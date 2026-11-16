@@ -96,6 +96,9 @@ button.ghost{background:transparent;color:var(--acc);border:1px solid var(--acc)
   <h1 id="hi"></h1>
   <div class="share"><small>رابط صفحتك الخاصة (شاركيه ليراسلك الناس عبره)</small><code id="myLink"></code>
     <button class="ghost" id="copy">نسخ الرابط</button></div>
+  <div class="share" id="mailBox" style="display:none"><small>عنوان استقبال الإيميل الخاص بك: أي إيميل يُرسل إليه يظهر هنا في صندوقك فقط</small><code id="myMail"></code>
+    <button class="ghost" id="mailCopy">نسخ العنوان</button>
+    <small style="margin-top:8px">ولتظهر هنا أيضًا الرسائل التي تصل إلى بريدك الحالي، فعّلي في بريدك خاصية «إعادة التوجيه» (Forwarding) إلى هذا العنوان.</small></div>
   <p><button id="wToggle">إضافة محادثة واتساب</button> <button id="cToggle">ربط Chakra (رسمي)</button> <button class="ghost" id="qToggle">ربط واتساب بمسح QR</button> <button class="ghost" id="aToggle">ربط عبر أندرويد</button></p>
   <div class="share" id="cBox" style="display:none">
     <small>في Chakra Chat: القائمة اليسرى «WhatsApp Setup» ثم تبويب «More» ثم الخانة «Pass-through webhook url»، والصقي فيها الرابط التالي ثم احفظي:</small>
@@ -135,7 +138,7 @@ button.ghost{background:transparent;color:var(--acc);border:1px solid var(--acc)
 </div>
 <script>
 // ===== الإعدادات =====
-const API = 'https://script.google.com/macros/s/AKfycbxPioURy3t5qqGKoidGt6q8Z3ORgrW1MErynerkljXcUYYThj6snYolRavW5gTUnIeSgA/exec';
+const API = 'https://script.google.com/macros/s/AKfycbww78cTsZpvXjJiz5ARCg3oWXsgETXztX0C9alUxpoDhhSYSCHVTKzcNtQ67mA_TmIrKQ/exec';
 // =====================
 
 const $ = id => document.getElementById(id);
@@ -159,7 +162,7 @@ async function initPublic(){
     if(!r.ok){ $('pTitle').textContent = r.error||'الصفحة غير موجودة'; return; }
     $('pTitle').textContent = 'تواصل مع ' + r.user.name;
     $('phoneTxt').textContent = disp(r.user.phone); $('phoneLink').href = 'tel:+' + r.user.phone;
-    $('mailTxt').textContent = r.user.email; $('mailLink').href = 'mailto:' + r.user.email;
+    const mm = r.user.mail || r.user.email; $('mailTxt').textContent = mm; $('mailLink').href = 'mailto:' + mm;
   }catch(e){ $('pTitle').textContent = 'تعذّر تحميل الصفحة'; }
 }
 $('send').onclick = async () => {
@@ -200,6 +203,9 @@ function openInbox(){
   show('inbox');
   $('hi').textContent = 'أهلًا ' + ME.name;
   $('myLink').textContent = location.origin + location.pathname + '?u=' + ME.id;
+  fetch(API+'?action=profile&u='+encodeURIComponent(ME.id)).then(r=>r.json()).then(r=>{
+    if(r.ok&&r.user.mail){$('myMail').textContent=r.user.mail;$('mailBox').style.display='block';}
+  }).catch(()=>{});
   load();
 }
 $('copy').onclick=()=>{navigator.clipboard.writeText($('myLink').textContent).then(()=>{$('copy').textContent='تم النسخ';setTimeout(()=>$('copy').textContent='نسخ الرابط',1500);});};
@@ -292,7 +298,7 @@ $('aToggle').onclick=()=>{
   $('aUrl').textContent=API; $('aBody').textContent='wa§§'+TOKEN+'§§{not_title}§§{not_text}';
 };
 const cp=(id,btn)=>navigator.clipboard.writeText($(id).textContent).then(()=>{const t=btn.textContent;btn.textContent='تم النسخ';setTimeout(()=>btn.textContent=t,1500);});
-$('aCopyUrl').onclick=e=>cp('aUrl',e.target); $('aCopyBody').onclick=e=>cp('aBody',e.target);
+$('mailCopy').onclick=e=>cp('myMail',e.target); $('aCopyUrl').onclick=e=>cp('aUrl',e.target); $('aCopyBody').onclick=e=>cp('aBody',e.target);
 
 $('qToggle').onclick=()=>{
   const b=$('qBox'); b.style.display=b.style.display==='none'?'block':'none';

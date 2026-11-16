@@ -105,7 +105,7 @@ function doGet(e) {
   }
   if (p.action === 'profile') {
     const u = userById_(p.u);
-    return u ? out_({ ok: true, user: { name: u[1], phone: u[2], email: u[3] } }) : out_({ ok: false, error: 'الصفحة غير موجودة' });
+    return u ? out_({ ok: true, user: { name: u[1], phone: u[2], email: u[3], mail: mailAddr_(u[0]) } }) : out_({ ok: false, error: 'الصفحة غير موجودة' });
   }
   return out_({ ok: true });
 }
@@ -251,8 +251,9 @@ function notify_(to, name, phone, email, message, source) {
 
 
 // ===== استيراد البريد تلقائيًا (Gmail) =====
-// يقرأ بريد الحساب الذي نشر السكربت، ويضع الرسائل في صندوق الموقع.
-// تُنسب الرسائل للحساب المسجَّل بنفس البريد، وإن لم يوجد فلأول حساب مسجَّل في الموقع.
+// لكل مستخدمة عنوان استقبال خاص بها: (بريد الحساب الذي نشر السكربت) مع +المعرّف، مثل: inbox+a1b2c3d4e5@gmail.com
+// أي إيميل يُرسل لهذا العنوان (أو يُحوَّل إليه من بريدها) يظهر في صندوقها هي فقط.
+// الرسائل التي لا تخص أي مستخدمة لا تُستورد أبدًا.
 // شغّلي الدالة setupEmailTrigger مرة واحدة فقط لتفعيل الاستيراد كل 5 دقائق.
 function setupEmailTrigger() {
   ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === 'importEmails').forEach(t => ScriptApp.deleteTrigger(t));
@@ -270,13 +271,37 @@ function mailText_(t, last) {
   return (t.getFirstMessageSubject() + '\n' + last.getPlainBody()).slice(0, 1000);
 }
 
+function baseMail_() {
+  return (Session.getEffectiveUser().getEmail() || Session.getActiveUser().getEmail() || '').toLowerCase();
+}
+// عنوان الاستقبال الخاص بالمستخدمة
+function mailAddr_(id) {
+  const me = baseMail_(), at = me.lastIndexOf('@');
+  return at < 0 ? '' : me.slice(0, at) + '+' + id + '@' + me.slice(at + 1);
+}
+
+// يحدد صاحبة الرسالة: عنوان الاستقبال (+المعرّف) في To/Cc، أو في ترويسة Delivered-To (للتحويل والنسخة المخفية)
+function routeMail_(last, users, meEmail) {
+  const hay = (last.getTo() + ' ' + last.getCc()).toLowerCase();
+  let m = hay.match(/\+([0-9a-f]{10})@/);
+  if (!m) {
+    try {
+      const raw = String(last.getRawContent()), end = raw.search(/\r?\n\r?\n/), head = raw.slice(0, end > 0 ? end : 20000).toLowerCase();
+      m = head.match(/^(?:delivered-to|x-original-to|x-forwarded-to):[^\n]*\+([0-9a-f]{10})@/m);
+    } catch (err) {}
+  }
+  if (m) return users.find(r => r[0] === m[1]) || null;
+  if (hay.indexOf(meEmail) >= 0) return users.find(r => String(r[3]).toLowerCase() === meEmail) || null;   // أُرسلت مباشرة لبريد الحساب نفسه
+  return null;
+}
+
 function importEmails_() {
   const users = allUsers_();
   if (!users.length) { Logger.log('لا يوجد أي حساب مسجّل في الموقع بعد.'); return; }
-  const meEmail = (Session.getEffectiveUser().getEmail() || Session.getActiveUser().getEmail() || '').toLowerCase();
+  const meEmail = baseMail_();
   if (!meEmail) { Logger.log('تعذّر معرفة بريد الحساب الذي نشر السكربت.'); return; }
   const mine = [meEmail].concat(GmailApp.getAliases().map(a => a.toLowerCase()));
-  const owner = users.find(r => String(r[3]).toLowerCase() === meEmail) || users[0];
+  const cache = CacheService.getScriptCache();
 
   const sh = msgs_();
   purge_(sh);
@@ -286,7 +311,7 @@ function importEmails_() {
   vals.forEach((r, i) => { index[r[0]] = i; });
 
   const threads = GmailApp.search(MAIL_QUERY, 0, 50);
-  let added = 0;
+  let added = 0, skipped = 0;
   threads.forEach(t => {
     const msgs = t.getMessages(), last = msgs[msgs.length - 1];
     const lastFrom = last.getFrom().toLowerCase();
@@ -306,13 +331,16 @@ function importEmails_() {
       return;
     }
     if (fromMe) return;
+    if (cache.get('skip_' + t.getId())) return;                      // سبق أن تبيّن أنها لا تخص أي مستخدمة
+    const owner = routeMail_(last, users, meEmail);
+    if (!owner) { cache.put('skip_' + t.getId(), '1', 21600); skipped++; return; }
     const from = last.getFrom();
     const name = from.replace(/<.*>/, '').replace(/"/g, '').trim() || from;
     const mail = (from.match(/<(.+?)>/) || [])[1] || from;
     sh.appendRow([id, last.getDate(), enc_(name), '', enc_(mail), enc_(mailText_(t, last)), 'جديدة', '', 'البريد', owner[0], '']);
     added++;
   });
-  Logger.log('البريد: ' + meEmail + ' | المالكة: ' + owner[3] + ' | سلاسل مطابقة: ' + threads.length + ' | أُضيف: ' + added);
+  Logger.log('البريد: ' + meEmail + ' | سلاسل مطابقة: ' + threads.length + ' | أُضيف: ' + added + ' | لا تخص أحدًا: ' + skipped);
 }
 
 // تنظيف: حذف صفوف الرسائل المحذوفة نهائيًا بعد 7 أيام (لا تحمل أي محتوى أصلًا)
@@ -373,15 +401,11 @@ function handleWhapi_(token, d) {
 
 
 // ===== فحص الاستيراد: شغّليها من المحرر ثم افتحي «سجل التنفيذ» (Execution log) =====
-// تبيّن لكل رسالة من آخر 3 أيام: هل ستُستورد؟ وإن لا، فما السبب.
+// تبيّن لكل رسالة من آخر 3 أيام: لمن ستُنسب؟ وهل ستُستورد؟ وإن لا فما السبب.
 function diagnoseEmail() {
-  const users = allUsers_();
-  const meEmail = (Session.getEffectiveUser().getEmail() || Session.getActiveUser().getEmail() || '').toLowerCase();
-  Logger.log('حساب Google الذي نشر السكربت (البريد اللي يُقرأ منه): ' + meEmail);
-  Logger.log('الحسابات المسجّلة في الموقع: ' + users.map(r => r[3]).join(' | '));
-  const owner = users.find(r => String(r[3]).toLowerCase() === meEmail);
-  Logger.log(owner ? 'ستُنسب الرسائل إلى: ' + owner[3]
-    : 'لا يوجد حساب في الموقع بهذا البريد، فستُنسب لأول حساب مسجّل: ' + (users[0] ? users[0][3] : '-') + ' (سجّلي دخولك بهذا الحساب لتري الرسائل)');
+  const users = allUsers_(), meEmail = baseMail_();
+  Logger.log('حساب Google الذي نشر السكربت (صندوق البريد الذي يُقرأ): ' + meEmail);
+  users.forEach(r => Logger.log('مستخدمة: ' + r[1] + ' ← عنوان استقبالها: ' + mailAddr_(r[0])));
   const mine = [meEmail].concat(GmailApp.getAliases().map(a => a.toLowerCase()));
   const sh = msgs_(), n = sh.getLastRow() - 1;
   const state = {};
@@ -394,10 +418,13 @@ function diagnoseEmail() {
     const ms = t.getMessages(), last = ms[ms.length - 1], from = last.getFrom().toLowerCase();
     let why;
     if (!passed[t.getId()]) why = 'مستبعدة بالفلتر (تصنيف ترويج/اجتماعي، أو ليست في الوارد)';
-    else if (mine.some(a => from.indexOf(a) >= 0)) why = 'آخر رسالة فيها منك أنتِ (مثلًا أرسلتِها لنفسك) فلا تُستورد';
-    else if (state['mail_' + t.getId()] === DEL) why = 'سبق أن حذفتِها من الموقع';
+    else if (mine.some(a => from.indexOf(a) >= 0)) why = 'آخر رسالة فيها منك أنتِ فلا تُستورد';
+    else if (state['mail_' + t.getId()] === DEL) why = 'سبق أن حُذفت من الموقع';
     else if (('mail_' + t.getId()) in state) why = 'مستوردة سابقًا (الحالة: ' + state['mail_' + t.getId()] + ')';
-    else why = 'جاهزة، ستُستورد في الدورة القادمة';
+    else {
+      const o = routeMail_(last, users, meEmail);
+      why = o ? 'ستُنسب إلى: ' + o[1] + ' وتُستورد' : 'لا تخص أي مستخدمة (لم تُرسل إلى عنوان استقبال أحد) فلن تُستورد';
+    }
     Logger.log('• ' + String(t.getFirstMessageSubject()).slice(0, 40) + ' | من: ' + last.getFrom().slice(0, 40) + ' → ' + why);
   });
 }
