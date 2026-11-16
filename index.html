@@ -48,6 +48,8 @@ button.ghost{background:transparent;color:var(--acc);border:1px solid var(--acc)
 .acts button{padding:7px 12px;font-size:14px}
 .acts button.danger{color:var(--bad);border-color:var(--bad)}
 .acts button.danger:hover{background:var(--bad);color:#fff}
+.bar button.danger{color:var(--bad);border-color:var(--bad);margin-inline-start:auto}
+.bar button.danger:hover{background:var(--bad);color:#fff}
 .tag{font-size:13px;font-weight:700}
 .note{margin-top:8px;font-size:14px}
 </style>
@@ -96,7 +98,7 @@ button.ghost{background:transparent;color:var(--acc);border:1px solid var(--acc)
   <h1 id="hi"></h1>
   <div class="share"><small>رابط صفحتك الخاصة (شاركيه ليراسلك الناس عبره)</small><code id="myLink"></code>
     <button class="ghost" id="copy">نسخ الرابط</button></div>
-  <p><button id="wToggle">إضافة محادثة واتساب</button> <button id="cToggle">ربط Chakra (رسمي)</button> <button class="ghost" id="qToggle">ربط واتساب بمسح QR</button> <button class="ghost" id="aToggle">ربط عبر أندرويد</button> <button id="mToggle">ربط البريد الإلكتروني</button></p>
+  <p><button id="wToggle">إضافة محادثة واتساب</button> <button id="cToggle">ربط Chakra (رسمي)</button> <button class="ghost" id="qToggle">ربط واتساب بمسح QR</button> <button id="mToggle">ربط البريد الإلكتروني</button></p>
   <div class="share" id="mBox" style="display:none">
     <small>١) افتحي الرابط script.google.com وأنتِ داخلة بحساب Gmail الذي تصلكِ عليه الرسائل، ثم اختاري «مشروع جديد».</small>
     <small>٢) احذفي كل ما في المحرر، والصقي الكود التالي مكانه ثم احفظي:</small>
@@ -119,16 +121,6 @@ button.ghost{background:transparent;color:var(--acc);border:1px solid var(--acc)
     <code id="qUrl"></code>
     <button class="ghost" id="qCopy">نسخ الرابط</button>
     <small style="margin-top:8px">٤) أرسلي رسالة تجريبية إلى رقمك من جوال آخر، فتظهر هنا. وعند ردّك من جوالك تتحول حالة المحادثة إلى «تم الرد».</small>
-  </div>
-  <div class="share" id="aBox" style="display:none">
-    <small>١) ثبّتي تطبيق MacroDroid من متجر Google Play.</small>
-    <small>٢) أنشئي ماكرو جديدًا: المشغّل «إشعار مستلم» ← اختاري WhatsApp (وWhatsApp Business إن لزم) ← أي نص، وامنحيه صلاحية الوصول إلى الإشعارات.</small>
-    <small>٣) الإجراء «طلب HTTP»: الطريقة POST، ونوع المحتوى text/plain، والرابط التالي:</small>
-    <code id="aUrl"></code>
-    <small>٤) نص الطلب (Body) هو التالي، وإن لم تجدي المتغيرين فاختاريهما من قائمة النص السحري: عنوان الإشعار ونص الإشعار:</small>
-    <code id="aBody"></code>
-    <button class="ghost" id="aCopyUrl">نسخ الرابط</button> <button class="ghost" id="aCopyBody">نسخ النص</button>
-    <small style="margin-top:8px">٥) احفظي الماكرو وفعّليه، وأوقفي تحسين البطارية عن MacroDroid. ثم أرسلي رسالة تجريبية إلى رقمك من جوال آخر.</small>
   </div>
   <div class="share" id="wForm" style="display:none">
     <label for="wn">اسم صاحبة المحادثة</label><input id="wn">
@@ -237,6 +229,10 @@ function render(){
   });
   const L=$('list'); L.innerHTML='';
   const rows=(inArch?ARCH:ALL).filter(x=>inArch||FILTER==='الكل'||x.status===FILTER);
+  if(!inArch&&FILTER==='تم الرد'&&rows.length){
+    const da=document.createElement('button'); da.className='ghost danger'; da.textContent='🗑 حذف الكل ('+rows.length+')';
+    da.title='حذف كل الرسائل التي تم الرد عليها'; da.onclick=delReplied; f.appendChild(da);
+  }
   if(!rows.length){L.textContent=inArch?'الأرشيف فارغ.':'لا توجد رسائل.';return;}
   rows.forEach(x=>{
     const cls = x.status==='تم الرد'?'replied':x.status==='لم يُرد عليها'?'left':x.status==='جديدة'?'new':'';
@@ -288,6 +284,15 @@ async function del(x){
   if(!r.ok){alert(r.error||'تعذّر الحذف');load();}
 }
 
+async function delReplied(){
+  const n=ALL.filter(x=>x.status==='تم الرد').length; if(!n) return;
+  if(!confirm('سيتم حذف '+n+' رسالة تم الرد عليها نهائيًا ولا يمكن استرجاعها. هل أنتِ متأكدة؟')) return;
+  ALL=ALL.filter(x=>x.status!=='تم الرد'); render();
+  const r=await post({action:'deleteReplied',token:TOKEN});
+  if(!r.ok){alert(r.error||'تعذّر الحذف');}
+  load();
+}
+
 $('wToggle').onclick=()=>{const f=$('wForm');f.style.display=f.style.display==='none'?'block':'none';};
 $('wAdd').onclick=async()=>{
   const name=$('wn').value.trim(); if(!name){alert('يرجى كتابة الاسم.');return;}
@@ -296,12 +301,7 @@ $('wAdd').onclick=async()=>{
   ['wn','wp','wm'].forEach(i=>$(i).value='');$('wForm').style.display='none';load();
 };
 
-$('aToggle').onclick=()=>{
-  const b=$('aBox'); b.style.display=b.style.display==='none'?'block':'none';
-  $('aUrl').textContent=API; $('aBody').textContent='wa§§'+TOKEN+'§§{not_title}§§{not_text}';
-};
 const cp=(id,btn)=>navigator.clipboard.writeText($(id).textContent).then(()=>{const t=btn.textContent;btn.textContent='تم النسخ';setTimeout(()=>btn.textContent=t,1500);});
-$('aCopyUrl').onclick=e=>cp('aUrl',e.target); $('aCopyBody').onclick=e=>cp('aBody',e.target);
 
 $('mToggle').onclick=()=>{
   const b=$('mBox'); b.style.display=b.style.display==='none'?'block':'none';

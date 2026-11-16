@@ -216,6 +216,21 @@ function doPost(e) {
       sh.getRange(f.row, 2, 1, COLS - 1).setValues([[new Date(), '', '', '', '', DEL, '', f.vals[8], f.vals[9], '']]);
       return out_({ ok: true });
     }
+    if (d.action === 'deleteReplied') {
+      // حذف كل الرسائل التي تم الرد عليها (غير المؤرشفة) دفعة واحدة، بنفس مسح المحتوى الكامل
+      const sh = msgs_();
+      if (sh.getLastRow() < 2) return out_({ ok: true, deleted: 0 });
+      const first = allUsers_()[0][0], n = sh.getLastRow() - 1;
+      const vals = sh.getRange(2, 1, n, COLS).getValues();
+      let deleted = 0;
+      vals.forEach(r => {
+        if ((r[9] || first) !== me[0] || r[6] !== 'تم الرد' || r[10] === 'نعم') return;
+        r[1] = new Date(); r[2] = ''; r[3] = ''; r[4] = ''; r[5] = ''; r[6] = DEL; r[7] = ''; r[10] = '';
+        deleted++;
+      });
+      if (deleted) sh.getRange(2, 1, n, COLS).setValues(vals);
+      return out_({ ok: true, deleted });
+    }
     return out_({ ok: false, error: 'طلب غير معروف.' });
   } finally { lock.releaseLock(); }
 }
