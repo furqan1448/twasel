@@ -96,7 +96,16 @@ button.ghost{background:transparent;color:var(--acc);border:1px solid var(--acc)
   <h1 id="hi"></h1>
   <div class="share"><small>رابط صفحتك الخاصة (شاركيه ليراسلك الناس عبره)</small><code id="myLink"></code>
     <button class="ghost" id="copy">نسخ الرابط</button></div>
-  <p><button id="wToggle">إضافة محادثة واتساب</button> <button id="cToggle">ربط Chakra (رسمي)</button> <button class="ghost" id="qToggle">ربط واتساب بمسح QR</button> <button class="ghost" id="aToggle">ربط عبر أندرويد</button></p>
+  <p><button id="wToggle">إضافة محادثة واتساب</button> <button id="cToggle">ربط Chakra (رسمي)</button> <button class="ghost" id="qToggle">ربط واتساب بمسح QR</button> <button class="ghost" id="aToggle">ربط عبر أندرويد</button> <button id="mToggle">ربط البريد الإلكتروني</button></p>
+  <div class="share" id="mBox" style="display:none">
+    <small>١) افتحي الرابط script.google.com وأنتِ داخلة بحساب Gmail الذي تصلكِ عليه الرسائل، ثم اختاري «مشروع جديد».</small>
+    <small>٢) احذفي كل ما في المحرر، والصقي الكود التالي مكانه ثم احفظي:</small>
+    <code id="mCode" style="white-space:pre-wrap;max-height:220px;overflow:auto"></code>
+    <button class="ghost" id="mCopy">نسخ الكود</button>
+    <small style="margin-top:8px">٣) من القائمة العلوية اختاري الدالة <b>setup</b> ثم «تشغيل»، ووافقي على الصلاحيات المطلوبة (إن ظهرت «لم يتم التحقق من هذا التطبيق» فاختاري «متقدّم» ثم «الانتقال إلى المشروع»).</small>
+    <small>٤) تظهر رسائل بريدك هنا خلال 5 دقائق، وعند ردّك على أي رسالة من بريدك تتحول حالتها إلى «تم الرد». الكود يقرأ بريدك أنتِ فقط ولا يمرّ على أي بريد آخر.</small>
+    <small>إن كان بريدك من غير Gmail (مثل Outlook) فعّلي فيه إعادة التوجيه إلى حساب Gmail لديك أولًا.</small>
+  </div>
   <div class="share" id="cBox" style="display:none">
     <small>في Chakra Chat: القائمة اليسرى «WhatsApp Setup» ثم تبويب «More» ثم الخانة «Pass-through webhook url»، والصقي فيها الرابط التالي ثم احفظي:</small>
     <code id="cUrl"></code>
@@ -135,7 +144,7 @@ button.ghost{background:transparent;color:var(--acc);border:1px solid var(--acc)
 </div>
 <script>
 // ===== الإعدادات =====
-const API = 'https://script.google.com/macros/s/AKfycbyFhAsgKpuzbCzC-Tuu2_3eqRJkyv7v58rKVr8n56n7mZdeu6XNsw6HYM_N1fnmAyAFaw/exec';
+const API = 'https://script.google.com/macros/s/AKfycbxrw_fsf6_SiEz94bjXqwIBHa8TOTXrMWs-CYwKnTE16Kujar98-TSV_8FUFiSkiwf6/exec';
 // =====================
 
 const $ = id => document.getElementById(id);
@@ -293,6 +302,30 @@ $('aToggle').onclick=()=>{
 };
 const cp=(id,btn)=>navigator.clipboard.writeText($(id).textContent).then(()=>{const t=btn.textContent;btn.textContent='تم النسخ';setTimeout(()=>btn.textContent=t,1500);});
 $('aCopyUrl').onclick=e=>cp('aUrl',e.target); $('aCopyBody').onclick=e=>cp('aBody',e.target);
+
+$('mToggle').onclick=()=>{
+  const b=$('mBox'); b.style.display=b.style.display==='none'?'block':'none';
+  $('mCode').textContent=
+"const API = '"+API+"';\n"+
+"const TOKEN = '"+TOKEN+"';\n\n"+
+"function sync() {\n"+
+"  const me = (Session.getEffectiveUser().getEmail() || '').toLowerCase();\n"+
+"  const items = GmailApp.search('newer_than:3d in:inbox -category:promotions -category:social', 0, 30).map(t => {\n"+
+"    const ms = t.getMessages(), last = ms[ms.length - 1], from = last.getFrom();\n"+
+"    return { id: t.getId(), date: last.getDate().getTime(), from: from, subject: t.getFirstMessageSubject(),\n"+
+"             body: last.getPlainBody().slice(0, 1000), fromMe: from.toLowerCase().indexOf(me) >= 0 };\n"+
+"  });\n"+
+"  if (!items.length) return;\n"+
+"  UrlFetchApp.fetch(API, { method: 'post', contentType: 'text/plain;charset=utf-8',\n"+
+"    payload: JSON.stringify({ action: 'mailIn', token: TOKEN, items: items }), muteHttpExceptions: true });\n"+
+"}\n\n"+
+"function setup() {\n"+
+"  ScriptApp.getProjectTriggers().forEach(t => ScriptApp.deleteTrigger(t));\n"+
+"  ScriptApp.newTrigger('sync').timeBased().everyMinutes(5).create();\n"+
+"  sync();\n"+
+"}\n";
+};
+$('mCopy').onclick=e=>cp('mCode',e.target);
 
 $('qToggle').onclick=()=>{
   const b=$('qBox'); b.style.display=b.style.display==='none'?'block':'none';

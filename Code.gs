@@ -174,6 +174,8 @@ function doPost(e) {
       return out_({ ok: true });
     }
 
+    if (d.action === 'mailIn') { mailIn_(me, d.items); return out_({ ok: true }); }
+
     if (d.action === 'addManual') {
       if (!d.name) return out_({ ok: false, error: 'الاسم مطلوب.' });
       msgs_().appendRow([Utilities.getUuid(), new Date(), enc_(String(d.name).slice(0, 200)), enc_(norm_(d.phone)), '', enc_(String(d.message || '').slice(0, 5000)), 'جديدة', '', 'واتساب', me[0], '']);
@@ -216,6 +218,37 @@ function doPost(e) {
     }
     return out_({ ok: false, error: 'طلب غير معروف.' });
   } finally { lock.releaseLock(); }
+}
+
+// بريد المستخدمة: يصل من سكربت تشغّله هي في حسابها (Gmail) فلا يُقرأ بريد أي حساب آخر
+function mailIn_(me, items) {
+  const sh = msgs_(), n = sh.getLastRow() - 1;
+  const vals = n > 0 ? sh.getRange(2, 1, n, COLS).getValues() : [];
+  const index = {};
+  vals.forEach((r, i) => { index[r[0]] = i; });
+  (Array.isArray(items) ? items : []).slice(0, 50).forEach(it => {
+    if (!it || !it.id) return;
+    const id = 'mail_' + me[0] + '_' + String(it.id).slice(0, 40);
+    const when = it.date ? new Date(Number(it.date)) : new Date();
+    const text = (String(it.subject || '') + '\n' + String(it.body || '')).slice(0, 1000);
+    if (id in index) {
+      const i = index[id], row = vals[i];
+      if (row[9] !== me[0] || row[6] === DEL) return;
+      if (it.fromMe) { if (row[6] !== 'تم الرد') sh.getRange(i + 2, 7).setValue('تم الرد'); }
+      else if ((row[6] === 'تم الرد' || row[10] === 'نعم') && when > new Date(row[1])) {   // رسالة جديدة بعد ردّك أو بعد الأرشفة
+        sh.getRange(i + 2, 7).setValue('جديدة');
+        sh.getRange(i + 2, 2).setValue(when);
+        sh.getRange(i + 2, 6).setValue(enc_(text));
+        sh.getRange(i + 2, 11).setValue('');
+      }
+      return;
+    }
+    if (it.fromMe) return;
+    const from = String(it.from || '').slice(0, 300);
+    const name = from.replace(/<.*>/, '').replace(/"/g, '').trim() || from;
+    const mail = (from.match(/<(.+?)>/) || [])[1] || from;
+    sh.appendRow([id, when, enc_(name), '', enc_(mail), enc_(text), 'جديدة', '', 'البريد', me[0], '']);
+  });
 }
 
 function handleWhatsApp_(d, key) {
