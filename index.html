@@ -94,6 +94,13 @@ button.ghost{background:transparent;color:var(--acc);border:1px solid var(--acc)
   <h1 id="hi"></h1>
   <div class="share"><small>رابط صفحتك الخاصة (شاركيه ليراسلك الناس عبره)</small><code id="myLink"></code>
     <button class="ghost" id="copy">نسخ الرابط</button></div>
+  <p><button id="wToggle">إضافة محادثة واتساب</button></p>
+  <div class="share" id="wForm" style="display:none">
+    <label for="wn">اسم صاحبة المحادثة</label><input id="wn">
+    <label for="wp">رقم جوالها (اختياري)</label><input id="wp" type="tel" inputmode="tel">
+    <label for="wm">ملخص الرسالة (اختياري)</label><textarea id="wm" style="min-height:70px"></textarea>
+    <p><button id="wAdd">حفظ</button></p>
+  </div>
   <div class="bar" id="filters"></div>
   <div id="list"></div>
   <p><button class="ghost" id="reload">تحديث</button> <button class="ghost" id="out">تسجيل الخروج</button></p>
@@ -102,7 +109,7 @@ button.ghost{background:transparent;color:var(--acc);border:1px solid var(--acc)
 </div>
 <script>
 // ===== الإعدادات =====
-const API = 'https://script.google.com/macros/s/AKfycbxe2j1QaSQjCrtc7rxTUVHuYH_bInZztEOa8AVH9yw7zpCvVmVJUzAiVoNM25MetMoV1w/exec';
+const API = 'ضعي_هنا_رابط_تطبيق_الويب_من_Apps_Script';
 // =====================
 
 const $ = id => document.getElementById(id);
@@ -220,6 +227,14 @@ async function upd(x,patch){
   const r=await post({action:'update',token:TOKEN,id:x.id,...patch});
   if(!r.ok){alert(r.error||'تعذّر الحفظ');load();}
 }
+
+$('wToggle').onclick=()=>{const f=$('wForm');f.style.display=f.style.display==='none'?'block':'none';};
+$('wAdd').onclick=async()=>{
+  const name=$('wn').value.trim(); if(!name){alert('يرجى كتابة الاسم.');return;}
+  const r=await post({action:'addManual',token:TOKEN,name,phone:$('wp').value.trim(),message:$('wm').value.trim()});
+  if(!r.ok){alert(r.error||'تعذّر الحفظ');return;}
+  ['wn','wp','wm'].forEach(i=>$(i).value='');$('wForm').style.display='none';load();
+};
 
 function logout(){TOKEN='';ME=null;try{localStorage.removeItem('tok');localStorage.removeItem('me');}catch(e){} show('auth');}
 $('reload').onclick=load; $('out').onclick=logout;

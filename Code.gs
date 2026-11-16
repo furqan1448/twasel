@@ -96,6 +96,12 @@ function doPost(e) {
     const me = userByToken_(d.token);
     if (!me) return out_({ ok: false, error: 'انتهت الجلسة، يرجى تسجيل الدخول.', auth: false });
 
+    if (d.action === 'addManual') {
+      if (!d.name) return out_({ ok: false, error: 'الاسم مطلوب.' });
+      msgs_().appendRow([Utilities.getUuid(), new Date(), d.name, norm_(d.phone), '', d.message || '', 'جديدة', '', 'واتساب', me[0]]);
+      return out_({ ok: true });
+    }
+
     if (d.action === 'list') {
       const first = allUsers_()[0][0];
       const sh = msgs_();
