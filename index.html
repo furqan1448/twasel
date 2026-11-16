@@ -6,8 +6,8 @@
 <title>صندوق الرسائل</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#faf7f5;--card:#fff;--ink:#2a1a1d;--mut:#7a6a6d;--line:#eadfe0;--acc:#7a1f2b;--acc2:#5e1822;--ok:#1f6b45;--warn:#9a5b00;}
-@media (prefers-color-scheme:dark){:root{--bg:#1a1214;--card:#251a1d;--ink:#f3e9ea;--mut:#b5a3a6;--line:#3a2a2e;--acc:#d4707e;--acc2:#e08d99;--ok:#58c28a;--warn:#e0a24a;}}
+:root{--bg:#faf7f5;--card:#fff;--ink:#2a1a1d;--mut:#7a6a6d;--line:#eadfe0;--acc:#7a1f2b;--acc2:#5e1822;--ok:#1f6b45;--warn:#9a5b00;--bad:#b3261e;}
+@media (prefers-color-scheme:dark){:root{--bg:#1a1214;--card:#251a1d;--ink:#f3e9ea;--mut:#b5a3a6;--line:#3a2a2e;--acc:#d4707e;--acc2:#e08d99;--ok:#58c28a;--warn:#e0a24a;--bad:#ef7b73;}}
 *{box-sizing:border-box}
 body{margin:0;font-family:'Tajawal',system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.8}
 .wrap{max-width:640px;margin:0 auto;padding:28px 18px 60px}
@@ -46,6 +46,8 @@ button.ghost{background:transparent;color:var(--acc);border:1px solid var(--acc)
 .body{margin:8px 0;white-space:pre-wrap}
 .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 .acts button{padding:7px 12px;font-size:14px}
+.acts button.danger{color:var(--bad);border-color:var(--bad)}
+.acts button.danger:hover{background:var(--bad);color:#fff}
 .tag{font-size:13px;font-weight:700}
 .note{margin-top:8px;font-size:14px}
 </style>
@@ -139,7 +141,8 @@ const API = 'https://script.google.com/macros/s/AKfycbww78cTsZpvXjJiz5ARCg3oWXsg
 const $ = id => document.getElementById(id);
 const STATUSES = ['جديدة', 'تم الرد', 'لم يُرد عليها'];
 const U = new URLSearchParams(location.search).get('u');
-let TOKEN = '', ME = null, ALL = [], FILTER = 'الكل';
+let TOKEN = '', ME = null, ALL = [], ARCH = [], ARCHN = 0, FILTER = 'الكل';
+const ARCHIVE = 'الأرشيف';
 const show = id => ['pub','auth','inbox'].forEach(s => $(s).style.display = s===id ? 'block' : 'none');
 const disp = p => { p = String(p||''); return p.startsWith('966') ? '0' + p.slice(3) : p; };
 
@@ -203,24 +206,29 @@ $('copy').onclick=()=>{navigator.clipboard.writeText($('myLink').textContent).th
 
 async function load(){
   $('list').textContent='جارٍ التحميل…';
+  const inArch = FILTER===ARCHIVE;
   try{
-    const r = await post({action:'list',token:TOKEN});
+    const r = await post({action:'list',token:TOKEN,archived:inArch});
     if(r.auth===false){logout();return;}
     if(!r.ok){$('list').textContent=r.error||'تعذّر التحميل.';return;}
-    ALL=r.rows; render();
+    if(inArch) ARCH=r.rows; else ALL=r.rows;
+    ARCHN=r.archivedCount||0; render();
   }catch(e){$('list').textContent='تعذّر تحميل الرسائل.';}
 }
 
 function render(){
+  const inArch = FILTER===ARCHIVE;
   const f=$('filters'); f.innerHTML='';
-  ['الكل',...STATUSES].forEach(s=>{
-    const c = s==='الكل'?ALL.length:ALL.filter(x=>x.status===s).length;
+  ['الكل',...STATUSES,ARCHIVE].forEach(s=>{
+    const c = s==='الكل'?ALL.length:s===ARCHIVE?ARCHN:ALL.filter(x=>x.status===s).length;
     const b=document.createElement('button'); b.className='ghost'+(s===FILTER?' on':'');
-    b.textContent=s+' ('+c+')'; b.onclick=()=>{FILTER=s;render();}; f.appendChild(b);
+    b.textContent=s+' ('+c+')';
+    b.onclick=()=>{const was=FILTER===ARCHIVE; FILTER=s; (was||s===ARCHIVE)?load():render();};
+    f.appendChild(b);
   });
   const L=$('list'); L.innerHTML='';
-  const rows=ALL.filter(x=>FILTER==='الكل'||x.status===FILTER);
-  if(!rows.length){L.textContent='لا توجد رسائل.';return;}
+  const rows=(inArch?ARCH:ALL).filter(x=>inArch||FILTER==='الكل'||x.status===FILTER);
+  if(!rows.length){L.textContent=inArch?'الأرشيف فارغ.':'لا توجد رسائل.';return;}
   rows.forEach(x=>{
     const cls = x.status==='تم الرد'?'replied':x.status==='لم يُرد عليها'?'left':x.status==='جديدة'?'new':'';
     const d=document.createElement('div'); d.className='item '+cls;
@@ -242,6 +250,10 @@ function render(){
     const nb=document.createElement('button'); nb.className='ghost'; nb.textContent='ملاحظة';
     nb.onclick=()=>{const t=prompt('اكتبي الملاحظة:',x.note||''); if(t!==null) upd(x,{note:t});};
     acts.appendChild(nb);
+    const ab=document.createElement('button'); ab.className='ghost'; ab.textContent=inArch?'إلغاء الأرشفة':'أرشفة';
+    ab.onclick=()=>archive(x,!inArch); acts.appendChild(ab);
+    const db=document.createElement('button'); db.className='ghost danger'; db.textContent='حذف';
+    db.onclick=()=>del(x); acts.appendChild(db);
     L.appendChild(d);
   });
 }
@@ -250,6 +262,21 @@ async function upd(x,patch){
   Object.assign(x,patch); render();
   const r=await post({action:'update',token:TOKEN,id:x.id,...patch});
   if(!r.ok){alert(r.error||'تعذّر الحفظ');load();}
+}
+
+async function archive(x,on){
+  const L=on?ALL:ARCH, i=L.indexOf(x); if(i>=0) L.splice(i,1);
+  ARCHN=Math.max(0,ARCHN+(on?1:-1)); render();
+  const r=await post({action:'update',token:TOKEN,id:x.id,archived:on});
+  if(!r.ok){alert(r.error||'تعذّر الحفظ');load();}
+}
+async function del(x){
+  if(!confirm('سيتم حذف هذه الرسالة نهائيًا ولا يمكن استرجاعها. هل أنتِ متأكدة؟')) return;
+  const inArch=FILTER===ARCHIVE, L=inArch?ARCH:ALL, i=L.indexOf(x); if(i>=0) L.splice(i,1);
+  if(inArch) ARCHN=Math.max(0,ARCHN-1);
+  render();
+  const r=await post({action:'delete',token:TOKEN,id:x.id});
+  if(!r.ok){alert(r.error||'تعذّر الحذف');load();}
 }
 
 $('wToggle').onclick=()=>{const f=$('wForm');f.style.display=f.style.display==='none'?'block':'none';};

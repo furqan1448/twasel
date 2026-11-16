@@ -1,7 +1,47 @@
 // ===== الإعدادات =====
 const WA_VERIFY_TOKEN = 'furqan-wa-2026';   // أي كلمة تختارينها، وتكتبينها نفسها في Meta
 const MSG = 'الرسائل', USR = 'المستخدمون';
+const COLS = 11;                              // عدد أعمدة جدول الرسائل
+const DEL = 'محذوفة';                         // الرسالة المحذوفة: يُمسح محتواها كليًا ويبقى معرّفها فقط لمنع عودتها
+const STATUSES_ = ['جديدة', 'تم الرد', 'لم يُرد عليها'];
+const MAIL_QUERY = 'newer_than:3d -category:promotions -category:social -category:updates -category:forums';
 
+// ===== التشفير =====
+// كل بيانات الرسالة (الاسم، الجوال، البريد، النص، الملاحظة) تُحفظ في الشيت مشفّرة،
+// فلو فتحتِ الشيت ما ترين إلا رموزًا غير مقروءة. تظهر الرسائل فقط داخل الموقع بعد تسجيل الدخول.
+// المفتاح يُنشأ تلقائيًا ويُحفظ في خصائص السكربت (Script Properties) وليس في الشيت.
+let KEY_ = null;
+function key_() {
+  if (KEY_) return KEY_;
+  const p = PropertiesService.getScriptProperties();
+  let k = p.getProperty('MSG_KEY');
+  if (!k) { k = Utilities.getUuid() + Utilities.getUuid() + Utilities.getUuid(); p.setProperty('MSG_KEY', k); }
+  return (KEY_ = k);
+}
+// تيار مفاتيح من HMAC-SHA256 (نمط العدّاد) ثم XOR مع بايتات النص
+function xor_(bytes, nonce) {
+  const key = key_(), out = new Array(bytes.length);
+  for (let i = 0; i < bytes.length; i += 32) {
+    const ks = Utilities.computeHmacSha256Signature(nonce + ':' + (i / 32), key);
+    for (let j = 0; j < 32 && i + j < bytes.length; j++) out[i + j] = bytes[i + j] ^ ks[j];
+  }
+  return out;
+}
+function enc_(s) {
+  s = String(s == null ? '' : s);
+  if (!s) return '';
+  const nonce = Utilities.getUuid();
+  return 'enc1:' + nonce + ':' + Utilities.base64Encode(xor_(Utilities.newBlob(s).getBytes(), nonce));
+}
+function dec_(s) {
+  s = String(s == null ? '' : s);
+  if (s.indexOf('enc1:') !== 0) return s;               // نص قديم غير مشفّر (قبل التحديث)
+  const p = s.split(':');
+  try { return Utilities.newBlob(xor_(Utilities.base64Decode(p[2]), p[1])).getDataAsString('UTF-8'); }
+  catch (err) { return ''; }
+}
+
+// ===== الجداول =====
 function ss_() { return SpreadsheetApp.getActiveSpreadsheet(); }
 
 function sheet_(name, header) {
@@ -10,10 +50,9 @@ function sheet_(name, header) {
   return sh;
 }
 function msgs_() {
-  const sh = sheet_(MSG, ['المعرف', 'التاريخ', 'الاسم', 'الجوال', 'البريد', 'الرسالة', 'الحالة', 'ملاحظة', 'المصدر', 'المالكة']);
-  if (!sh.getRange(1, 9).getValue()) sh.getRange(1, 9).setValue('المصدر');
-  if (!sh.getRange(1, 10).getValue()) sh.getRange(1, 10).setValue('المالكة');
-  sh.getRange('D:D').setNumberFormat('@');
+  const sh = sheet_(MSG, ['المعرف', 'التاريخ', 'الاسم', 'الجوال', 'البريد', 'الرسالة', 'الحالة', 'ملاحظة', 'المصدر', 'المالكة', 'مؤرشفة']);
+  const h = sh.getRange(1, 1, 1, COLS).getValues()[0];
+  [[9, 'المصدر'], [10, 'المالكة'], [11, 'مؤرشفة']].forEach(x => { if (!h[x[0] - 1]) sh.getRange(1, x[0]).setValue(x[1]); });
   return sh;
 }
 function users_() {
@@ -42,6 +81,21 @@ function allUsers_() { const sh = users_(); return sh.getLastRow() < 2 ? [] : sh
 function userByToken_(t) { return t ? allUsers_().find(r => r[6] === t) : null; }
 function userById_(id) { return allUsers_().find(r => r[0] === id); }
 function userByPhone_(p) { const n = norm_(p); return n ? allUsers_().find(r => norm_(r[2]) === n) : null; }
+
+function rowOut_(r) {
+  return {
+    id: r[0], date: r[1], name: dec_(r[2]), phone: dec_(r[3]), email: dec_(r[4]), message: dec_(r[5]),
+    status: r[6], note: dec_(r[7]), source: r[8] || 'النموذج', archived: r[10] === 'نعم'
+  };
+}
+// يجد رسالة تخص هذه المستخدمة (الرسائل القديمة بلا مالكة تعود لأول حساب)
+function findRow_(sh, id, me) {
+  if (sh.getLastRow() < 2) return null;
+  const first = allUsers_()[0][0];
+  const vals = sh.getRange(2, 1, sh.getLastRow() - 1, COLS).getValues();
+  const i = vals.findIndex(r => r[0] === id && (r[9] || first) === me[0] && r[6] !== DEL);
+  return i < 0 ? null : { row: i + 2, vals: vals[i] };
+}
 
 function doGet(e) {
   const p = e.parameter || {};
@@ -93,8 +147,10 @@ function doPost(e) {
       const owner = userById_(d.owner);
       if (!owner) return out_({ ok: false, error: 'الصفحة غير موجودة.' });
       if (!d.name || !d.message) return out_({ ok: false, error: 'الاسم والرسالة مطلوبان.' });
-      msgs_().appendRow([Utilities.getUuid(), new Date(), d.name, d.phone || '', d.email || '', d.message, 'جديدة', '', 'النموذج', owner[0]]);
-      notify_(owner[3], d.name, d.phone, d.email, d.message, 'النموذج');
+      const name = String(d.name).slice(0, 200), message = String(d.message).slice(0, 5000);
+      const phone = String(d.phone || '').slice(0, 50), email = String(d.email || '').slice(0, 200);
+      msgs_().appendRow([Utilities.getUuid(), new Date(), enc_(name), enc_(phone), enc_(email), enc_(message), 'جديدة', '', 'النموذج', owner[0], '']);
+      notify_(owner[3], name, phone, email, message, 'النموذج');
       return out_({ ok: true });
     }
 
@@ -107,37 +163,50 @@ function doPost(e) {
       if (!title || !text) return out_({ ok: true });
       if (/^(whatsapp|واتساب)/i.test(title) || /\d+\s*(new messages|رسائل جديدة|رسالة جديدة)/i.test(text)) return out_({ ok: true });   // إشعارات التجميع
       const sh = msgs_(), n = sh.getLastRow() - 1;
-      const recent = n > 0 ? sh.getRange(Math.max(2, n - 18), 1, Math.min(n, 20), 10).getValues() : [];
-      if (recent.some(r => r[9] === me[0] && r[2] === title && r[5] === text)) return out_({ ok: true });   // منع التكرار
-      sh.appendRow([Utilities.getUuid(), new Date(), title, '', '', text, 'جديدة', '', 'واتساب', me[0]]);
+      const recent = n > 0 ? sh.getRange(Math.max(2, n - 18), 1, Math.min(n, 20), COLS).getValues() : [];
+      if (recent.some(r => r[9] === me[0] && r[6] !== DEL && dec_(r[2]) === title && dec_(r[5]) === text)) return out_({ ok: true });   // منع التكرار
+      sh.appendRow([Utilities.getUuid(), new Date(), enc_(title), '', '', enc_(text), 'جديدة', '', 'واتساب', me[0], '']);
       return out_({ ok: true });
     }
 
     if (d.action === 'addManual') {
       if (!d.name) return out_({ ok: false, error: 'الاسم مطلوب.' });
-      msgs_().appendRow([Utilities.getUuid(), new Date(), d.name, norm_(d.phone), '', d.message || '', 'جديدة', '', 'واتساب', me[0]]);
+      msgs_().appendRow([Utilities.getUuid(), new Date(), enc_(String(d.name).slice(0, 200)), enc_(norm_(d.phone)), '', enc_(String(d.message || '').slice(0, 5000)), 'جديدة', '', 'واتساب', me[0], '']);
       return out_({ ok: true });
     }
 
     if (d.action === 'list') {
       const first = allUsers_()[0][0];
-      const sh = msgs_();
-      const rows = sh.getLastRow() < 2 ? [] : sh.getRange(2, 1, sh.getLastRow() - 1, 10).getValues()
-        .filter(r => (r[9] || first) === me[0])               // الرسائل القديمة بلا مالكة تعود لأول حساب
-        .map(r => ({ id: r[0], date: r[1], name: r[2], phone: r[3], email: r[4], message: r[5], status: r[6], note: r[7], source: r[8] || 'النموذج' }))
-        .reverse();
-      return out_({ ok: true, rows });
+      const sh = msgs_(), wantArchived = !!d.archived;
+      let archivedCount = 0;
+      const rows = [];
+      if (sh.getLastRow() >= 2) {
+        sh.getRange(2, 1, sh.getLastRow() - 1, COLS).getValues().forEach(r => {
+          if ((r[9] || first) !== me[0] || r[6] === DEL) return;       // الرسائل القديمة بلا مالكة تعود لأول حساب
+          const isArch = r[10] === 'نعم';
+          if (isArch) archivedCount++;
+          if (isArch === wantArchived) rows.push(rowOut_(r));            // فك التشفير للمطلوب عرضه فقط
+        });
+      }
+      rows.reverse();
+      return out_({ ok: true, rows, archivedCount });
     }
 
     if (d.action === 'update') {
-      const first = allUsers_()[0][0];
-      const sh = msgs_();
-      if (sh.getLastRow() < 2) return out_({ ok: false, error: 'الرسالة غير موجودة.' });
-      const vals = sh.getRange(2, 1, sh.getLastRow() - 1, 10).getValues();
-      const i = vals.findIndex(r => r[0] === d.id && (r[9] || first) === me[0]);
-      if (i < 0) return out_({ ok: false, error: 'الرسالة غير موجودة.' });
-      if (d.status !== undefined) sh.getRange(i + 2, 7).setValue(d.status);
-      if (d.note !== undefined) sh.getRange(i + 2, 8).setValue(d.note);
+      const sh = msgs_(), f = findRow_(sh, d.id, me);
+      if (!f) return out_({ ok: false, error: 'الرسالة غير موجودة.' });
+      if (d.status !== undefined && STATUSES_.indexOf(d.status) < 0) return out_({ ok: false, error: 'حالة غير صحيحة.' });
+      if (d.status !== undefined) sh.getRange(f.row, 7).setValue(d.status);
+      if (d.note !== undefined) sh.getRange(f.row, 8).setValue(enc_(String(d.note).slice(0, 2000)));
+      if (d.archived !== undefined) sh.getRange(f.row, 11).setValue(d.archived ? 'نعم' : '');
+      return out_({ ok: true });
+    }
+
+    if (d.action === 'delete') {
+      const sh = msgs_(), f = findRow_(sh, d.id, me);
+      if (!f) return out_({ ok: false, error: 'الرسالة غير موجودة.' });
+      // مسح كامل للمحتوى؛ يبقى المعرّف فقط حتى لا يعيد استيراد البريد/الواتساب الرسالة نفسها
+      sh.getRange(f.row, 2, 1, COLS - 1).setValues([[new Date(), '', '', '', '', DEL, '', f.vals[8], f.vals[9], '']]);
       return out_({ ok: true });
     }
     return out_({ ok: false, error: 'طلب غير معروف.' });
@@ -158,15 +227,15 @@ function handleWhatsApp_(d, key) {
       const name = (c && c.profile && c.profile.name) || m.from;
       let text = m.type === 'text' ? m.text.body : m.type === 'button' ? m.button.text : '[رسالة من نوع: ' + m.type + ']';
       const ts = m.timestamp ? new Date(Number(m.timestamp) * 1000) : new Date();
-      sh.appendRow([m.id, ts, name, m.from, '', text, 'جديدة', '', 'واتساب', owner[0]]);
+      sh.appendRow([m.id, ts, enc_(name), enc_(m.from), '', enc_(text), 'جديدة', '', 'واتساب', owner[0], '']);
       notify_(owner[3], name, m.from, '', text, 'واتساب');
     });
 
     (v.message_echoes || []).forEach(m => {
       const to = norm_(m.to);
       if (!to || sh.getLastRow() < 2) return;
-      sh.getRange(2, 1, sh.getLastRow() - 1, 10).getValues().forEach((r, i) => {
-        if (norm_(r[3]) === to && r[8] === 'واتساب' && r[9] === owner[0] && r[6] !== 'تم الرد') sh.getRange(i + 2, 7).setValue('تم الرد');
+      sh.getRange(2, 1, sh.getLastRow() - 1, COLS).getValues().forEach((r, i) => {
+        if (r[8] === 'واتساب' && r[9] === owner[0] && r[6] !== 'تم الرد' && r[6] !== DEL && norm_(dec_(r[3])) === to) sh.getRange(i + 2, 7).setValue('تم الرد');
       });
     });
   }));
@@ -176,12 +245,13 @@ function notify_(to, name, phone, email, message, source) {
   try {
     MailApp.sendEmail(to, 'رسالة جديدة (' + source + ') من ' + name,
       'الاسم: ' + name + '\nالجوال: ' + (phone || '-') + '\nالبريد: ' + (email || '-') + '\n\n' + message);
-  } catch (err) {}
+  } catch (err) { Logger.log('تعذّر إرسال إشعار البريد: ' + err); }
 }
 
 
 // ===== استيراد البريد تلقائيًا (Gmail) =====
-// يقرأ بريد الحساب الذي نشر السكربت فقط، ويُنسب الرسائل لحساب مسجَّل بالبريد نفسه.
+// يقرأ بريد الحساب الذي نشر السكربت، ويضع الرسائل في صندوق الموقع.
+// تُنسب الرسائل للحساب المسجَّل بنفس البريد، وإن لم يوجد فلأول حساب مسجَّل في الموقع.
 // شغّلي الدالة setupEmailTrigger مرة واحدة فقط لتفعيل الاستيراد كل 5 دقائق.
 function setupEmailTrigger() {
   ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === 'importEmails').forEach(t => ScriptApp.deleteTrigger(t));
@@ -190,25 +260,47 @@ function setupEmailTrigger() {
 }
 
 function importEmails() {
-  const meEmail = Session.getEffectiveUser().getEmail().toLowerCase();
-  const owner = allUsers_().find(r => String(r[3]).toLowerCase() === meEmail);
-  if (!owner) return;                                   // سجّلي في الموقع بالبريد نفسه أولًا
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try { importEmails_(); } finally { lock.releaseLock(); }
+}
+
+function mailText_(t, last) {
+  return (t.getFirstMessageSubject() + '\n' + last.getPlainBody()).slice(0, 1000);
+}
+
+function importEmails_() {
+  const users = allUsers_();
+  if (!users.length) { Logger.log('لا يوجد أي حساب مسجّل في الموقع بعد.'); return; }
+  const meEmail = (Session.getEffectiveUser().getEmail() || Session.getActiveUser().getEmail() || '').toLowerCase();
+  if (!meEmail) { Logger.log('تعذّر معرفة بريد الحساب الذي نشر السكربت.'); return; }
+  const mine = [meEmail].concat(GmailApp.getAliases().map(a => a.toLowerCase()));
+  const owner = users.find(r => String(r[3]).toLowerCase() === meEmail) || users[0];
+
   const sh = msgs_();
+  purge_(sh);
   const n = sh.getLastRow() - 1;
-  const vals = n > 0 ? sh.getRange(2, 1, n, 10).getValues() : [];
+  const vals = n > 0 ? sh.getRange(2, 1, n, COLS).getValues() : [];
   const index = {};
   vals.forEach((r, i) => { index[r[0]] = i; });
 
-  GmailApp.search('newer_than:3d -category:promotions -category:social -category:updates -category:forums', 0, 50).forEach(t => {
+  const threads = GmailApp.search(MAIL_QUERY, 0, 50);
+  let added = 0;
+  threads.forEach(t => {
     const msgs = t.getMessages(), last = msgs[msgs.length - 1];
-    const fromMe = last.getFrom().toLowerCase().indexOf(meEmail) >= 0;
+    const lastFrom = last.getFrom().toLowerCase();
+    const fromMe = mine.some(a => lastFrom.indexOf(a) >= 0);
     const id = 'mail_' + t.getId();
 
     if (id in index) {
       const i = index[id], row = vals[i];
+      if (row[6] === DEL) return;                                    // محذوفة: لا تعود
       if (fromMe && row[6] !== 'تم الرد') sh.getRange(i + 2, 7).setValue('تم الرد');
-      else if (!fromMe && row[6] === 'تم الرد' && last.getDate() > new Date(row[1])) {   // وصل رد جديد بعد ردّك
-        sh.getRange(i + 2, 7).setValue('جديدة'); sh.getRange(i + 2, 2).setValue(last.getDate());
+      else if (!fromMe && (row[6] === 'تم الرد' || row[10] === 'نعم') && last.getDate() > new Date(row[1])) {   // وصل رد جديد بعد ردّك أو بعد الأرشفة
+        sh.getRange(i + 2, 7).setValue('جديدة');
+        sh.getRange(i + 2, 2).setValue(last.getDate());
+        sh.getRange(i + 2, 6).setValue(enc_(mailText_(t, last)));
+        sh.getRange(i + 2, 11).setValue('');
       }
       return;
     }
@@ -216,9 +308,40 @@ function importEmails() {
     const from = last.getFrom();
     const name = from.replace(/<.*>/, '').replace(/"/g, '').trim() || from;
     const mail = (from.match(/<(.+?)>/) || [])[1] || from;
-    const text = (t.getFirstMessageSubject() + '\n' + last.getPlainBody()).slice(0, 1000);
-    sh.appendRow([id, last.getDate(), name, '', mail, text, 'جديدة', '', 'البريد', owner[0]]);
+    sh.appendRow([id, last.getDate(), enc_(name), '', enc_(mail), enc_(mailText_(t, last)), 'جديدة', '', 'البريد', owner[0], '']);
+    added++;
   });
+  Logger.log('البريد: ' + meEmail + ' | المالكة: ' + owner[3] + ' | سلاسل مطابقة: ' + threads.length + ' | أُضيف: ' + added);
+}
+
+// تنظيف: حذف صفوف الرسائل المحذوفة نهائيًا بعد 7 أيام (لا تحمل أي محتوى أصلًا)
+function purge_(sh) {
+  const n = sh.getLastRow() - 1;
+  if (n < 1) return;
+  const vals = sh.getRange(2, 1, n, COLS).getValues(), cutoff = Date.now() - 7 * 86400000;
+  for (let i = n - 1; i >= 0; i--) {
+    if (vals[i][6] === DEL && new Date(vals[i][1]).getTime() < cutoff) sh.deleteRow(i + 2);
+  }
+}
+
+// ===== تشفير الرسائل القديمة (شغّليها مرة واحدة فقط بعد تحديث الكود) =====
+function migrateEncrypt() {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const sh = msgs_(), n = sh.getLastRow() - 1;
+    if (n < 1) { Logger.log('لا توجد رسائل لتشفيرها.'); return; }
+    const rng = sh.getRange(2, 1, n, COLS), vals = rng.getValues();
+    let done = 0;
+    vals.forEach(r => {
+      [2, 3, 4, 5, 7].forEach(c => {
+        const v = String(r[c] == null ? '' : r[c]);
+        if (v && v.indexOf('enc1:') !== 0) { r[c] = enc_(v); done++; }
+      });
+    });
+    rng.setValues(vals);
+    Logger.log('تم تشفير ' + done + ' خانة.');
+  } finally { lock.releaseLock(); }
 }
 
 
@@ -232,17 +355,17 @@ function handleWhapi_(token, d) {
     if (chat.indexOf('@s.whatsapp.net') < 0) return;                 // المحادثات الفردية فقط
     const phone = chat.split('@')[0];
     const n = sh.getLastRow() - 1;
-    const vals = n > 0 ? sh.getRange(2, 1, n, 10).getValues() : [];
+    const vals = n > 0 ? sh.getRange(2, 1, n, COLS).getValues() : [];
 
     if (m.from_me) {                                                 // ردّك من الجوال: تُعلَّم المحادثة «تم الرد»
       vals.forEach((r, i) => {
-        if (r[9] === me[0] && r[8] === 'واتساب' && norm_(r[3]) === phone && r[6] !== 'تم الرد') sh.getRange(i + 2, 7).setValue('تم الرد');
+        if (r[9] === me[0] && r[8] === 'واتساب' && r[6] !== 'تم الرد' && r[6] !== DEL && norm_(dec_(r[3])) === phone) sh.getRange(i + 2, 7).setValue('تم الرد');
       });
       return;
     }
     if (vals.some(r => r[0] === m.id)) return;                       // منع التكرار
     const text = m.type === 'text' ? ((m.text && m.text.body) || '') : '[رسالة من نوع: ' + m.type + ']';
     const when = m.timestamp ? new Date(Number(m.timestamp) * 1000) : new Date();
-    sh.appendRow([m.id, when, m.from_name || phone, phone, '', text, 'جديدة', '', 'واتساب', me[0]]);
+    sh.appendRow([m.id, when, enc_(m.from_name || phone), enc_(phone), '', enc_(text), 'جديدة', '', 'واتساب', me[0], '']);
   });
 }
