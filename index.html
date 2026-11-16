@@ -109,7 +109,7 @@ button.ghost{background:transparent;color:var(--acc);border:1px solid var(--acc)
 </div>
 <script>
 // ===== الإعدادات =====
-const API = 'https://script.google.com/macros/s/AKfycbys1VwKfpBFGH26DedfmAwFw6w6JgKIcU3F_WV6d_QBZ2EnHlDMxv69fUKmS-cCQN8itA/exec';
+const API = 'ضعي_هنا_رابط_تطبيق_الويب_من_Apps_Script';
 // =====================
 
 const $ = id => document.getElementById(id);
@@ -203,7 +203,7 @@ function render(){
     const date=new Date(x.date).toLocaleString('ar-SA',{dateStyle:'medium',timeStyle:'short'});
     d.innerHTML=`<div class="top"><b></b><span class="date">${date}</span></div>
       <div class="meta"></div><div class="body"></div>
-      <div class="tag">${x.source==='واتساب'?'واتساب':'النموذج'} · الحالة: ${x.status}</div><div class="note"></div><div class="acts"></div>`;
+      <div class="tag">${x.source||'النموذج'} · الحالة: ${x.status}</div><div class="note"></div><div class="acts"></div>`;
     d.querySelector('b').textContent=x.name;
     const meta=d.querySelector('.meta');
     if(x.phone){const a=document.createElement('a');a.href='tel:'+x.phone;a.textContent=disp(x.phone);meta.appendChild(a);meta.append('  ');}

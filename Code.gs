@@ -161,3 +161,45 @@ function notify_(to, name, phone, email, message, source) {
       'الاسم: ' + name + '\nالجوال: ' + (phone || '-') + '\nالبريد: ' + (email || '-') + '\n\n' + message);
   } catch (err) {}
 }
+
+
+// ===== استيراد البريد تلقائيًا (Gmail) =====
+// يقرأ بريد الحساب الذي نشر السكربت فقط، ويُنسب الرسائل لحساب مسجَّل بالبريد نفسه.
+// شغّلي الدالة setupEmailTrigger مرة واحدة فقط لتفعيل الاستيراد كل 5 دقائق.
+function setupEmailTrigger() {
+  ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === 'importEmails').forEach(t => ScriptApp.deleteTrigger(t));
+  ScriptApp.newTrigger('importEmails').timeBased().everyMinutes(5).create();
+  importEmails();
+}
+
+function importEmails() {
+  const meEmail = Session.getEffectiveUser().getEmail().toLowerCase();
+  const owner = allUsers_().find(r => String(r[3]).toLowerCase() === meEmail);
+  if (!owner) return;                                   // سجّلي في الموقع بالبريد نفسه أولًا
+  const sh = msgs_();
+  const n = sh.getLastRow() - 1;
+  const vals = n > 0 ? sh.getRange(2, 1, n, 10).getValues() : [];
+  const index = {};
+  vals.forEach((r, i) => { index[r[0]] = i; });
+
+  GmailApp.search('newer_than:3d -category:promotions -category:social -category:updates -category:forums', 0, 50).forEach(t => {
+    const msgs = t.getMessages(), last = msgs[msgs.length - 1];
+    const fromMe = last.getFrom().toLowerCase().indexOf(meEmail) >= 0;
+    const id = 'mail_' + t.getId();
+
+    if (id in index) {
+      const i = index[id], row = vals[i];
+      if (fromMe && row[6] !== 'تم الرد') sh.getRange(i + 2, 7).setValue('تم الرد');
+      else if (!fromMe && row[6] === 'تم الرد' && last.getDate() > new Date(row[1])) {   // وصل رد جديد بعد ردّك
+        sh.getRange(i + 2, 7).setValue('جديدة'); sh.getRange(i + 2, 2).setValue(last.getDate());
+      }
+      return;
+    }
+    if (fromMe) return;
+    const from = last.getFrom();
+    const name = from.replace(/<.*>/, '').replace(/"/g, '').trim() || from;
+    const mail = (from.match(/<(.+?)>/) || [])[1] || from;
+    const text = (t.getFirstMessageSubject() + '\n' + last.getPlainBody()).slice(0, 1000);
+    sh.appendRow([id, last.getDate(), name, '', mail, text, 'جديدة', '', 'البريد', owner[0]]);
+  });
+}
