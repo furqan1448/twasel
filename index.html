@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>صندوق الرسائل</title>
+<title>وَصْل</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#faf7f5;--card:#fff;--ink:#2a1a1d;--mut:#7a6a6d;--line:#eadfe0;--acc:#7a1f2b;--acc2:#5e1822;--ok:#1f6b45;--warn:#9a5b00;--bad:#b3261e;}
@@ -75,7 +75,7 @@ button.ghost{background:transparent;color:var(--acc);border:1px solid var(--acc)
 
 <!-- الدخول والتسجيل -->
 <section id="auth">
-  <h1>صندوق الرسائل</h1>
+  <h1>وَصْل</h1>
   <p class="sub">سجّلي رقم جوالك وبريدك لتحصلي على صفحة تواصل خاصة بك وصندوق رسائل لا يراه غيرك.</p>
   <div class="tabs"><button id="tLogin">تسجيل الدخول</button><button id="tReg" class="ghost">حساب جديد</button></div>
   <div id="fLogin">
@@ -93,7 +93,7 @@ button.ghost{background:transparent;color:var(--acc);border:1px solid var(--acc)
   <div class="msg" id="aRes" role="status"></div>
 </section>
 
-<!-- صندوق الرسائل -->
+<!-- وَصْل -->
 <section id="inbox">
   <h1 id="hi"></h1>
   <div class="share"><small>رابط صفحتك الخاصة (شاركيه ليراسلك الناس عبره)</small><code id="myLink"></code>
@@ -196,7 +196,7 @@ $('doReg').onclick=async()=>{
   catch(e){$('aRes').textContent='تعذّر الاتصال.';}
 };
 
-/* ---------- صندوق الرسائل ---------- */
+/* ---------- وَصْل ---------- */
 function openInbox(){
   show('inbox');
   $('hi').textContent = 'أهلًا ' + ME.name;
