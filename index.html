@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>صندوق الرسائل</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#faf7f5;--card:#fff;--ink:#2a1a1d;--mut:#7a6a6d;--line:#eadfe0;--acc:#7a1f2b;--acc2:#5e1822;--ok:#1f6b45;--warn:#9a5b00;}
+@media (prefers-color-scheme:dark){:root{--bg:#1a1214;--card:#251a1d;--ink:#f3e9ea;--mut:#b5a3a6;--line:#3a2a2e;--acc:#d4707e;--acc2:#e08d99;--ok:#58c28a;--warn:#e0a24a;}}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Tajawal',system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.8}
+.wrap{max-width:640px;margin:0 auto;padding:28px 18px 60px}
+section{display:none}
+h1{font-size:30px;font-weight:800;margin:10px 0 4px;color:var(--acc)}
+.sub{color:var(--mut);margin:0 0 22px}
+.contacts{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:26px}
+.contacts a{flex:1 1 200px;display:block;padding:14px 16px;background:var(--card);border:1px solid var(--line);border-radius:10px;color:var(--ink);text-decoration:none}
+.contacts small{display:block;color:var(--mut);font-size:13px}
+.contacts b{font-size:17px;direction:ltr;unicode-bidi:plaintext}
+label{display:block;font-weight:500;margin:14px 0 4px}
+input,textarea{width:100%;padding:12px;font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:8px}
+input:focus,textarea:focus,button:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+textarea{min-height:130px;resize:vertical}
+button{font:inherit;font-weight:700;cursor:pointer;border:0;border-radius:8px;padding:12px 20px;background:var(--acc);color:#fff}
+button:hover{background:var(--acc2)}
+button.ghost{background:transparent;color:var(--acc);border:1px solid var(--acc)}
+.msg{margin-top:12px;font-weight:500}
+.tabs{display:flex;gap:8px;margin:18px 0 4px}
+.tabs button{flex:1}
+.share{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:12px 0}
+.share small{color:var(--mut);display:block}
+.share code{display:block;direction:ltr;text-align:left;font-size:13px;word-break:break-all;margin:4px 0 8px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+.bar button{padding:8px 14px;font-size:14px}
+.bar button.on{background:var(--acc);color:#fff}
+.item{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:12px;border-right:5px solid var(--warn)}
+.item.replied{border-right-color:var(--ok)}
+.item.left{border-right-color:var(--mut)}
+.item.new{border-right-color:var(--acc)}
+.top{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.top b{font-size:17px}
+.date{color:var(--mut);font-size:13px}
+.meta{color:var(--mut);font-size:14px;direction:ltr;text-align:right;unicode-bidi:plaintext}
+.meta a{color:var(--acc)}
+.body{margin:8px 0;white-space:pre-wrap}
+.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.acts button{padding:7px 12px;font-size:14px}
+.tag{font-size:13px;font-weight:700}
+.note{margin-top:8px;font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- صفحة الزائر: ?u=معرّف -->
+<section id="pub">
+  <h1 id="pTitle">تواصل معي</h1>
+  <p class="sub">يمكنكم الاتصال أو المراسلة مباشرةً، أو إرسال رسالة عبر النموذج أدناه.</p>
+  <div class="contacts">
+    <a id="phoneLink"><small>رقم الجوال</small><b id="phoneTxt"></b></a>
+    <a id="mailLink"><small>البريد الإلكتروني</small><b id="mailTxt"></b></a>
+  </div>
+  <label for="n">الاسم</label><input id="n" autocomplete="name">
+  <label for="p">رقم الجوال (اختياري)</label><input id="p" type="tel" inputmode="tel">
+  <label for="e">البريد الإلكتروني (اختياري)</label><input id="e" type="email">
+  <label for="m">الرسالة</label><textarea id="m"></textarea>
+  <p><button id="send">إرسال الرسالة</button></p>
+  <div class="msg" id="res" role="status"></div>
+</section>
+
+<!-- الدخول والتسجيل -->
+<section id="auth">
+  <h1>صندوق الرسائل</h1>
+  <p class="sub">سجّلي رقم جوالك وبريدك لتحصلي على صفحة تواصل خاصة بك وصندوق رسائل لا يراه غيرك.</p>
+  <div class="tabs"><button id="tLogin">تسجيل الدخول</button><button id="tReg" class="ghost">حساب جديد</button></div>
+  <div id="fLogin">
+    <label for="li">رقم الجوال أو البريد الإلكتروني</label><input id="li" autocomplete="username">
+    <label for="lp">كلمة المرور</label><input id="lp" type="password" autocomplete="current-password">
+    <p><button id="doLogin">دخول</button></p>
+  </div>
+  <div id="fReg" style="display:none">
+    <label for="rn">الاسم</label><input id="rn" autocomplete="name">
+    <label for="rp">رقم الجوال</label><input id="rp" type="tel" inputmode="tel" placeholder="05xxxxxxxx">
+    <label for="re">البريد الإلكتروني</label><input id="re" type="email" autocomplete="email">
+    <label for="rw">كلمة المرور (6 أحرف فأكثر)</label><input id="rw" type="password" autocomplete="new-password">
+    <p><button id="doReg">إنشاء الحساب</button></p>
+  </div>
+  <div class="msg" id="aRes" role="status"></div>
+</section>
+
+<!-- صندوق الرسائل -->
+<section id="inbox">
+  <h1 id="hi"></h1>
+  <div class="share"><small>رابط صفحتك الخاصة (شاركيه ليراسلك الناس عبره)</small><code id="myLink"></code>
+    <button class="ghost" id="copy">نسخ الرابط</button></div>
+  <div class="bar" id="filters"></div>
+  <div id="list"></div>
+  <p><button class="ghost" id="reload">تحديث</button> <button class="ghost" id="out">تسجيل الخروج</button></p>
+</section>
+
+</div>
+<script>
+// ===== الإعدادات =====
+const API = 'ضعي_هنا_رابط_تطبيق_الويب_من_Apps_Script';
+// =====================
+
+const $ = id => document.getElementById(id);
+const STATUSES = ['جديدة', 'تم الرد', 'لم يُرد عليها'];
+const U = new URLSearchParams(location.search).get('u');
+let TOKEN = '', ME = null, ALL = [], FILTER = 'الكل';
+const show = id => ['pub','auth','inbox'].forEach(s => $(s).style.display = s===id ? 'block' : 'none');
+const disp = p => { p = String(p||''); return p.startsWith('966') ? '0' + p.slice(3) : p; };
+
+async function post(o){
+  const r = await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(o)});
+  return r.json();
+}
+
+/* ---------- صفحة الزائر ---------- */
+async function initPublic(){
+  show('pub');
+  try{
+    const r = await (await fetch(API+'?action=profile&u='+encodeURIComponent(U))).json();
+    if(!r.ok){ $('pTitle').textContent = r.error||'الصفحة غير موجودة'; return; }
+    $('pTitle').textContent = 'تواصل مع ' + r.user.name;
+    $('phoneTxt').textContent = disp(r.user.phone); $('phoneLink').href = 'tel:+' + r.user.phone;
+    $('mailTxt').textContent = r.user.email; $('mailLink').href = 'mailto:' + r.user.email;
+  }catch(e){ $('pTitle').textContent = 'تعذّر تحميل الصفحة'; }
+}
+$('send').onclick = async () => {
+  const name=$('n').value.trim(), message=$('m').value.trim();
+  if(!name||!message){$('res').textContent='يرجى كتابة الاسم والرسالة.';return;}
+  $('send').disabled=true; $('res').textContent='جارٍ الإرسال…';
+  try{
+    const r = await post({action:'add',owner:U,name,phone:$('p').value.trim(),email:$('e').value.trim(),message});
+    if(r.ok){$('res').textContent='تم إرسال رسالتكم بنجاح، شكرًا لتواصلكم.';['n','p','e','m'].forEach(i=>$(i).value='');}
+    else $('res').textContent=r.error||'تعذّر الإرسال.';
+  }catch(e){$('res').textContent='تعذّر الاتصال، يرجى المحاولة لاحقًا.';}
+  $('send').disabled=false;
+};
+
+/* ---------- الدخول والتسجيل ---------- */
+$('tLogin').onclick=()=>{$('fLogin').style.display='block';$('fReg').style.display='none';$('tLogin').className='';$('tReg').className='ghost';$('aRes').textContent='';};
+$('tReg').onclick=()=>{$('fLogin').style.display='none';$('fReg').style.display='block';$('tReg').className='';$('tLogin').className='ghost';$('aRes').textContent='';};
+
+async function authDone(r){
+  if(!r.ok){$('aRes').textContent=r.error||'تعذّر تنفيذ الطلب.';return;}
+  TOKEN=r.token; ME=r.user;
+  try{localStorage.setItem('tok',TOKEN);localStorage.setItem('me',JSON.stringify(ME));}catch(e){}
+  openInbox();
+}
+$('doLogin').onclick=async()=>{
+  $('aRes').textContent='جارٍ الدخول…';
+  try{ authDone(await post({action:'login',identifier:$('li').value,password:$('lp').value})); }
+  catch(e){$('aRes').textContent='تعذّر الاتصال.';}
+};
+$('doReg').onclick=async()=>{
+  $('aRes').textContent='جارٍ إنشاء الحساب…';
+  try{ authDone(await post({action:'register',name:$('rn').value,phone:$('rp').value,email:$('re').value,password:$('rw').value})); }
+  catch(e){$('aRes').textContent='تعذّر الاتصال.';}
+};
+
+/* ---------- صندوق الرسائل ---------- */
+function openInbox(){
+  show('inbox');
+  $('hi').textContent = 'أهلًا ' + ME.name;
+  $('myLink').textContent = location.origin + location.pathname + '?u=' + ME.id;
+  load();
+}
+$('copy').onclick=()=>{navigator.clipboard.writeText($('myLink').textContent).then(()=>{$('copy').textContent='تم النسخ';setTimeout(()=>$('copy').textContent='نسخ الرابط',1500);});};
+
+async function load(){
+  $('list').textContent='جارٍ التحميل…';
+  try{
+    const r = await post({action:'list',token:TOKEN});
+    if(r.auth===false){logout();return;}
+    if(!r.ok){$('list').textContent=r.error||'تعذّر التحميل.';return;}
+    ALL=r.rows; render();
+  }catch(e){$('list').textContent='تعذّر تحميل الرسائل.';}
+}
+
+function render(){
+  const f=$('filters'); f.innerHTML='';
+  ['الكل',...STATUSES].forEach(s=>{
+    const c = s==='الكل'?ALL.length:ALL.filter(x=>x.status===s).length;
+    const b=document.createElement('button'); b.className='ghost'+(s===FILTER?' on':'');
+    b.textContent=s+' ('+c+')'; b.onclick=()=>{FILTER=s;render();}; f.appendChild(b);
+  });
+  const L=$('list'); L.innerHTML='';
+  const rows=ALL.filter(x=>FILTER==='الكل'||x.status===FILTER);
+  if(!rows.length){L.textContent='لا توجد رسائل.';return;}
+  rows.forEach(x=>{
+    const cls = x.status==='تم الرد'?'replied':x.status==='لم يُرد عليها'?'left':x.status==='جديدة'?'new':'';
+    const d=document.createElement('div'); d.className='item '+cls;
+    const date=new Date(x.date).toLocaleString('ar-SA',{dateStyle:'medium',timeStyle:'short'});
+    d.innerHTML=`<div class="top"><b></b><span class="date">${date}</span></div>
+      <div class="meta"></div><div class="body"></div>
+      <div class="tag">${x.source==='واتساب'?'واتساب':'النموذج'} · الحالة: ${x.status}</div><div class="note"></div><div class="acts"></div>`;
+    d.querySelector('b').textContent=x.name;
+    const meta=d.querySelector('.meta');
+    if(x.phone){const a=document.createElement('a');a.href='tel:'+x.phone;a.textContent=disp(x.phone);meta.appendChild(a);meta.append('  ');}
+    if(x.email){const a=document.createElement('a');a.href='mailto:'+x.email;a.textContent=x.email;meta.appendChild(a);}
+    d.querySelector('.body').textContent=x.message;
+    d.querySelector('.note').textContent=x.note?'ملاحظة: '+x.note:'';
+    const acts=d.querySelector('.acts');
+    if(x.source==='واتساب'){const w=document.createElement('a');w.href='https://wa.me/'+String(x.phone).replace(/\D/g,'');w.target='_blank';w.rel='noopener';w.textContent='فتح المحادثة في واتساب';w.style.cssText='color:var(--acc);font-weight:700;font-size:14px;align-self:center';acts.appendChild(w);}
+    STATUSES.filter(s=>s!==x.status&&s!=='جديدة').forEach(s=>{
+      const b=document.createElement('button'); b.textContent=s; b.onclick=()=>upd(x,{status:s}); acts.appendChild(b);
+    });
+    const nb=document.createElement('button'); nb.className='ghost'; nb.textContent='ملاحظة';
+    nb.onclick=()=>{const t=prompt('اكتبي الملاحظة:',x.note||''); if(t!==null) upd(x,{note:t});};
+    acts.appendChild(nb);
+    L.appendChild(d);
+  });
+}
+
+async function upd(x,patch){
+  Object.assign(x,patch); render();
+  const r=await post({action:'update',token:TOKEN,id:x.id,...patch});
+  if(!r.ok){alert(r.error||'تعذّر الحفظ');load();}
+}
+
+function logout(){TOKEN='';ME=null;try{localStorage.removeItem('tok');localStorage.removeItem('me');}catch(e){} show('auth');}
+$('reload').onclick=load; $('out').onclick=logout;
+
+/* ---------- البداية ---------- */
+if(U) initPublic();
+else{
+  try{TOKEN=localStorage.getItem('tok')||'';ME=JSON.parse(localStorage.getItem('me')||'null');}catch(e){}
+  if(TOKEN&&ME) openInbox(); else show('auth');
+}
+</script>
+</body>
+</html>
