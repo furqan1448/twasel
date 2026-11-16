@@ -5,6 +5,9 @@ const COLS = 11;                              // عدد أعمدة جدول ال
 const DEL = 'محذوفة';                         // الرسالة المحذوفة: يُمسح محتواها كليًا ويبقى معرّفها فقط لمنع عودتها
 const STATUSES_ = ['جديدة', 'تم الرد', 'لم يُرد عليها'];
 // أي إيميل يصل إلى صندوق الوارد من أي مُرسِل (نستبعد فقط تصنيفي الترويج والاجتماعي)
+// استيراد بريد Gmail الخاص بالحساب الذي نشر السكربت: معطّل، فلا يُقرأ ولا يصل إلى ذلك البريد شيء.
+// الإشعارات تذهب فقط إلى البريد الذي سجّلت به كل مستخدمة مع رقم جوالها.
+const EMAIL_IMPORT = false;
 const MAIL_QUERY = 'newer_than:3d in:inbox -category:promotions -category:social';
 
 // ===== التشفير =====
@@ -105,7 +108,7 @@ function doGet(e) {
   }
   if (p.action === 'profile') {
     const u = userById_(p.u);
-    return u ? out_({ ok: true, user: { name: u[1], phone: u[2], email: u[3], mail: mailAddr_(u[0]) } }) : out_({ ok: false, error: 'الصفحة غير موجودة' });
+    return u ? out_({ ok: true, user: { name: u[1], phone: u[2], email: u[3] } }) : out_({ ok: false, error: 'الصفحة غير موجودة' });
   }
   return out_({ ok: true });
 }
@@ -167,6 +170,7 @@ function doPost(e) {
       const recent = n > 0 ? sh.getRange(Math.max(2, n - 18), 1, Math.min(n, 20), COLS).getValues() : [];
       if (recent.some(r => r[9] === me[0] && r[6] !== DEL && dec_(r[2]) === title && dec_(r[5]) === text)) return out_({ ok: true });   // منع التكرار
       sh.appendRow([Utilities.getUuid(), new Date(), enc_(title), '', '', enc_(text), 'جديدة', '', 'واتساب', me[0], '']);
+      notify_(me[3], title, '', '', text, 'واتساب');
       return out_({ ok: true });
     }
 
@@ -242,10 +246,17 @@ function handleWhatsApp_(d, key) {
   }));
 }
 
+// الإشعار يُرسل دائمًا إلى البريد المسجّل لصاحبة الصندوق فقط، ولا تُرسل نسخة إلى أي بريد آخر.
+// الردود لا تعود إلى بريد حساب النشر: تذهب إلى بريد الزائر إن وُجد، وإلا يُرسل الإشعار بلا خاصية الرد.
 function notify_(to, name, phone, email, message, source) {
+  to = String(to || '').trim();
+  if (to.indexOf('@') < 1) return;
+  const opt = { name: 'صندوق الرسائل' };
+  const reply = String(email || '').trim();
+  if (/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(reply)) opt.replyTo = reply; else opt.noReply = true;
   try {
     MailApp.sendEmail(to, 'رسالة جديدة (' + source + ') من ' + name,
-      'الاسم: ' + name + '\nالجوال: ' + (phone || '-') + '\nالبريد: ' + (email || '-') + '\n\n' + message);
+      'الاسم: ' + name + '\nالجوال: ' + (phone || '-') + '\nالبريد: ' + (email || '-') + '\n\n' + message, opt);
   } catch (err) { Logger.log('تعذّر إرسال إشعار البريد: ' + err); }
 }
 
@@ -262,6 +273,7 @@ function setupEmailTrigger() {
 }
 
 function importEmails() {
+  if (!EMAIL_IMPORT) return;
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try { importEmails_(); } finally { lock.releaseLock(); }
@@ -396,6 +408,7 @@ function handleWhapi_(token, d) {
     const text = m.type === 'text' ? ((m.text && m.text.body) || '') : '[رسالة من نوع: ' + m.type + ']';
     const when = m.timestamp ? new Date(Number(m.timestamp) * 1000) : new Date();
     sh.appendRow([m.id, when, enc_(m.from_name || phone), enc_(phone), '', enc_(text), 'جديدة', '', 'واتساب', me[0], '']);
+    notify_(me[3], m.from_name || phone, phone, '', text, 'واتساب');
   });
 }
 
