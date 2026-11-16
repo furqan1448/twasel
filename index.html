@@ -94,7 +94,25 @@ button.ghost{background:transparent;color:var(--acc);border:1px solid var(--acc)
   <h1 id="hi"></h1>
   <div class="share"><small>رابط صفحتك الخاصة (شاركيه ليراسلك الناس عبره)</small><code id="myLink"></code>
     <button class="ghost" id="copy">نسخ الرابط</button></div>
-  <p><button id="wToggle">إضافة محادثة واتساب</button></p>
+  <p><button id="wToggle">إضافة محادثة واتساب</button> <button class="ghost" id="qToggle">ربط واتساب بمسح QR</button> <button class="ghost" id="aToggle">ربط عبر أندرويد</button></p>
+  <div class="share" id="qBox" style="display:none">
+    <small>١) سجّلي في موقع Whapi.Cloud وأنشئي قناة (Channel).</small>
+    <small>٢) من واتساب في جوالك: الإعدادات ← الأجهزة المرتبطة ← ربط جهاز، ثم امسحي رمز QR الظاهر في الموقع.</small>
+    <small>٣) في إعدادات القناة افتحي Webhooks، وضعي الرابط التالي، وفعّلي حدث الرسائل (messages) بطريقة POST:</small>
+    <code id="qUrl"></code>
+    <button class="ghost" id="qCopy">نسخ الرابط</button>
+    <small style="margin-top:8px">٤) أرسلي رسالة تجريبية إلى رقمك من جوال آخر، فتظهر هنا. وعند ردّك من جوالك تتحول حالة المحادثة إلى «تم الرد».</small>
+  </div>
+  <div class="share" id="aBox" style="display:none">
+    <small>١) ثبّتي تطبيق MacroDroid من متجر Google Play.</small>
+    <small>٢) أنشئي ماكرو جديدًا: المشغّل «إشعار مستلم» ← اختاري WhatsApp (وWhatsApp Business إن لزم) ← أي نص، وامنحيه صلاحية الوصول إلى الإشعارات.</small>
+    <small>٣) الإجراء «طلب HTTP»: الطريقة POST، ونوع المحتوى text/plain، والرابط التالي:</small>
+    <code id="aUrl"></code>
+    <small>٤) نص الطلب (Body) هو التالي، وإن لم تجدي المتغيرين فاختاريهما من قائمة النص السحري: عنوان الإشعار ونص الإشعار:</small>
+    <code id="aBody"></code>
+    <button class="ghost" id="aCopyUrl">نسخ الرابط</button> <button class="ghost" id="aCopyBody">نسخ النص</button>
+    <small style="margin-top:8px">٥) احفظي الماكرو وفعّليه، وأوقفي تحسين البطارية عن MacroDroid. ثم أرسلي رسالة تجريبية إلى رقمك من جوال آخر.</small>
+  </div>
   <div class="share" id="wForm" style="display:none">
     <label for="wn">اسم صاحبة المحادثة</label><input id="wn">
     <label for="wp">رقم جوالها (اختياري)</label><input id="wp" type="tel" inputmode="tel">
@@ -109,7 +127,7 @@ button.ghost{background:transparent;color:var(--acc);border:1px solid var(--acc)
 </div>
 <script>
 // ===== الإعدادات =====
-const API = 'https://script.google.com/macros/s/AKfycby_dVBbG-5AGWmiBKIOQnHki2KJbvQhSBIiRRF7DejhZu4oIRWyghMtPAW_9Hmosx_MqQ/exec';
+const API = 'ضعي_هنا_رابط_تطبيق_الويب_من_Apps_Script';
 // =====================
 
 const $ = id => document.getElementById(id);
@@ -235,6 +253,19 @@ $('wAdd').onclick=async()=>{
   if(!r.ok){alert(r.error||'تعذّر الحفظ');return;}
   ['wn','wp','wm'].forEach(i=>$(i).value='');$('wForm').style.display='none';load();
 };
+
+$('aToggle').onclick=()=>{
+  const b=$('aBox'); b.style.display=b.style.display==='none'?'block':'none';
+  $('aUrl').textContent=API; $('aBody').textContent='wa§§'+TOKEN+'§§{not_title}§§{not_text}';
+};
+const cp=(id,btn)=>navigator.clipboard.writeText($(id).textContent).then(()=>{const t=btn.textContent;btn.textContent='تم النسخ';setTimeout(()=>btn.textContent=t,1500);});
+$('aCopyUrl').onclick=e=>cp('aUrl',e.target); $('aCopyBody').onclick=e=>cp('aBody',e.target);
+
+$('qToggle').onclick=()=>{
+  const b=$('qBox'); b.style.display=b.style.display==='none'?'block':'none';
+  $('qUrl').textContent=API+'?wh='+TOKEN;
+};
+$('qCopy').onclick=e=>cp('qUrl',e.target);
 
 function logout(){TOKEN='';ME=null;try{localStorage.removeItem('tok');localStorage.removeItem('me');}catch(e){} show('auth');}
 $('reload').onclick=load; $('out').onclick=logout;

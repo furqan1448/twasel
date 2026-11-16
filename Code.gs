@@ -56,10 +56,16 @@ function doGet(e) {
 }
 
 function doPost(e) {
-  const d = JSON.parse(e.postData.contents);
+  const raw = e.postData.contents;
+  let d;
+  if (raw.indexOf('wa§§') === 0) {                         // إشعار واتساب من تطبيق الجوال
+    const p = raw.split('§§');
+    d = { action: 'waNotify', token: p[1], title: p[2], text: p.slice(3).join('§§') };
+  } else d = JSON.parse(raw);
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
+    if (e.parameter && e.parameter.wh) { handleWhapi_(e.parameter.wh, d); return out_({ ok: true }); }   // Whapi.Cloud
     if (d.object === 'whatsapp_business_account') { handleWhatsApp_(d); return out_({ ok: true }); }
 
     // ---- إنشاء حساب ----
@@ -95,6 +101,17 @@ function doPost(e) {
     // ---- ما يلزم له تسجيل دخول ----
     const me = userByToken_(d.token);
     if (!me) return out_({ ok: false, error: 'انتهت الجلسة، يرجى تسجيل الدخول.', auth: false });
+
+    if (d.action === 'waNotify') {
+      const title = String(d.title || '').trim(), text = String(d.text || '').trim();
+      if (!title || !text) return out_({ ok: true });
+      if (/^(whatsapp|واتساب)/i.test(title) || /\d+\s*(new messages|رسائل جديدة|رسالة جديدة)/i.test(text)) return out_({ ok: true });   // إشعارات التجميع
+      const sh = msgs_(), n = sh.getLastRow() - 1;
+      const recent = n > 0 ? sh.getRange(Math.max(2, n - 18), 1, Math.min(n, 20), 10).getValues() : [];
+      if (recent.some(r => r[9] === me[0] && r[2] === title && r[5] === text)) return out_({ ok: true });   // منع التكرار
+      sh.appendRow([Utilities.getUuid(), new Date(), title, '', '', text, 'جديدة', '', 'واتساب', me[0]]);
+      return out_({ ok: true });
+    }
 
     if (d.action === 'addManual') {
       if (!d.name) return out_({ ok: false, error: 'الاسم مطلوب.' });
@@ -201,5 +218,31 @@ function importEmails() {
     const mail = (from.match(/<(.+?)>/) || [])[1] || from;
     const text = (t.getFirstMessageSubject() + '\n' + last.getPlainBody()).slice(0, 1000);
     sh.appendRow([id, last.getDate(), name, '', mail, text, 'جديدة', '', 'البريد', owner[0]]);
+  });
+}
+
+
+// ===== استقبال الواتساب من Whapi.Cloud (ربط بمسح QR) =====
+function handleWhapi_(token, d) {
+  const me = userByToken_(token);
+  if (!me) return;
+  const sh = msgs_();
+  (d.messages || []).forEach(m => {
+    const chat = String(m.chat_id || '');
+    if (chat.indexOf('@s.whatsapp.net') < 0) return;                 // المحادثات الفردية فقط
+    const phone = chat.split('@')[0];
+    const n = sh.getLastRow() - 1;
+    const vals = n > 0 ? sh.getRange(2, 1, n, 10).getValues() : [];
+
+    if (m.from_me) {                                                 // ردّك من الجوال: تُعلَّم المحادثة «تم الرد»
+      vals.forEach((r, i) => {
+        if (r[9] === me[0] && r[8] === 'واتساب' && norm_(r[3]) === phone && r[6] !== 'تم الرد') sh.getRange(i + 2, 7).setValue('تم الرد');
+      });
+      return;
+    }
+    if (vals.some(r => r[0] === m.id)) return;                       // منع التكرار
+    const text = m.type === 'text' ? ((m.text && m.text.body) || '') : '[رسالة من نوع: ' + m.type + ']';
+    const when = m.timestamp ? new Date(Number(m.timestamp) * 1000) : new Date();
+    sh.appendRow([m.id, when, m.from_name || phone, phone, '', text, 'جديدة', '', 'واتساب', me[0]]);
   });
 }
