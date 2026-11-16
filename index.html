@@ -94,7 +94,13 @@ button.ghost{background:transparent;color:var(--acc);border:1px solid var(--acc)
   <h1 id="hi"></h1>
   <div class="share"><small>رابط صفحتك الخاصة (شاركيه ليراسلك الناس عبره)</small><code id="myLink"></code>
     <button class="ghost" id="copy">نسخ الرابط</button></div>
-  <p><button id="wToggle">إضافة محادثة واتساب</button> <button class="ghost" id="qToggle">ربط واتساب بمسح QR</button> <button class="ghost" id="aToggle">ربط عبر أندرويد</button></p>
+  <p><button id="wToggle">إضافة محادثة واتساب</button> <button id="cToggle">ربط Chakra (رسمي)</button> <button class="ghost" id="qToggle">ربط واتساب بمسح QR</button> <button class="ghost" id="aToggle">ربط عبر أندرويد</button></p>
+  <div class="share" id="cBox" style="display:none">
+    <small>في Chakra Chat: القائمة اليسرى «WhatsApp Setup» ثم تبويب «More» ثم الخانة «Pass-through webhook url»، والصقي فيها الرابط التالي ثم احفظي:</small>
+    <code id="cUrl"></code>
+    <button class="ghost" id="cCopy">نسخ الرابط</button>
+    <small style="margin-top:8px">ثم أرسلي رسالة تجريبية إلى رقمك من جوال آخر، فتظهر هنا بمصدر «واتساب». وعند ردّك من تطبيق واتساب للأعمال تتحول حالة المحادثة إلى «تم الرد».</small>
+  </div>
   <div class="share" id="qBox" style="display:none">
     <small>١) سجّلي في موقع Whapi.Cloud وأنشئي قناة (Channel).</small>
     <small>٢) من واتساب في جوالك: الإعدادات ← الأجهزة المرتبطة ← ربط جهاز، ثم امسحي رمز QR الظاهر في الموقع.</small>
@@ -127,7 +133,7 @@ button.ghost{background:transparent;color:var(--acc);border:1px solid var(--acc)
 </div>
 <script>
 // ===== الإعدادات =====
-const API = 'https://script.google.com/macros/s/AKfycbz2tNawNYt8SLPnaSJhObepwkKuaoW7sFoAMtyTMAvOUeJcvxkrgTVGFyprOuGs6d3_ag/exec';
+const API = 'ضعي_هنا_رابط_تطبيق_الويب_من_Apps_Script';
 // =====================
 
 const $ = id => document.getElementById(id);
@@ -266,6 +272,12 @@ $('qToggle').onclick=()=>{
   $('qUrl').textContent=API+'?wh='+TOKEN;
 };
 $('qCopy').onclick=e=>cp('qUrl',e.target);
+
+$('cToggle').onclick=()=>{
+  const b=$('cBox'); b.style.display=b.style.display==='none'?'block':'none';
+  $('cUrl').textContent=API+'?k='+TOKEN;
+};
+$('cCopy').onclick=e=>cp('cUrl',e.target);
 
 function logout(){TOKEN='';ME=null;try{localStorage.removeItem('tok');localStorage.removeItem('me');}catch(e){} show('auth');}
 $('reload').onclick=load; $('out').onclick=logout;

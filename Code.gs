@@ -66,7 +66,7 @@ function doPost(e) {
   lock.waitLock(20000);
   try {
     if (e.parameter && e.parameter.wh) { handleWhapi_(e.parameter.wh, d); return out_({ ok: true }); }   // Whapi.Cloud
-    if (d.object === 'whatsapp_business_account') { handleWhatsApp_(d); return out_({ ok: true }); }
+    if (d.object === 'whatsapp_business_account') { handleWhatsApp_(d, e.parameter && e.parameter.k); return out_({ ok: true }); }
 
     // ---- إنشاء حساب ----
     if (d.action === 'register') {
@@ -144,12 +144,12 @@ function doPost(e) {
   } finally { lock.releaseLock(); }
 }
 
-function handleWhatsApp_(d) {
+function handleWhatsApp_(d, key) {
+  const owner = key ? userByToken_(key) : null;          // الرابط الخاص بكل حساب يحمل مفتاحه (?k=...)
+  if (!owner) return;
   const sh = msgs_();
   (d.entry || []).forEach(entry => (entry.changes || []).forEach(ch => {
     const v = ch.value || {};
-    const owner = userByPhone_(v.metadata && v.metadata.display_phone_number);   // الرسالة تُنسب لصاحبة الرقم المسجَّل
-    if (!owner) return;
 
     (v.messages || []).forEach(m => {
       const ids = sh.getLastRow() > 1 ? sh.getRange(2, 1, sh.getLastRow() - 1, 1).getValues().flat() : [];
