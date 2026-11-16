@@ -8,6 +8,8 @@ const STATUSES_ = ['جديدة', 'تم الرد', 'لم يُرد عليها'];
 // استيراد بريد Gmail الخاص بالحساب الذي نشر السكربت: معطّل، فلا يُقرأ ولا يصل إلى ذلك البريد شيء.
 // الإشعارات تذهب فقط إلى البريد الذي سجّلت به كل مستخدمة مع رقم جوالها.
 const EMAIL_IMPORT = false;
+// إشعارات البريد لرسائل الواتساب: معطّلة حفاظًا على خصوصية المرسلين (لا يُرسل محتوى رسائل الواتساب إلى أي بريد).
+const NOTIFY_WHATSAPP_BY_EMAIL = false;
 const MAIL_QUERY = 'newer_than:3d in:inbox -category:promotions -category:social';
 
 // ===== التشفير =====
@@ -297,6 +299,7 @@ function handleWhatsApp_(d, key) {
 // الإشعار يُرسل دائمًا إلى البريد المسجّل لصاحبة الصندوق فقط، ولا تُرسل نسخة إلى أي بريد آخر.
 // الردود لا تعود إلى بريد حساب النشر: تذهب إلى بريد الزائر إن وُجد، وإلا يُرسل الإشعار بلا خاصية الرد.
 function notify_(to, name, phone, email, message, source) {
+  if (source === 'واتساب' && !NOTIFY_WHATSAPP_BY_EMAIL) return;
   to = String(to || '').trim();
   if (to.indexOf('@') < 1) return;
   const opt = { name: 'صندوق الرسائل' };

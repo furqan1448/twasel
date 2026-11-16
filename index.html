@@ -306,8 +306,18 @@ const cp=(id,btn)=>navigator.clipboard.writeText($(id).textContent).then(()=>{co
 $('mToggle').onclick=()=>{
   const b=$('mBox'); b.style.display=b.style.display==='none'?'block':'none';
   $('mCode').textContent=
-"const API = '"+API+"';\n"+
+"const SITE = '"+location.origin+location.pathname+"';\n"+
+"const API_FALLBACK = '"+API+"';\n"+
 "const TOKEN = '"+TOKEN+"';\n\n"+
+"// يقرأ رابط النشر الحالي من الموقع، فلا تحتاجين تغيير الكود إذا تغيّر الرابط\n"+
+"function api_() {\n"+
+"  try {\n"+
+"    const html = UrlFetchApp.fetch(SITE + '?t=' + Date.now(), { muteHttpExceptions: true }).getContentText();\n"+
+"    const m = html.match(/const API = '(https[^']+)'/);\n"+
+"    if (m) return m[1];\n"+
+"  } catch (e) {}\n"+
+"  return API_FALLBACK;\n"+
+"}\n\n"+
 "function sync() {\n"+
 "  const me = (Session.getEffectiveUser().getEmail() || '').toLowerCase();\n"+
 "  const items = GmailApp.search('newer_than:3d in:inbox -category:promotions -category:social', 0, 30).map(t => {\n"+
@@ -316,7 +326,7 @@ $('mToggle').onclick=()=>{
 "             body: last.getPlainBody().slice(0, 1000), fromMe: from.toLowerCase().indexOf(me) >= 0 };\n"+
 "  });\n"+
 "  if (!items.length) return;\n"+
-"  UrlFetchApp.fetch(API, { method: 'post', contentType: 'text/plain;charset=utf-8',\n"+
+"  UrlFetchApp.fetch(api_(), { method: 'post', contentType: 'text/plain;charset=utf-8',\n"+
 "    payload: JSON.stringify({ action: 'mailIn', token: TOKEN, items: items }), muteHttpExceptions: true });\n"+
 "}\n\n"+
 "function setup() {\n"+
