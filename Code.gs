@@ -4,7 +4,8 @@ const MSG = 'الرسائل', USR = 'المستخدمون';
 const COLS = 11;                              // عدد أعمدة جدول الرسائل
 const DEL = 'محذوفة';                         // الرسالة المحذوفة: يُمسح محتواها كليًا ويبقى معرّفها فقط لمنع عودتها
 const STATUSES_ = ['جديدة', 'تم الرد', 'لم يُرد عليها'];
-const MAIL_QUERY = 'newer_than:3d -category:promotions -category:social -category:updates -category:forums';
+// أي إيميل يصل إلى صندوق الوارد من أي مُرسِل (نستبعد فقط تصنيفي الترويج والاجتماعي)
+const MAIL_QUERY = 'newer_than:3d in:inbox -category:promotions -category:social';
 
 // ===== التشفير =====
 // كل بيانات الرسالة (الاسم، الجوال، البريد، النص، الملاحظة) تُحفظ في الشيت مشفّرة،
@@ -367,5 +368,36 @@ function handleWhapi_(token, d) {
     const text = m.type === 'text' ? ((m.text && m.text.body) || '') : '[رسالة من نوع: ' + m.type + ']';
     const when = m.timestamp ? new Date(Number(m.timestamp) * 1000) : new Date();
     sh.appendRow([m.id, when, enc_(m.from_name || phone), enc_(phone), '', enc_(text), 'جديدة', '', 'واتساب', me[0], '']);
+  });
+}
+
+
+// ===== فحص الاستيراد: شغّليها من المحرر ثم افتحي «سجل التنفيذ» (Execution log) =====
+// تبيّن لكل رسالة من آخر 3 أيام: هل ستُستورد؟ وإن لا، فما السبب.
+function diagnoseEmail() {
+  const users = allUsers_();
+  const meEmail = (Session.getEffectiveUser().getEmail() || Session.getActiveUser().getEmail() || '').toLowerCase();
+  Logger.log('حساب Google الذي نشر السكربت (البريد اللي يُقرأ منه): ' + meEmail);
+  Logger.log('الحسابات المسجّلة في الموقع: ' + users.map(r => r[3]).join(' | '));
+  const owner = users.find(r => String(r[3]).toLowerCase() === meEmail);
+  Logger.log(owner ? 'ستُنسب الرسائل إلى: ' + owner[3]
+    : 'لا يوجد حساب في الموقع بهذا البريد، فستُنسب لأول حساب مسجّل: ' + (users[0] ? users[0][3] : '-') + ' (سجّلي دخولك بهذا الحساب لتري الرسائل)');
+  const mine = [meEmail].concat(GmailApp.getAliases().map(a => a.toLowerCase()));
+  const sh = msgs_(), n = sh.getLastRow() - 1;
+  const state = {};
+  (n > 0 ? sh.getRange(2, 1, n, COLS).getValues() : []).forEach(r => { state[r[0]] = r[6]; });
+  const passed = {};
+  GmailApp.search(MAIL_QUERY, 0, 50).forEach(t => { passed[t.getId()] = 1; });
+  const all = GmailApp.search('newer_than:3d', 0, 20);
+  Logger.log('رسائل آخر 3 أيام: ' + all.length + ' | تمرّ من الفلتر: ' + Object.keys(passed).length);
+  all.forEach(t => {
+    const ms = t.getMessages(), last = ms[ms.length - 1], from = last.getFrom().toLowerCase();
+    let why;
+    if (!passed[t.getId()]) why = 'مستبعدة بالفلتر (تصنيف ترويج/اجتماعي، أو ليست في الوارد)';
+    else if (mine.some(a => from.indexOf(a) >= 0)) why = 'آخر رسالة فيها منك أنتِ (مثلًا أرسلتِها لنفسك) فلا تُستورد';
+    else if (state['mail_' + t.getId()] === DEL) why = 'سبق أن حذفتِها من الموقع';
+    else if (('mail_' + t.getId()) in state) why = 'مستوردة سابقًا (الحالة: ' + state['mail_' + t.getId()] + ')';
+    else why = 'جاهزة، ستُستورد في الدورة القادمة';
+    Logger.log('• ' + String(t.getFirstMessageSubject()).slice(0, 40) + ' | من: ' + last.getFrom().slice(0, 40) + ' → ' + why);
   });
 }
