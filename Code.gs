@@ -53,8 +53,12 @@ function sheet_(name, header) {
 }
 function msgs_() {
   const sh = sheet_(MSG, ['المعرف', 'التاريخ', 'الاسم', 'الجوال', 'البريد', 'الرسالة', 'الحالة', 'ملاحظة', 'المصدر', 'المالكة', 'مؤرشفة']);
-  const h = sh.getRange(1, 1, 1, COLS).getValues()[0];
-  [[9, 'المصدر'], [10, 'المالكة'], [11, 'مؤرشفة']].forEach(x => { if (!h[x[0] - 1]) sh.getRange(1, x[0]).setValue(x[1]); });
+  const P = PropertiesService.getScriptProperties();
+  if (!P.getProperty('HDR')) {   // فحص العناوين مرة واحدة فقط
+    const h = sh.getRange(1, 1, 1, COLS).getValues()[0];
+    [[9, 'المصدر'], [10, 'المالكة'], [11, 'مؤرشفة']].forEach(x => { if (!h[x[0] - 1]) sh.getRange(1, x[0]).setValue(x[1]); });
+    P.setProperty('HDR', '1');
+  }
   return sh;
 }
 function users_() {
@@ -80,8 +84,17 @@ function hash_(pw, salt) {
 }
 function pub_(r) { return { id: r[0], name: r[1], phone: r[2], email: r[3] }; }
 
-let UC_ = null;   // قراءة المستخدمين مرة واحدة لكل طلب بدل عدة مرات
-function allUsers_() { if (UC_) return UC_; const sh = users_(); return (UC_ = sh.getLastRow() < 2 ? [] : sh.getRange(2, 1, sh.getLastRow() - 1, 8).getValues()); }
+let UC_ = null;   // المستخدمون: تُقرأ من ذاكرة مؤقتة (10 دقائق) بدل قراءة الشيت مع كل طلب
+function allUsers_() {
+  if (UC_) return UC_;
+  const cache = CacheService.getScriptCache(), c = cache.get('USERS');
+  if (c) { try { return (UC_ = JSON.parse(c)); } catch (e) {} }
+  const sh = users_();
+  UC_ = sh.getLastRow() < 2 ? [] : sh.getRange(2, 1, sh.getLastRow() - 1, 8).getValues();
+  try { cache.put('USERS', JSON.stringify(UC_), 600); } catch (e) {}
+  return UC_;
+}
+function dropUsers_() { UC_ = null; CacheService.getScriptCache().remove('USERS'); }
 // ===== الجلسات: منفصلة تمامًا عن «مفتاح الربط» =====
 // الجلسة (تسجيل الدخول من الموقع): تُحفظ بصمتها فقط، وتنتهي بعد 30 يومًا، وتُلغى عند تغيير/استعادة كلمة المرور.
 // مفتاح الربط (العمود «الرمز» في المستخدمون): يُستخدم في روابط الواتساب وسكربت البريد، ويسمح بإضافة الرسائل فقط ولا يقرأ شيئًا.
@@ -144,7 +157,8 @@ function doPost(e) {
     d = { action: 'waNotify', token: p[1], title: p[2], text: p.slice(3).join('§§') };
   } else d = JSON.parse(raw);
   const lock = LockService.getScriptLock();
-  lock.waitLock(20000);
+  const needLock = d.action !== 'list' && d.action !== 'keys';   // القراءة لا تنتظر بعضها، فيسرع الموقع
+  if (needLock) lock.waitLock(20000);
   try {
     if (e.parameter && e.parameter.wh) { handleWhapi_(e.parameter.wh, d); return out_({ ok: true }); }   // Whapi.Cloud
     if (d.object === 'whatsapp_business_account') { handleWhatsApp_(d, e.parameter && e.parameter.k); return out_({ ok: true }); }
@@ -157,7 +171,7 @@ function doPost(e) {
       const dup = allUsers_().some(r => norm_(r[2]) === phone || String(r[3]).toLowerCase() === email);
       if (dup) return out_({ ok: false, error: 'رقم الجوال أو البريد مسجّل مسبقًا، يرجى تسجيل الدخول.' });
       const id = Utilities.getUuid().replace(/-/g, '').slice(0, 10), salt = Utilities.getUuid(), token = Utilities.getUuid();
-      users_().appendRow([id, name, phone, email, hash_(pw, salt), salt, token, new Date()]); UC_ = null;
+      users_().appendRow([id, name, phone, email, hash_(pw, salt), salt, token, new Date()]); dropUsers_();
       return out_({ ok: true, token: newSession_(id), user: { id, name, phone, email } });
     }
 
@@ -299,7 +313,7 @@ function doPost(e) {
       return out_({ ok: true, deleted: ids.length });
     }
     return out_({ ok: false, error: 'طلب غير معروف.' });
-  } finally { lock.releaseLock(); }
+  } finally { if (needLock) lock.releaseLock(); }
 }
 
 // بريد المستخدمة: يصل من سكربت تشغّله هي في حسابها (Gmail) فلا يُقرأ بريد أي حساب آخر
@@ -409,7 +423,7 @@ function sendMail_(to, subject, body) {
 function setPw_(u, pw) {
   const i = allUsers_().findIndex(r => r[0] === u[0]); if (i < 0) return;
   const salt = Utilities.getUuid();
-  users_().getRange(i + 2, 5, 1, 2).setValues([[hash_(pw, salt), salt]]); UC_ = null;
+  users_().getRange(i + 2, 5, 1, 2).setValues([[hash_(pw, salt), salt]]); dropUsers_();
 }
 
 // ===== تشفير الرسائل القديمة (شغّليها مرة واحدة فقط بعد تحديث الكود) =====
@@ -460,3 +474,16 @@ function handleWhapi_(token, d) {
 }
 
 
+
+
+// ===== للمسؤولة: إعادة تعيين كلمة مرور أي مستخدمة بدون بريد =====
+// غيّري القيمتين ثم اختاري adminResetPassword وشغّليها من المحرر، ثم امسحي كلمة المرور من الكود.
+function adminResetPassword() {
+  const IDENT = 'ضعي-هنا-البريد-أو-الجوال', NEW_PASSWORD = 'ضعي-هنا-كلمة-مرور-جديدة';
+  const idf = IDENT.trim().toLowerCase(), n = norm_(idf);
+  const u = allUsers_().find(r => String(r[3]).toLowerCase() === idf || (n && norm_(r[2]) === n));
+  if (!u) { Logger.log('لا يوجد حساب بهذه البيانات.'); return; }
+  if (NEW_PASSWORD.length < 8) { Logger.log('كلمة المرور لا تقل عن 8 أحرف.'); return; }
+  setPw_(u, NEW_PASSWORD); endSessions_(u[0]);
+  Logger.log('تم تعيين كلمة مرور جديدة للحساب: ' + u[1] + '. يمكنها الدخول بها الآن.');
+}

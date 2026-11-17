@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="preconnect" href="https://script.google.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <title>وَصْل للتواصل | جمعية فرقان</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
 <style>
@@ -153,19 +154,8 @@ dialog h3{margin:0 0 4px;font-size:20px}dialog p{margin:0;color:var(--mut)}.dact
       <small>١) افتحي script.google.com وأنتِ داخلة بحساب Gmail الذي تصلكِ عليه الرسائل، ثم «مشروع جديد».</small>
       <small>٢) احذفي كل ما في المحرر والصقي الكود التالي ثم احفظي:</small>
       <code id="mCode"></code><button class="btn ghost sm" id="mCopy">نسخ الكود</button>
-      <small style="margin-top:10px"><b>٣) للأمان (يقلّل تنبيهات جوجل):</b> من ⚙ إعدادات المشروع فعّلي «إظهار ملف appsscript.json»، ثم افتحيه واستبدلي محتواه بما يلي، فيطلب الكود قراءة البريد فقط دون تعديل أو حذف:</small>
-      <code id="mMan">{
-  "timeZone": "Asia/Riyadh",
-  "runtimeVersion": "V8",
-  "oauthScopes": [
-    "https://www.googleapis.com/auth/gmail.readonly",
-    "https://www.googleapis.com/auth/script.external_request",
-    "https://www.googleapis.com/auth/script.scriptapp",
-    "https://www.googleapis.com/auth/userinfo.email"
-  ]
-}</code><button class="btn ghost sm" id="mCopy2">نسخ الإعدادات</button>
-      <small style="margin-top:10px">٤) اختاري الدالة <b>setup</b> ثم «تشغيل» ووافقي على الصلاحيات (إن ظهرت «لم يتم التحقق من هذا التطبيق» فهذا طبيعي لأنه مشروعك أنتِ: «متقدّم» ثم «الانتقال إلى المشروع»).</small>
-      <small>٥) تظهر رسائلك هنا خلال 5 دقائق، وعند ردّك تتحول حالتها إلى «تم الرد». الكود يقرأ بريدك أنتِ فقط.</small>
+      <small style="margin-top:10px">٣) اختاري الدالة <b>setup</b> ثم «تشغيل» ووافقي على الصلاحيات (إن ظهرت «لم يتم التحقق من هذا التطبيق» فهذا طبيعي لأنه مشروعك أنتِ: «متقدّم» ثم «الانتقال إلى المشروع»).</small>
+      <small>٤) تظهر رسائلك هنا خلال 5 دقائق، وعند ردّك تتحول حالتها إلى «تم الرد». الكود يقرأ بريدك أنتِ فقط.</small>
     </div>
     <div class="card panel" id="cBox">
       <small>في Chakra Chat: «WhatsApp Setup» ← «More» ← «Pass-through webhook url»، والصقي الرابط ثم احفظي:</small>
@@ -191,7 +181,7 @@ dialog h3{margin:0 0 4px;font-size:20px}dialog p{margin:0;color:var(--mut)}.dact
 <div id="toast" role="status"></div>
 
 <script>
-const API = 'https://script.google.com/macros/s/AKfycbzEMssp4APCvtDVCfPZRd5kFNDiwNF8plHYrdp9uCafov-ZlGz9HdVNfOWqw6EW8KccZg/exec';
+const API = 'https://script.google.com/macros/s/AKfycbzklFmG08Ccj4QwycD7Vinsv-hg-NbzxLeNDNnf-a5WPrdMvRyw22r9tHEjH6blTXE4pg/exec';
 const $ = id => document.getElementById(id);
 const STATUSES = ['جديدة', 'تم الرد', 'لم يُرد عليها'], ARCHIVE = 'الأرشيف';
 const U = new URLSearchParams(location.search).get('u');
@@ -416,7 +406,7 @@ $('mToggle').onclick=async()=>{ const KY=await getKey();
 "}\n";
 };
 
-$('mCopy').onclick=e=>cp('mCode',e.target); $('mCopy2').onclick=e=>cp('mMan',e.target);
+$('mCopy').onclick=e=>cp('mCode',e.target);
 $('qToggle').onclick=async()=>{ tg('qBox'); $('qUrl').textContent=API+'?wh='+await getKey(); };
 $('qCopy').onclick=e=>cp('qUrl',e.target);
 $('cToggle').onclick=async()=>{ tg('cBox'); $('cUrl').textContent=API+'?k='+await getKey(); };
