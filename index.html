@@ -139,7 +139,7 @@ dialog h3{margin:0 0 4px;font-size:20px}dialog p{margin:0;color:var(--mut)}.dact
   <div class="top"><div class="in"><span class="bm"></span><div class="ttl"><b id="hi"></b><small>جمعية فرقان · وَصْل للتواصل</small></div>
     <button class="ib" id="reload" title="تحديث" aria-label="تحديث"><svg class="i"><use href="#ref"/></svg></button>
     <button class="ib" id="pwBtn" title="تغيير كلمة المرور" aria-label="تغيير كلمة المرور"><svg class="i"><use href="#key"/></svg></button>
-    <button class="ib" id="out" title="تسجيل الخروج" aria-label="تسجيل الخروج"><svg class="i"><use href="#out"/></svg></button></div></div>
+    <button class="ib" id="outBtn" title="تسجيل الخروج" aria-label="تسجيل الخروج"><svg class="i"><use href="#out"/></svg></button></div></div>
   <div class="wrap">
     <div class="stats" id="stats"></div>
     <div class="card share"><div style="flex:1 1 100%;color:var(--mut);font-size:14px">رابط صفحتك الخاصة — شاركيه ليراسلك الناس عبره</div><code id="myLink"></code>
@@ -289,7 +289,9 @@ async function load(){
   $('list').innerHTML='<div class="sk"></div><div class="sk"></div><div class="sk"></div>';
   const inArch = FILTER===ARCHIVE;
   try{
-    const r = await post({action:'list',token:TOKEN,archived:inArch,limit:LIMIT});
+    const tk=TOKEN; if(!tk) return;
+    const r = await post({action:'list',token:tk,archived:inArch,limit:LIMIT});
+    if(!TOKEN) return; /* خرجت المستخدمة أثناء التحميل */
     if(r.auth===false){logout();return;}
     if(!r.ok){$('list').textContent=r.error||'تعذّر التحميل.';return;}
     if(inArch) ARCH=r.rows; else ALL=r.rows;
@@ -412,8 +414,21 @@ $('qCopy').onclick=e=>cp('qUrl',e.target);
 $('cToggle').onclick=async()=>{ tg('cBox'); $('cUrl').textContent=API+'?k='+await getKey(); };
 $('cCopy').onclick=e=>cp('cUrl',e.target);
 
-function logout(){ if(TOKEN) try{ navigator.sendBeacon(API,new Blob([JSON.stringify({action:'logout',token:TOKEN})],{type:'text/plain;charset=utf-8'})); }catch(e){} KEY='';TOKEN='';ME=null;try{localStorage.removeItem('tok');localStorage.removeItem('me');}catch(e){} show('auth');}
-$('reload').onclick=load; $('out').onclick=logout;
+function logout(){
+  const t=TOKEN;
+  /* الخروج الفوري من الواجهة أولًا، دون انتظار الخادم */
+  KEY='';TOKEN='';ME=null;ALL=[];ARCH=[];
+  try{localStorage.removeItem('tok');localStorage.removeItem('me');}catch(e){}
+  show('auth');
+  /* إنهاء الجلسة في الخادم في الخلفية */
+  if(t){
+    const body=JSON.stringify({action:'logout',token:t});
+    let sent=false;
+    try{ sent=navigator.sendBeacon(API,new Blob([body],{type:'text/plain;charset=utf-8'})); }catch(e){}
+    if(!sent){ try{ fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body,keepalive:true}).catch(()=>{}); }catch(e){} }
+  }
+}
+$('reload').onclick=load; $('outBtn').onclick=logout;
 
 /* ---------- البداية ---------- */
 if(U) initPublic();
