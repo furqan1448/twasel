@@ -153,16 +153,12 @@ dialog h3{margin:0 0 4px;font-size:20px}dialog p{margin:0;color:var(--mut)}.dact
     <div class="card panel" id="mBox">
       <div id="mAuto">
         <small id="mSt"></small>
-        <a class="btn sm" id="mGo" target="_blank" rel="noopener"><svg class="i"><use href="#pl"/></svg>ربط بريدي بنقرة واحدة</a>
-        <small style="margin-top:10px">اضغطي الزر واختاري حساب Gmail الذي تصلكِ عليه الرسائل، ثم وافقي على الصلاحيات (إن ظهرت «Google لم يتحقق من هذا التطبيق» فاضغطي «متقدّم» ثم «الانتقال إلى…»). بعد ظهور «تم ربط بريدك» تصل رسائلك هنا خلال دقيقة تقريبًا، ولا يلزم أي تحديث لاحقًا.</small>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+          <a class="btn sm" id="mGo" target="_blank" rel="noopener"><svg class="i"><use href="#pl"/></svg>ربط بريدي بنقرة واحدة</a>
+          <a class="btn danger sm" id="mOff" target="_blank" rel="noopener" style="display:none">إيقاف الربط</a>
+        </div>
+        <small style="margin-top:10px">اضغطي الزر واختاري حساب Gmail الذي تصلكِ عليه الرسائل، ثم وافقي على الصلاحيات (إن ظهرت «Google لم يتحقق من هذا التطبيق» فاضغطي «متقدّم» ثم «الانتقال إلى…»). بعد ظهور «تم ربط بريدك» تصل رسائلك هنا خلال دقيقة تقريبًا.</small>
       </div>
-      <details id="mMan"><summary style="cursor:pointer;color:var(--acc);font-weight:500;margin-top:8px">طريقة بديلة بالكود</summary>
-        <small>١) افتحي script.google.com وأنتِ داخلة بحساب Gmail، ثم «مشروع جديد».</small>
-        <small>٢) احذفي كل ما في المحرر والصقي الكود التالي ثم احفظي:</small>
-        <code id="mCode"></code><button class="btn ghost sm" id="mCopy">نسخ الكود</button>
-        <small style="margin-top:10px">٣) اختاري الدالة <b>setup</b> ثم «تشغيل» ووافقي على الصلاحيات (إن ظهرت «لم يتم التحقق من هذا التطبيق» فهذا طبيعي: «متقدّم» ثم «الانتقال إلى المشروع»).</small>
-        <small>٤) تظهر رسائلك هنا خلال دقيقة تقريبًا، وعند ردّك تتحول حالتها إلى «تم الرد».</small>
-      </details>
     </div>
     <div class="card panel" id="cBox">
       <small>في Chakra Chat: «WhatsApp Setup» ← «More» ← «Pass-through webhook url»، والصقي الرابط ثم احفظي:</small>
@@ -190,7 +186,7 @@ dialog h3{margin:0 0 4px;font-size:20px}dialog p{margin:0;color:var(--mut)}.dact
 
 <script>
 const API = 'https://script.google.com/macros/s/AKfycbwqjhbrX4p3QDXl_rhcLmF4Hdr9YABCzor2DXPi7EGNk4qjxWJoaF4oE8MYG1zwQVR0Ng/exec';
-const MAIL_LINK = 'https://script.google.com/macros/s/AKfycbyc30Go377UOoBclYwAEL3NV9m8AQCUAB2gugVUefEfCwdvPa6WjAi5hZwY74o9Sw7M4w/exec';   // رابط نشر MailAgent (ينتهي بـ /exec) — يوضع مرة واحدة
+const MAIL_LINK = 'https://script.google.com/macros/s/AKfycbwblsFupyHLsb9WRuwpdrvlpfASeFkiNUhQnHbXeVYSagLUZAUFeN8qeOyN5djo_n38iA/exec';   // رابط نشر MailAgent (ينتهي بـ /exec) — يوضع مرة واحدة
 const $ = id => document.getElementById(id);
 const STATUSES = ['جديدة', 'تم الرد', 'لم يُرد عليها'], ARCHIVE = 'الأرشيف';
 const U = new URLSearchParams(location.search).get('u');
@@ -395,24 +391,16 @@ $('wAdd').onclick=async()=>{
 };
 async function getKey(){ if(!KEY){ const r=await post({action:'keys',token:TOKEN}); if(r.auth===false){logout();return '';} KEY=r.key||''; } return KEY; }
 const cp=(id,btn)=>navigator.clipboard.writeText($(id).textContent).then(()=>toast('تم النسخ'));
-const MCORE = "\nconst PROP_ = () => PropertiesService.getUserProperties();\n\nfunction post_(api, payload) {\n  try {\n    const r = UrlFetchApp.fetch(api, { method: 'post', contentType: 'text/plain;charset=utf-8', payload: payload, muteHttpExceptions: true });\n    return JSON.parse(r.getContentText());\n  } catch (e) { return null; }\n}\n\n// \u0625\u0646 \u062a\u063a\u064a\u0651\u0631 \u0631\u0627\u0628\u0637 \u0627\u0644\u0646\u0634\u0631 \u064a\u0642\u0631\u0624\u0647 \u0645\u0646 \u0627\u0644\u0645\u0648\u0642\u0639 \u062a\u0644\u0642\u0627\u0626\u064a\u064b\u0627\u060c \u0641\u0644\u0627 \u062a\u062d\u062a\u0627\u062c\u064a\u0646 \u062a\u0639\u062f\u064a\u0644 \u0634\u064a\u0621\nfunction refresh_(c) {\n  try {\n    const html = UrlFetchApp.fetch(c.site + (c.site.indexOf('?') < 0 ? '?' : '&') + 't=' + Date.now(), { muteHttpExceptions: true }).getContentText();\n    const m = html.match(/const API = '(https:\\/\\/script\\.google\\.com\\/macros\\/s\\/[\\w-]+\\/exec)'/);\n    if (m) { PROP_().setProperty('API', m[1]); return m[1]; }\n  } catch (e) {}\n  return '';\n}\n\n// \u062e\u0641\u064a\u0641: \u064a\u0641\u062d\u0635 \u0627\u0644\u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u062c\u062f\u064a\u062f\u0629 \u0641\u0642\u0637\u060c \u0648\u064a\u0631\u0633\u0644\u0647\u0627 \u0644\u0644\u0645\u0648\u0642\u0639\u060c \u0641\u064a\u0635\u0644\u0643 \u0627\u0644\u0628\u0631\u064a\u062f \u062e\u0644\u0627\u0644 \u062f\u0642\u064a\u0642\u0629 \u062a\u0642\u0631\u064a\u0628\u064b\u0627\nfunction sync() {\n  const c = cfg_(), P = PROP_();\n  if (!c.key || !c.api) return { ok: false };\n  const last = Number(P.getProperty('LAST') || 0), now = Date.now();\n  const me = (Session.getEffectiveUser().getEmail() || '').toLowerCase();\n  const items = GmailApp.search('newer_than:3d (in:inbox OR in:sent) -category:promotions -category:social', 0, 30)\n    .filter(t => !last || t.getLastMessageDate().getTime() > last - 600000)\n    .map(t => {\n      const ms = t.getMessages(), m = ms[ms.length - 1], from = m.getFrom();\n      return { id: t.getId(), date: m.getDate().getTime(), from: from, subject: t.getFirstMessageSubject(),\n               body: m.getPlainBody().slice(0, 1000), fromMe: !!me && from.toLowerCase().indexOf(me) >= 0 };\n    });\n  if (!items.length && now - Number(P.getProperty('PING') || 0) < 1800000) return { ok: true };\n  const payload = JSON.stringify({ action: 'mailIn', token: c.key, items: items });\n  let r = post_(c.api, payload);\n  if (!r && c.site) { const a = refresh_(c); if (a) r = post_(a, payload); }\n  if (r && r.ok) { P.setProperty('LAST', String(now)); P.setProperty('PING', String(now)); }\n  return r || { ok: false };\n}\n";
 function mailBtn(){ const ok=MAILAT&&Date.now()-MAILAT<7200000; $('mLbl').textContent=ok?'البريد مرتبط ✓':'ربط البريد'; }
-$('mToggle').onclick=async()=>{ const KY=await getKey();
+$('mToggle').onclick=async()=>{
+  const KY=await getKey();
   tg('mBox');
   const site=location.origin+location.pathname, ok=MAILAT&&Date.now()-MAILAT<7200000;
-  $('mAuto').style.display=MAIL_LINK?'block':'none'; $('mMan').open=true;
   $('mSt').textContent=ok?'✅ بريدك مرتبط ويعمل. آخر مزامنة: '+new Date(MAILAT).toLocaleTimeString('ar-SA',{timeStyle:'short'}):'البريد غير مرتبط بعد.';
-  if(MAIL_LINK) $('mGo').href=MAIL_LINK+'?k='+encodeURIComponent(KY)+'&api='+encodeURIComponent(API)+'&site='+encodeURIComponent(site);
-  $('mCode').textContent=
-"const SITE = '"+site+"';\n"+
-"const API_FALLBACK = '"+API+"';\n"+
-"const TOKEN = '"+KY+"';\n\n"+
-"function cfg_() { return { key: TOKEN, api: PropertiesService.getUserProperties().getProperty('API') || API_FALLBACK, site: SITE }; }\n"+
-MCORE+"\n"+
-"function setup() {\n  ScriptApp.getProjectTriggers().forEach(t => ScriptApp.deleteTrigger(t));\n  ScriptApp.newTrigger('sync').timeBased().everyMinutes(1).create();\n  Logger.log('النتيجة: ' + JSON.stringify(sync()));\n}\n";
+  $('mGo').href=MAIL_LINK+'?k='+encodeURIComponent(KY)+'&api='+encodeURIComponent(API)+'&site='+encodeURIComponent(site);
+  $('mOff').style.display=ok?'inline-flex':'none';
+  $('mOff').href=MAIL_LINK+'?off=1';
 };
-
-$('mCopy').onclick=e=>cp('mCode',e.target);
 $('qToggle').onclick=async()=>{ tg('qBox'); $('qUrl').textContent=API+'?wh='+await getKey(); };
 $('qCopy').onclick=e=>cp('qUrl',e.target);
 $('cToggle').onclick=async()=>{ tg('cBox'); $('cUrl').textContent=API+'?k='+await getKey(); };
