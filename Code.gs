@@ -1,7 +1,7 @@
 /** @OnlyCurrentDoc */
 // ===== الإعدادات =====
 const WA_VERIFY_TOKEN = 'furqan-wa-2026';   // أي كلمة تختارينها، وتكتبينها نفسها في Meta
-const VERSION = '2026-11-17-b';               // رقم الإصدار: يظهر عند فتح رابط النشر في المتصفح، ليُعرف هل النشر يعمل بآخر كود
+const VERSION = '2026-11-17-c';               // رقم الإصدار: يظهر عند فتح رابط النشر في المتصفح، ليُعرف هل النشر يعمل بآخر كود
 const MSG = 'الرسائل', USR = 'المستخدمون';
 const COLS = 11;                              // عدد أعمدة جدول الرسائل
 const DEL = 'محذوفة';                         // قديم: صفوف قديمة تُحذف تلقائيًا من الشيت ولا يُكتب هذا النص بعد الآن
@@ -283,7 +283,7 @@ function doPost(e) {
       }
       const ord = new Map(mine.map((r, i) => [r, i]));
       mine.sort((a, b) => (new Date(b[1]).getTime() || 0) - (new Date(a[1]).getTime() || 0) || ord.get(b) - ord.get(a));   // الأحدث أولًا
-      return out_({ ok: true, rows: mine.slice(0, limit).map(rowOut_), archivedCount, counts, total: mine.length });
+      return out_({ ok: true, v: VERSION, rows: mine.slice(0, limit).map(rowOut_), archivedCount, counts, total: mine.length });
     }
 
     if (d.action === 'update') {
@@ -394,7 +394,7 @@ function notify_(to, name, phone, email, message, source) {
 
 // ===== سجل منع العودة =====
 // عند الحذف يُمسح الصف كاملًا من الشيت. ولكي لا يعيد استيراد البريد (آخر 3 أيام) الرسالة نفسها،
-// نحفظ بصمة مقتطعة (Hash) لمعرّفها فقط في خصائص السكربت (ليس في الشيت)، وتُنسى بعد 5 أيام.
+// نحفظ بصمة مقتطعة (Hash) لمعرّفها فقط في خصائص السكربت (ليس في الشيت)، وتُنسى بعد 8 أيام (لأن Meta قد تعيد إرسال الرسالة نفسها حتى 7 أيام).
 function tb_(id) { return Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, 'tb:' + id)).slice(0, 8); }
 function tombs_(k) {
   try { return JSON.parse(PropertiesService.getScriptProperties().getProperty(k || 'TOMB') || '[]'); } catch (e) { return []; }
@@ -402,7 +402,7 @@ function tombs_(k) {
 function isGone_(id) { const h = tb_(id); return tombs_().some(x => x.slice(0, 8) === h); }
 function bury_(ids, k, ttlDays, cap) {
   k = k || 'TOMB';
-  const now = Math.floor(Date.now() / 60000), ttl = (ttlDays || 5) * 1440;
+  const now = Math.floor(Date.now() / 60000), ttl = (ttlDays || 8) * 1440;
   const keep = tombs_(k).filter(x => now - parseInt(x.slice(8), 36) < ttl);
   ids.forEach(id => keep.push(tb_(id) + now.toString(36)));
   PropertiesService.getScriptProperties().setProperty(k, JSON.stringify(keep.slice(-(cap || 450))));
