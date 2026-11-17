@@ -5,8 +5,7 @@ const MSG = 'الرسائل', USR = 'المستخدمون';
 const COLS = 11;                              // عدد أعمدة جدول الرسائل
 const DEL = 'محذوفة';                         // قديم: صفوف قديمة تُحذف تلقائيًا من الشيت ولا يُكتب هذا النص بعد الآن
 const STATUSES_ = ['جديدة', 'تم الرد', 'لم يُرد عليها'];
-// إشعارات البريد لرسائل الواتساب: معطّلة حفاظًا على خصوصية المرسلين.
-const NOTIFY_WHATSAPP_BY_EMAIL = false;
+// إشعارات البريد: تُرسل لرسائل «النموذج» فقط. رسائل الواتساب والبريد لا يُرسل عنها أي إشعار إطلاقًا.
 
 // ===== التشفير =====
 // كل بيانات الرسالة (الاسم، الجوال، البريد، النص، الملاحظة) تُحفظ في الشيت مشفّرة،
@@ -250,11 +249,11 @@ function doPost(e) {
       const title = String(d.title || '').trim(), text = String(d.text || '').trim();
       if (!title || !text) return out_({ ok: true });
       if (/^(whatsapp|واتساب)/i.test(title) || /\d+\s*(new messages|رسائل جديدة|رسالة جديدة)/i.test(text)) return out_({ ok: true });   // إشعارات التجميع
+      if (isGoneC_(cid_(me[0], title, text))) return out_({ ok: true });   // رسالة حُذفت قبل قليل: لا تعود
       const sh = msgs_(), n = sh.getLastRow() - 1;
       const recent = n > 0 ? sh.getRange(Math.max(2, n - 18), 1, Math.min(n, 20), COLS).getValues() : [];
       if (recent.some(r => r[9] === me[0] && r[6] !== DEL && dec_(r[2]) === title && dec_(r[5]) === text)) return out_({ ok: true });   // منع التكرار
       sh.appendRow([Utilities.getUuid(), new Date(), enc_(title), '', '', enc_(text), 'جديدة', '', 'واتساب', me[0], '']);
-      notify_(me[3], title, '', '', text, 'واتساب');
       return out_({ ok: true });
     }
 
@@ -281,7 +280,8 @@ function doPost(e) {
           if (isArch === wantArchived) mine.push(r);
         });
       }
-      mine.reverse();
+      const ord = new Map(mine.map((r, i) => [r, i]));
+      mine.sort((a, b) => (new Date(b[1]).getTime() || 0) - (new Date(a[1]).getTime() || 0) || ord.get(b) - ord.get(a));   // الأحدث أولًا
       return out_({ ok: true, rows: mine.slice(0, limit).map(rowOut_), archivedCount, counts, total: mine.length });
     }
 
@@ -298,7 +298,7 @@ function doPost(e) {
     if (d.action === 'delete') {
       const sh = msgs_(), f = findRow_(sh, d.id, me);
       if (!f) return out_({ ok: false, error: 'الرسالة غير موجودة.' });
-      bury_([d.id]); sh.deleteRow(f.row);          // حذف الصف كاملًا من الشيت، بلا أي أثر نصي
+      buryRows_([f.vals], me[0]); sh.deleteRow(f.row);          // حذف الصف كاملًا من الشيت، بلا أي أثر نصي
       return out_({ ok: true });
     }
     if (d.action === 'deleteReplied') {
@@ -307,9 +307,9 @@ function doPost(e) {
       const first = allUsers_()[0][0], ids = [], rows = [];
       sh.getRange(2, 1, sh.getLastRow() - 1, COLS).getValues().forEach((r, i) => {
         if ((r[9] || first) !== me[0] || r[6] !== 'تم الرد' || r[10] === 'نعم') return;
-        ids.push(r[0]); rows.push(i + 2);
+        ids.push(r); rows.push(i + 2);
       });
-      if (ids.length) { bury_(ids); rows.reverse().forEach(x => sh.deleteRow(x)); }
+      if (ids.length) { buryRows_(ids, me[0]); rows.reverse().forEach(x => sh.deleteRow(x)); }
       return out_({ ok: true, deleted: ids.length });
     }
     return out_({ ok: false, error: 'طلب غير معروف.' });
@@ -363,7 +363,6 @@ function handleWhatsApp_(d, key) {
       let text = m.type === 'text' ? m.text.body : m.type === 'button' ? m.button.text : '[رسالة من نوع: ' + m.type + ']';
       const ts = m.timestamp ? new Date(Number(m.timestamp) * 1000) : new Date();
       sh.appendRow([m.id, ts, enc_(name), enc_(m.from), '', enc_(text), 'جديدة', '', 'واتساب', owner[0], '']);
-      notify_(owner[3], name, m.from, '', text, 'واتساب');
     });
 
     (v.message_echoes || []).forEach(m => {
@@ -379,7 +378,7 @@ function handleWhatsApp_(d, key) {
 // الإشعار يُرسل دائمًا إلى البريد المسجّل لصاحبة الصندوق فقط، ولا تُرسل نسخة إلى أي بريد آخر.
 // الردود لا تعود إلى بريد حساب النشر: تذهب إلى بريد الزائر إن وُجد، وإلا يُرسل الإشعار بلا خاصية الرد.
 function notify_(to, name, phone, email, message, source) {
-  if (source === 'واتساب' && !NOTIFY_WHATSAPP_BY_EMAIL) return;
+  if (source !== 'النموذج') return;   // لا إشعارات بريد لرسائل الواتساب
   to = String(to || '').trim();
   if (to.indexOf('@') < 1) return;
   const opt = { name: 'صندوق الرسائل' };
@@ -396,15 +395,24 @@ function notify_(to, name, phone, email, message, source) {
 // عند الحذف يُمسح الصف كاملًا من الشيت. ولكي لا يعيد استيراد البريد (آخر 3 أيام) الرسالة نفسها،
 // نحفظ بصمة مقتطعة (Hash) لمعرّفها فقط في خصائص السكربت (ليس في الشيت)، وتُنسى بعد 5 أيام.
 function tb_(id) { return Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, 'tb:' + id)).slice(0, 8); }
-function tombs_() {
-  try { return JSON.parse(PropertiesService.getScriptProperties().getProperty('TOMB') || '[]'); } catch (e) { return []; }
+function tombs_(k) {
+  try { return JSON.parse(PropertiesService.getScriptProperties().getProperty(k || 'TOMB') || '[]'); } catch (e) { return []; }
 }
 function isGone_(id) { const h = tb_(id); return tombs_().some(x => x.slice(0, 8) === h); }
-function bury_(ids) {
-  const now = Math.floor(Date.now() / 60000), ttl = 5 * 1440;
-  const keep = tombs_().filter(x => now - parseInt(x.slice(8), 36) < ttl);
+function bury_(ids, k, ttlDays, cap) {
+  k = k || 'TOMB';
+  const now = Math.floor(Date.now() / 60000), ttl = (ttlDays || 5) * 1440;
+  const keep = tombs_(k).filter(x => now - parseInt(x.slice(8), 36) < ttl);
   ids.forEach(id => keep.push(tb_(id) + now.toString(36)));
-  PropertiesService.getScriptProperties().setProperty('TOMB', JSON.stringify(keep.slice(-300)));
+  PropertiesService.getScriptProperties().setProperty(k, JSON.stringify(keep.slice(-(cap || 450))));
+}
+// إشعارات الواتساب القادمة من تطبيق الجوال ليس لها معرّف ثابت، فنمنع عودتها بحسب (المالكة + المرسل + النص) لمدة 12 ساعة بعد حذفها.
+function cid_(owner, name, text) { return owner + '|' + name + '|' + text; }
+function isGoneC_(c) { const h = tb_(c), now = Math.floor(Date.now() / 60000); return tombs_('TOMBC').some(x => x.slice(0, 8) === h && now - parseInt(x.slice(8), 36) < 720); }
+function buryRows_(rows, owner) {   // rows: صفوف الشيت المحذوفة (مصفوفات)
+  bury_(rows.map(r => r[0]));
+  const c = rows.filter(r => r[8] === 'واتساب').map(r => cid_(owner, dec_(r[2]), dec_(r[5])));
+  if (c.length) bury_(c, 'TOMBC', 0.5, 200);
 }
 // تنظيف الصفوف القديمة المكتوب فيها «محذوفة»: تُحذف نهائيًا من الشيت
 function cleanDeleted_(sh) {
@@ -469,7 +477,6 @@ function handleWhapi_(token, d) {
     const text = m.type === 'text' ? ((m.text && m.text.body) || '') : '[رسالة من نوع: ' + m.type + ']';
     const when = m.timestamp ? new Date(Number(m.timestamp) * 1000) : new Date();
     sh.appendRow([m.id, when, enc_(m.from_name || phone), enc_(phone), '', enc_(text), 'جديدة', '', 'واتساب', me[0], '']);
-    notify_(me[3], m.from_name || phone, phone, '', text, 'واتساب');
   });
 }
 // ===== للمسؤولة: إعادة تعيين كلمة مرور أي مستخدمة بدون بريد =====
