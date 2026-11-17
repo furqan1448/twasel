@@ -1,11 +1,18 @@
-// ===== سكربت ربط البريد (مشروع واحد تنشرينه أنتِ مرة واحدة) =====
-// النشر: نشر ← عملية نشر جديدة ← تطبيق ويب
-//   تنفيذ باسم: «المستخدم الذي يصل إلى تطبيق الويب»   ·   من يمكنه الوصول: «أي شخص لديه حساب Google»
+// ===== سكربت ربط بريد كل مستخدمة الخاص (مشروع واحد تنشرينه أنتِ مرة واحدة) =====
+// إعدادات النشر (مهمة جدًا لكي يرتبط بريد كل مستخدمة الخاص وليس بريد الموقع):
+//   نشر ← عملية نشر جديدة ← تطبيق ويب
+//   1) تنفيذ باسم (Execute as): «المستخدم الذي يصل إلى تطبيق الويب» (User accessing the web app)
+//   2) من يمكنه الوصول (Who has access): «أي شخص لديه حساب Google» (Anyone with Google account)
 // ثم انسخي رابط النشر (ينتهي بـ /exec) وضعيه في index.html مكان MAIL_LINK.
 
 function cfg_() {
   const P = PROP_();
-  return { key: P.getProperty('KEY'), api: P.getProperty('API'), site: P.getProperty('SITE') || '' };
+  return {
+    key: P.getProperty('KEY'),
+    api: P.getProperty('API'),
+    site: P.getProperty('SITE') || '',
+    regEmail: P.getProperty('REG_EMAIL') || ''
+  };
 }
 
 const PROP_ = () => PropertiesService.getUserProperties();
@@ -33,10 +40,10 @@ function post_(api, payload) {
   }
 }
 
-function getFallback_(api, key, items) {
+function getFallback_(api, key, em, items) {
   try {
     const b64 = Utilities.base64EncodeWebSafe(Utilities.newBlob(JSON.stringify(items)).getBytes());
-    const url = api + '?action=mailIn&k=' + encodeURIComponent(key) + '&items=' + encodeURIComponent(b64);
+    const url = api + '?action=mailIn&k=' + encodeURIComponent(key) + '&em=' + encodeURIComponent(em) + '&items=' + encodeURIComponent(b64);
     if (url.length > 7500) return null;
     const r = UrlFetchApp.fetch(url, { followRedirects: true, muteHttpExceptions: true });
     return JSON.parse(r.getContentText());
@@ -56,7 +63,13 @@ function sync(forceAll) {
   const c = cfg_(), P = PROP_();
   if (!c.key || !c.api) return { ok: false, reason: 'missing_cfg' };
   const last = forceAll ? 0 : Number(P.getProperty('LAST') || 0), now = Date.now();
-  const me = (Session.getEffectiveUser().getEmail() || '').toLowerCase();
+  const me = (Session.getEffectiveUser().getEmail() || Session.getActiveUser().getEmail() || '').toLowerCase();
+
+  // التحقق من أن البريد المفتوح في المتصفح يطابق البريد المسجّل في حساب المستخدمة بالموقع
+  if (c.regEmail && me && c.regEmail !== me) {
+    return { ok: false, emailMismatch: true, expected: c.regEmail, actual: me };
+  }
+
   const threads = GmailApp.search('newer_than:7d (in:inbox OR in:sent)', 0, 25);
   const items = threads
     .filter(t => !last || t.getLastMessageDate().getTime() > last - 600000)
@@ -71,14 +84,14 @@ function sync(forceAll) {
         fromMe: !!me && from.toLowerCase().indexOf(me) >= 0
       };
     });
-  if (!forceAll && !items.length && now - Number(P.getProperty('PING') || 0) < 1800000) return { ok: true, count: 0 };
-  const payload = JSON.stringify({ action: 'mailIn', token: c.key, items: items });
+  if (!forceAll && !items.length && now - Number(P.getProperty('PING') || 0) < 1800000) return { ok: true, count: 0, email: me };
+  const payload = JSON.stringify({ action: 'mailIn', token: c.key, em: me, items: items });
   let r = post_(c.api, payload);
-  if ((!r || !r.ok) && r && r.auth !== false) {
-    const g = getFallback_(c.api, c.key, items);
-    if (g && g.ok) r = g;
+  if ((!r || !r.ok) && r && r.auth !== false && !r.emailMismatch) {
+    const g = getFallback_(c.api, c.key, me, items);
+    if (g && (g.ok || g.emailMismatch)) r = g;
   }
-  if ((!r || !r.ok) && c.site) {
+  if ((!r || !r.ok) && !r.emailMismatch && c.site) {
     const a = refresh_(c);
     if (a) r = post_(a, payload);
   }
@@ -93,7 +106,7 @@ function sync(forceAll) {
 
 function page_(title, text) {
   return HtmlService.createHtmlOutput(
-    '<div dir="rtl" style="font-family:Tahoma,Arial,sans-serif;max-width:440px;margin:10vh auto;padding:24px;text-align:center;line-height:2;border:1px solid #ebe1e2;border-radius:16px">' +
+    '<div dir="rtl" style="font-family:Tahoma,Arial,sans-serif;max-width:460px;margin:10vh auto;padding:24px;text-align:center;line-height:2;border:1px solid #ebe1e2;border-radius:16px">' +
     '<h2 style="color:#8C1A2C">' + title + '</h2><div>' + text + '</div></div>'
   ).setTitle(title);
 }
@@ -103,16 +116,32 @@ function doGet(e) {
   if (p.off) {
     ScriptApp.getProjectTriggers().forEach(t => ScriptApp.deleteTrigger(t));
     P.deleteAllProperties();
-    return page_('تم إيقاف الربط', 'لن تُرسَل رسائل بريدك إلى الموقع بعد الآن.');
+    return page_('تم إيقاف الربط', 'لن تُرسَل رسائل بريدك الخاص إلى الموقع بعد الآن.');
   }
   if (!p.k || !/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(p.api || '')) {
-    return page_('رابط غير صحيح', 'افتحي رابط الربط من زر «ربط البريد» داخل الموقع.');
+    return page_('رابط غير صحيح', 'افتحي رابط الربط من زر «ربط البريد» داخل حسابك في الموقع.');
   }
-  P.setProperties({ KEY: p.k, API: p.api, SITE: /^https:\/\//.test(p.site || '') ? p.site : '', LAST: '0', PING: '0' });
+  const regEmail = String(p.em || '').trim().toLowerCase();
+  P.setProperties({
+    KEY: p.k,
+    API: p.api,
+    SITE: /^https:\/\//.test(p.site || '') ? p.site : '',
+    REG_EMAIL: regEmail,
+    LAST: '0',
+    PING: '0'
+  });
   ScriptApp.getProjectTriggers().forEach(t => ScriptApp.deleteTrigger(t));
   const r = sync(true);
   if (!r || !r.ok) {
     P.deleteAllProperties();
+    if (r && r.emailMismatch) {
+      return page_(
+        'الحساب المفتوح غير مطابق لبريدك المسجّل',
+        'حسابك في الموقع مسجّل بالبريد:<br><b style="color:#8C1A2C;direction:ltr;display:inline-block">' + (r.expected || regEmail) + '</b><br>' +
+        'بينما المتصفح مفتوح حاليًا بحساب:<br><b style="direction:ltr;display:inline-block">' + (r.actual || '') + '</b><br><br>' +
+        'يرجى اختيار حسابك المسجّل (<b style="direction:ltr">' + (r.expected || regEmail) + '</b>) من أعلى الصفحة أو تسجيل الدخول به في Google ثم إعادة الضغط على زر الربط.'
+      );
+    }
     const detail = r && r.auth === false
       ? 'مفتاح الربط غير مطابق (تأكدي من تسجيل الدخول بنفس الحساب).'
       : 'تعذّر الاتصال بالموقع' + (r && r._http ? ' (رمز: ' + r._http + ')' : '') + '.';
@@ -120,8 +149,8 @@ function doGet(e) {
   }
   ScriptApp.newTrigger('sync').timeBased().everyMinutes(1).create();
   const site = P.getProperty('SITE');
-  const em = r.email ? '<br><small style="color:#666">الحساب المربوط: ' + r.email + '</small>' : '';
-  const cnt = '<br><small style="color:#1f6b45">تم فحص ومزامنة ' + (r.synced || 0) + ' محادثة من آخر 7 أيام.</small>';
+  const em = r.email ? '<br><small style="color:#666">تم ربط بريدك الخاص: <b style="direction:ltr">' + r.email + '</b></small>' : '';
+  const cnt = '<br><small style="color:#1f6b45">تمت مزامنة ' + (r.synced || 0) + ' محادثة من بريدك الخاص.</small>';
   const backBtn = site ? '<p style="margin-top:18px"><a href="' + site + '" style="display:inline-block;padding:10px 24px;background:#8C1A2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold">العودة إلى الصندوق</a></p>' : '';
-  return page_('تم ربط بريدك ✓', 'ستصل أي رسالة جديدة إلى الموقع خلال دقيقة تقريبًا.' + em + cnt + backBtn);
+  return page_('تم ربط بريدك الخاص بنجاح ✓', 'ستصل رسائل بريدك الخاص إلى صندوقك في الموقع خلال دقيقة تقريبًا.' + em + cnt + backBtn);
 }

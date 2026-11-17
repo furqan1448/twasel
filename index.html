@@ -154,10 +154,10 @@ dialog h3{margin:0 0 4px;font-size:20px}dialog p{margin:0;color:var(--mut)}.dact
       <div id="mAuto">
         <small id="mSt"></small>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
-          <a class="btn sm" id="mGo" target="_blank" rel="noopener"><svg class="i"><use href="#pl"/></svg>ربط بريدي بنقرة واحدة</a>
+          <a class="btn sm" id="mGo" target="_blank" rel="noopener"><svg class="i"><use href="#pl"/></svg>ربط بريدي الخاص بنقرة واحدة</a>
           <a class="btn danger sm" id="mOff" target="_blank" rel="noopener" style="display:none">إيقاف الربط</a>
         </div>
-        <small style="margin-top:10px">اضغطي الزر واختاري حساب Gmail الذي تصلكِ عليه الرسائل، ثم وافقي على الصلاحيات (إن ظهرت «Google لم يتحقق من هذا التطبيق» فاضغطي «متقدّم» ثم «الانتقال إلى…»). بعد ظهور «تم ربط بريدك» تصل رسائلك هنا خلال دقيقة تقريبًا.</small>
+        <small style="margin-top:10px">سيتم ربط بريدكِ الخاص المسجّل في الحساب (<b id="mRegEmail" style="direction:ltr"></b>). اضغطي الزر واختاري نفس هذا الحساب في نافذة Google ثم وافقي على الصلاحيات.</small>
       </div>
     </div>
     <div class="card panel" id="cBox">
@@ -185,8 +185,8 @@ dialog h3{margin:0 0 4px;font-size:20px}dialog p{margin:0;color:var(--mut)}.dact
 <div id="toast" role="status"></div>
 
 <script>
-const API = 'https://script.google.com/macros/s/AKfycbzo1Rm7nIVXnMXlQWFlNOtHxJ9RXay5JEU5wNo60mwJVCLIkQ6B-z5PGAaGKx9ygFiiAQ/exec';
-const MAIL_LINK = 'https://script.google.com/macros/s/AKfycby6YzMeSwlnUFk-hY-b01wd6mG8cFUGJfMB1Fx_8z_vMbXIwXPa7fVpl5HusidY3Vd9FQ/exec';   // رابط نشر MailAgent (ينتهي بـ /exec) — يوضع مرة واحدة
+const API = 'https://script.google.com/macros/s/AKfycbxlMZLxBGP7urFpswiyC2e4Q2NvPeZygE2kyjQaiS0EqV9zHu-Kh7bGi1hrYCIGyTs5pQ/exec';
+const MAIL_LINK = 'https://script.google.com/macros/s/AKfycby6rxyv0yJW4qNSMOJMj9u5yErwYDEAx_64qthINGcxg79OBkJ350NrfFtKwhpFl1o6-g/exec';   // رابط نشر MailAgent (ينتهي بـ /exec) — يوضع مرة واحدة
 const $ = id => document.getElementById(id);
 const STATUSES = ['جديدة', 'تم الرد', 'لم يُرد عليها'], ARCHIVE = 'الأرشيف';
 const U = new URLSearchParams(location.search).get('u');
@@ -393,13 +393,17 @@ async function getKey(){ if(!KEY){ const r=await post({action:'keys',token:TOKEN
 const cp=(id,btn)=>navigator.clipboard.writeText($(id).textContent).then(()=>toast('تم النسخ'));
 function mailBtn(){ const ok=MAILAT&&Date.now()-MAILAT<7200000; $('mLbl').textContent=ok?'البريد مرتبط ✓':'ربط البريد'; }
 $('mToggle').onclick=async()=>{
-  const KY=await getKey();
   tg('mBox');
-  const site=location.origin+location.pathname, ok=MAILAT&&Date.now()-MAILAT<7200000;
-  $('mSt').textContent=ok?'✅ بريدك مرتبط ويعمل. آخر مزامنة: '+new Date(MAILAT).toLocaleTimeString('ar-SA',{timeStyle:'short'}):'البريد غير مرتبط بعد.';
-  $('mGo').href=MAIL_LINK+'?k='+encodeURIComponent(KY)+'&api='+encodeURIComponent(API)+'&site='+encodeURIComponent(site);
+  const ok=MAILAT&&Date.now()-MAILAT<7200000;
+  const userEmail=(ME&&ME.email)||'';
+  $('mRegEmail').textContent=userEmail;
+  $('mSt').textContent=ok?'✅ بريدك الخاص ('+userEmail+') مرتبط ويعمل. آخر مزامنة: '+new Date(MAILAT).toLocaleTimeString('ar-SA',{timeStyle:'short'}):'بريدك الخاص ('+userEmail+') غير مرتبط بعد.';
   $('mOff').style.display=ok?'inline-flex':'none';
   $('mOff').href=MAIL_LINK+'?off=1';
+  const KY=await getKey();
+  if(!KY){ $('mSt').textContent='تعذّر تجهيز الرابط، أعيدي تسجيل الدخول.'; return; }
+  const site=location.origin+location.pathname;
+  $('mGo').href=MAIL_LINK+'?k='+encodeURIComponent(KY)+'&api='+encodeURIComponent(API)+'&site='+encodeURIComponent(site)+'&em='+encodeURIComponent(userEmail);
 };
 $('qToggle').onclick=async()=>{ tg('qBox'); $('qUrl').textContent=API+'?wh='+await getKey(); };
 $('qCopy').onclick=e=>cp('qUrl',e.target);

@@ -151,6 +151,11 @@ function doGet(e) {
   if (p.action === 'mailIn' && p.k) {
     const me = userByKey_(p.k);
     if (!me) return out_({ ok: false, auth: false });
+    const regEmail = String(me[3] || '').trim().toLowerCase();
+    const senderEmail = String(p.em || '').trim().toLowerCase();
+    if (senderEmail && regEmail && senderEmail !== regEmail) {
+      return out_({ ok: false, emailMismatch: true, expected: regEmail, actual: senderEmail });
+    }
     let items = [];
     if (p.items) {
       try { items = JSON.parse(Utilities.newBlob(Utilities.base64DecodeWebSafe(p.items)).getDataAsString('UTF-8')); } catch (err) {}
@@ -161,7 +166,7 @@ function doGet(e) {
       mailIn_(me, items);
       PropertiesService.getScriptProperties().setProperty('ML_' + me[0], String(Date.now()));
     } finally { lock.releaseLock(); }
-    return out_({ ok: true, count: items.length });
+    return out_({ ok: true, count: items.length, expected: regEmail });
   }
   return out_({ ok: true, v: VERSION, url: ScriptApp.getService().getUrl() });
 }
@@ -275,7 +280,16 @@ function doPost(e) {
       return out_({ ok: true });
     }
 
-    if (d.action === 'mailIn') { mailIn_(me, d.items); PropertiesService.getScriptProperties().setProperty('ML_' + me[0], String(Date.now())); return out_({ ok: true }); }
+    if (d.action === 'mailIn') {
+      const regEmail = String(me[3] || '').trim().toLowerCase();
+      const senderEmail = String(d.em || '').trim().toLowerCase();
+      if (senderEmail && regEmail && senderEmail !== regEmail) {
+        return out_({ ok: false, emailMismatch: true, expected: regEmail, actual: senderEmail });
+      }
+      mailIn_(me, d.items);
+      PropertiesService.getScriptProperties().setProperty('ML_' + me[0], String(Date.now()));
+      return out_({ ok: true, expected: regEmail });
+    }
 
     if (d.action === 'addManual') {
       if (!d.name) return out_({ ok: false, error: 'الاسم مطلوب.' });
