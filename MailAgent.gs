@@ -137,13 +137,15 @@ function doGet(e) {
   if (!r || !r.ok) {
     P.deleteAllProperties();
     if (r && r.emailMismatch) {
-      const forceUrl = ScriptApp.getService().getUrl() + '?k=' + encodeURIComponent(p.k) + '&api=' + encodeURIComponent(p.api) + '&site=' + encodeURIComponent(p.site || '') + '&em=' + encodeURIComponent(r.actual) + '&force=1';
+      const targetEmail = r.expected || regEmail;
+      const retryUrl = ScriptApp.getService().getUrl() + '?k=' + encodeURIComponent(p.k) + '&api=' + encodeURIComponent(p.api) + '&site=' + encodeURIComponent(p.site || '') + '&em=' + encodeURIComponent(targetEmail);
+      const chooserUrl = 'https://accounts.google.com/AccountChooser?Email=' + encodeURIComponent(targetEmail) + '&continue=' + encodeURIComponent(retryUrl);
       return page_(
-        'الحساب المفتوح مختلف عن البريد المسجّل',
-        'حسابك في الموقع مسجّل بالبريد: <b style="color:#8C1A2C;direction:ltr">' + (r.expected || regEmail) + '</b><br>' +
-        'بينما المتصفح مفتوح حالياً بحساب: <b style="direction:ltr">' + (r.actual || '') + '</b><br><br>' +
-        'هل تريد ربط البريد المفتوح حالياً (<b style="direction:ltr">' + r.actual + '</b>) مباشرة دون تغيير المتصفح؟<br><br>' +
-        '<a href="' + forceUrl + '" style="display:inline-block;padding:12px 24px;background:#8C1A2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold">ربط هذا البريد (' + r.actual + ') مباشرة ✓</a>'
+        'يرجى اختيار البريد المسجّل في حسابك',
+        'حسابك في الموقع مسجّل بالبريد: <b style="color:#8C1A2C;direction:ltr">' + targetEmail + '</b><br>' +
+        'بينما المتصفح مفتوح حالياً بحساب مختلف (<b style="direction:ltr">' + (r.actual || '') + '</b>).<br><br>' +
+        'اضغطي على الزر أدناه لاختيار أو تسجيل الدخول ببريدك المسجّل:<br><br>' +
+        '<a href="' + chooserUrl + '" style="display:inline-block;padding:12px 24px;background:#8C1A2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold">ربط البريد المسجّل (' + targetEmail + ') ✓</a>'
       );
     }
     const detail = r && r.auth === false
