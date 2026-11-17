@@ -1,7 +1,9 @@
 /** @OnlyCurrentDoc */
 // ===== الإعدادات =====
+// مهم: عند أي تحديث لا تنشئي «عملية نشر جديدة». استخدمي: نشر ← إدارة عمليات النشر ← ✏️ تعديل ← الإصدار: «إصدار جديد» ← نشر.
+// بهذه الطريقة يبقى رابط /exec نفسه، فلا يحتاج أي مستخدم لتغيير رابط Meta أو أي ربط آخر.
 const WA_VERIFY_TOKEN = 'furqan-wa-2026';   // أي كلمة تختارينها، وتكتبينها نفسها في Meta
-const VERSION = '2026-11-17-c';               // رقم الإصدار: يظهر عند فتح رابط النشر في المتصفح، ليُعرف هل النشر يعمل بآخر كود
+const VERSION = '2026-11-17-d';               // رقم الإصدار: يظهر عند فتح رابط النشر في المتصفح، ليُعرف هل النشر يعمل بآخر كود
 const MSG = 'الرسائل', USR = 'المستخدمون';
 const COLS = 11;                              // عدد أعمدة جدول الرسائل
 const DEL = 'محذوفة';                         // قديم: صفوف قديمة تُحذف تلقائيًا من الشيت ولا يُكتب هذا النص بعد الآن
@@ -146,7 +148,7 @@ function doGet(e) {
     const u = userById_(p.u);
     return u ? out_({ ok: true, user: { name: u[1], phone: u[2], email: u[3] } }) : out_({ ok: false, error: 'الصفحة غير موجودة' });
   }
-  return out_({ ok: true, v: VERSION });
+  return out_({ ok: true, v: VERSION, url: ScriptApp.getService().getUrl() });
 }
 
 function doPost(e) {
@@ -252,13 +254,13 @@ function doPost(e) {
       if (/^(whatsapp|واتساب)/i.test(title) || /\d+\s*(new messages|رسائل جديدة|رسالة جديدة)/i.test(text)) return out_({ ok: true });   // إشعارات التجميع
       if (isGoneC_(cid_(me[0], title, text))) return out_({ ok: true });   // رسالة حُذفت قبل قليل: لا تعود
       const sh = msgs_(), n = sh.getLastRow() - 1;
-      const recent = n > 0 ? sh.getRange(Math.max(2, n - 18), 1, Math.min(n, 20), COLS).getValues() : [];
+      const recent = n > 0 ? sh.getRange(Math.max(2, n - 98), 1, Math.min(n, 100), COLS).getValues() : [];
       if (recent.some(r => r[9] === me[0] && r[6] !== DEL && dec_(r[2]) === title && dec_(r[5]) === text)) return out_({ ok: true });   // منع التكرار
       sh.appendRow([Utilities.getUuid(), new Date(), enc_(title), '', '', enc_(text), 'جديدة', '', 'واتساب', me[0], '']);
       return out_({ ok: true });
     }
 
-    if (d.action === 'mailIn') { mailIn_(me, d.items); return out_({ ok: true }); }
+    if (d.action === 'mailIn') { mailIn_(me, d.items); PropertiesService.getScriptProperties().setProperty('ML_' + me[0], String(Date.now())); return out_({ ok: true }); }
 
     if (d.action === 'addManual') {
       if (!d.name) return out_({ ok: false, error: 'الاسم مطلوب.' });
@@ -283,7 +285,7 @@ function doPost(e) {
       }
       const ord = new Map(mine.map((r, i) => [r, i]));
       mine.sort((a, b) => (new Date(b[1]).getTime() || 0) - (new Date(a[1]).getTime() || 0) || ord.get(b) - ord.get(a));   // الأحدث أولًا
-      return out_({ ok: true, v: VERSION, rows: mine.slice(0, limit).map(rowOut_), archivedCount, counts, total: mine.length });
+      return out_({ ok: true, v: VERSION, rows: mine.slice(0, limit).map(rowOut_), archivedCount, counts, total: mine.length, mail: Number(PropertiesService.getScriptProperties().getProperty('ML_' + me[0]) || 0) });
     }
 
     if (d.action === 'update') {
@@ -393,27 +395,47 @@ function notify_(to, name, phone, email, message, source) {
 
 
 // ===== سجل منع العودة =====
-// عند الحذف يُمسح الصف كاملًا من الشيت. ولكي لا يعيد استيراد البريد (آخر 3 أيام) الرسالة نفسها،
-// نحفظ بصمة مقتطعة (Hash) لمعرّفها فقط في خصائص السكربت (ليس في الشيت)، وتُنسى بعد 8 أيام (لأن Meta قد تعيد إرسال الرسالة نفسها حتى 7 أيام).
+// عند الحذف يُمسح الصف كاملًا من الشيت، وتُحفظ بصمة مقتطعة (Hash) لمعرّف الرسالة فقط في خصائص السكربت (ليس في الشيت).
+// السجل مقسّم بالأيام، فلا يمتلئ ولا يُمسح بعضه ببعض مهما كثر الحذف (كان سابقًا سقفه 450 بصمة لكل المستخدمات معًا).
+// معرّفات الرسائل تُحفظ 9 أيام (Meta قد تعيد الإرسال حتى 7 أيام)، وبصمات نص إشعارات الجوال 4 أيام.
+const TOMB_DAYS = 9, TOMBC_DAYS = 4;
 function tb_(id) { return Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, 'tb:' + id)).slice(0, 8); }
-function tombs_(k) {
-  try { return JSON.parse(PropertiesService.getScriptProperties().getProperty(k || 'TOMB') || '[]'); } catch (e) { return []; }
+function day_() { return Math.floor(Date.now() / 86400000); }
+let TS_ = {};   // ذاكرة داخل التنفيذ الواحد
+function tombSet_(pre, days) {
+  const k = pre + days;
+  if (TS_[k]) return TS_[k];
+  const P = PropertiesService.getScriptProperties(), set = {}, d0 = day_();
+  for (let d = d0; d > d0 - days; d--) for (let n = 0; ; n++) {
+    const v = P.getProperty(pre + d + '.' + n); if (v == null) break;
+    for (let i = 0; i + 8 <= v.length; i += 8) set[v.substr(i, 8)] = 1;
+  }
+  try {   // السجل القديم (قبل هذا الإصدار) يبقى معتمدًا حتى لا يعود ما حُذف قريبًا
+    JSON.parse(P.getProperty(pre === 'T' ? 'TOMB' : 'TOMBC') || '[]').forEach(x => { set[String(x).slice(0, 8)] = 1; });
+  } catch (e) {}
+  return (TS_[k] = set);
 }
-function isGone_(id) { const h = tb_(id); return tombs_().some(x => x.slice(0, 8) === h); }
-function bury_(ids, k, ttlDays, cap) {
-  k = k || 'TOMB';
-  const now = Math.floor(Date.now() / 60000), ttl = (ttlDays || 8) * 1440;
-  const keep = tombs_(k).filter(x => now - parseInt(x.slice(8), 36) < ttl);
-  ids.forEach(id => keep.push(tb_(id) + now.toString(36)));
-  PropertiesService.getScriptProperties().setProperty(k, JSON.stringify(keep.slice(-(cap || 450))));
+function addTombs_(hs, pre, days) {
+  const P = PropertiesService.getScriptProperties(), d = day_(), set = tombSet_(pre, days);
+  let n = 0, cur = '';
+  while (true) { cur = P.getProperty(pre + d + '.' + n) || ''; if (cur.length + 8 <= 8000) break; n++; }   // الخاصية الواحدة تتسع لنحو 1000 بصمة
+  hs.forEach(h => {
+    set[h] = 1;
+    if (cur.length + 8 > 8000) { P.setProperty(pre + d + '.' + n, cur); n++; cur = ''; }
+    cur += h;
+  });
+  P.setProperty(pre + d + '.' + n, cur);
+  for (let od = d - days - 2; od <= d - days; od++) for (let m = 0; P.getProperty(pre + od + '.' + m) != null; m++) P.deleteProperty(pre + od + '.' + m);   // تنظيف الأيام المنتهية
 }
-// إشعارات الواتساب القادمة من تطبيق الجوال ليس لها معرّف ثابت، فنمنع عودتها بحسب (المالكة + المرسل + النص) لمدة 12 ساعة بعد حذفها.
+function isGone_(id) { return !!tombSet_('T', TOMB_DAYS)[tb_(id)]; }
+function bury_(ids) { if (ids.length) addTombs_(ids.map(tb_), 'T', TOMB_DAYS); }
+// إشعارات الواتساب القادمة من تطبيق الجوال ليس لها معرّف ثابت، فنمنع عودتها بحسب (المالكة + المرسل + النص).
 function cid_(owner, name, text) { return owner + '|' + name + '|' + text; }
-function isGoneC_(c) { const h = tb_(c), now = Math.floor(Date.now() / 60000); return tombs_('TOMBC').some(x => x.slice(0, 8) === h && now - parseInt(x.slice(8), 36) < 720); }
+function isGoneC_(c) { return !!tombSet_('C', TOMBC_DAYS)[tb_(c)]; }
 function buryRows_(rows, owner) {   // rows: صفوف الشيت المحذوفة (مصفوفات)
   bury_(rows.map(r => r[0]));
   const c = rows.filter(r => r[8] === 'واتساب').map(r => cid_(owner, dec_(r[2]), dec_(r[5])));
-  if (c.length) bury_(c, 'TOMBC', 0.5, 200);
+  if (c.length) addTombs_(c.map(tb_), 'C', TOMBC_DAYS);
 }
 // تنظيف الصفوف القديمة المكتوب فيها «محذوفة»: تُحذف نهائيًا من الشيت
 function cleanDeleted_(sh) {
