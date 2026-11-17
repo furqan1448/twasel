@@ -66,7 +66,9 @@ function sync(forceAll) {
   const me = (Session.getEffectiveUser().getEmail() || Session.getActiveUser().getEmail() || '').toLowerCase();
 
   // التحقق من أن البريد المفتوح في المتصفح يطابق البريد المسجّل في حساب المستخدمة بالموقع
-  if (!p.force && c.regEmail && me && c.regEmail !== me) {
+  if (forceAll === 'force' && c.regEmail && me && c.regEmail !== me) {
+    // force override allowed
+  } else if (c.regEmail && me && c.regEmail !== me) {
     return { ok: false, emailMismatch: true, expected: c.regEmail, actual: me };
   }
 
@@ -131,7 +133,7 @@ function doGet(e) {
     PING: '0'
   });
   ScriptApp.getProjectTriggers().forEach(t => ScriptApp.deleteTrigger(t));
-  const r = sync(true);
+  const r = sync(p.force ? 'force' : true);
   if (!r || !r.ok) {
     P.deleteAllProperties();
     if (r && r.emailMismatch) {
