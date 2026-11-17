@@ -59,7 +59,8 @@ function msgs_() {
 }
 function users_() {
   const sh = sheet_(USR, ['المعرف', 'الاسم', 'الجوال', 'البريد', 'التجزئة', 'الملح', 'الرمز', 'التاريخ']);
-  sh.getRange('C:C').setNumberFormat('@');
+  const P = PropertiesService.getScriptProperties();
+  if (!P.getProperty('PH_FMT')) { sh.getRange('C:C').setNumberFormat('@'); P.setProperty('PH_FMT', '1'); }   // مرة واحدة فقط (كانت تُنفَّذ مع كل طلب فتبطّئ الموقع)
   return sh;
 }
 
@@ -79,7 +80,8 @@ function hash_(pw, salt) {
 }
 function pub_(r) { return { id: r[0], name: r[1], phone: r[2], email: r[3] }; }
 
-function allUsers_() { const sh = users_(); return sh.getLastRow() < 2 ? [] : sh.getRange(2, 1, sh.getLastRow() - 1, 8).getValues(); }
+let UC_ = null;   // قراءة المستخدمين مرة واحدة لكل طلب بدل عدة مرات
+function allUsers_() { if (UC_) return UC_; const sh = users_(); return (UC_ = sh.getLastRow() < 2 ? [] : sh.getRange(2, 1, sh.getLastRow() - 1, 8).getValues()); }
 // ===== الجلسات: منفصلة تمامًا عن «مفتاح الربط» =====
 // الجلسة (تسجيل الدخول من الموقع): تُحفظ بصمتها فقط، وتنتهي بعد 30 يومًا، وتُلغى عند تغيير/استعادة كلمة المرور.
 // مفتاح الربط (العمود «الرمز» في المستخدمون): يُستخدم في روابط الواتساب وسكربت البريد، ويسمح بإضافة الرسائل فقط ولا يقرأ شيئًا.
@@ -155,7 +157,7 @@ function doPost(e) {
       const dup = allUsers_().some(r => norm_(r[2]) === phone || String(r[3]).toLowerCase() === email);
       if (dup) return out_({ ok: false, error: 'رقم الجوال أو البريد مسجّل مسبقًا، يرجى تسجيل الدخول.' });
       const id = Utilities.getUuid().replace(/-/g, '').slice(0, 10), salt = Utilities.getUuid(), token = Utilities.getUuid();
-      users_().appendRow([id, name, phone, email, hash_(pw, salt), salt, token, new Date()]);
+      users_().appendRow([id, name, phone, email, hash_(pw, salt), salt, token, new Date()]); UC_ = null;
       return out_({ ok: true, token: newSession_(id), user: { id, name, phone, email } });
     }
 
@@ -251,21 +253,22 @@ function doPost(e) {
     }
 
     if (d.action === 'list') {
+      // يُرجع أحدث رسائل العرض المطلوب فقط (الافتراضي 100) مع أعداد الحالات كاملة، ويفك تشفير المعروض فقط
       const first = allUsers_()[0][0];
-      const sh = msgs_(), wantArchived = !!d.archived;
+      const sh = msgs_(), wantArchived = !!d.archived, limit = Math.min(Math.max(Number(d.limit) || 100, 1), 1000);
       cleanDeleted_(sh);
       let archivedCount = 0;
-      const rows = [];
+      const mine = [], counts = {};
       if (sh.getLastRow() >= 2) {
         sh.getRange(2, 1, sh.getLastRow() - 1, COLS).getValues().forEach(r => {
           if ((r[9] || first) !== me[0] || r[6] === DEL) return;       // الرسائل القديمة بلا مالكة تعود لأول حساب
           const isArch = r[10] === 'نعم';
-          if (isArch) archivedCount++;
-          if (isArch === wantArchived) rows.push(rowOut_(r));            // فك التشفير للمطلوب عرضه فقط
+          if (isArch) archivedCount++; else counts[r[6]] = (counts[r[6]] || 0) + 1;
+          if (isArch === wantArchived) mine.push(r);
         });
       }
-      rows.reverse();
-      return out_({ ok: true, rows, archivedCount });
+      mine.reverse();
+      return out_({ ok: true, rows: mine.slice(0, limit).map(rowOut_), archivedCount, counts, total: mine.length });
     }
 
     if (d.action === 'update') {
@@ -391,11 +394,12 @@ function bury_(ids) {
 }
 // تنظيف الصفوف القديمة المكتوب فيها «محذوفة»: تُحذف نهائيًا من الشيت
 function cleanDeleted_(sh) {
+  const P = PropertiesService.getScriptProperties(); if (P.getProperty('CLEAN1')) return;   // تنظيف لمرة واحدة فقط
   const n = sh.getLastRow() - 1; if (n < 1) return;
   const gone = [], rows = [];
   sh.getRange(2, 1, n, 7).getValues().forEach((r, i) => { if (r[6] === DEL) { gone.push(r[0]); rows.push(i + 2); } });
-  if (!gone.length) return;
-  bury_(gone); rows.reverse().forEach(x => sh.deleteRow(x));
+  if (gone.length) { bury_(gone); rows.reverse().forEach(x => sh.deleteRow(x)); }
+  P.setProperty('CLEAN1', '1');
 }
 
 // ===== كلمة المرور =====
@@ -405,7 +409,7 @@ function sendMail_(to, subject, body) {
 function setPw_(u, pw) {
   const i = allUsers_().findIndex(r => r[0] === u[0]); if (i < 0) return;
   const salt = Utilities.getUuid();
-  users_().getRange(i + 2, 5, 1, 2).setValues([[hash_(pw, salt), salt]]);
+  users_().getRange(i + 2, 5, 1, 2).setValues([[hash_(pw, salt), salt]]); UC_ = null;
 }
 
 // ===== تشفير الرسائل القديمة (شغّليها مرة واحدة فقط بعد تحديث الكود) =====
