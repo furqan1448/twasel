@@ -148,6 +148,21 @@ function doGet(e) {
     const u = userById_(p.u);
     return u ? out_({ ok: true, user: { name: u[1], phone: u[2], email: u[3] } }) : out_({ ok: false, error: 'الصفحة غير موجودة' });
   }
+  if (p.action === 'mailIn' && p.k) {
+    const me = userByKey_(p.k);
+    if (!me) return out_({ ok: false, auth: false });
+    let items = [];
+    if (p.items) {
+      try { items = JSON.parse(Utilities.newBlob(Utilities.base64DecodeWebSafe(p.items)).getDataAsString('UTF-8')); } catch (err) {}
+    }
+    const lock = LockService.getScriptLock();
+    lock.waitLock(20000);
+    try {
+      mailIn_(me, items);
+      PropertiesService.getScriptProperties().setProperty('ML_' + me[0], String(Date.now()));
+    } finally { lock.releaseLock(); }
+    return out_({ ok: true, count: items.length });
+  }
   return out_({ ok: true, v: VERSION, url: ScriptApp.getService().getUrl() });
 }
 
