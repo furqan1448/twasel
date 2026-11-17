@@ -66,7 +66,7 @@ function sync(forceAll) {
   const me = (Session.getEffectiveUser().getEmail() || Session.getActiveUser().getEmail() || '').toLowerCase();
 
   // التحقق من أن البريد المفتوح في المتصفح يطابق البريد المسجّل في حساب المستخدمة بالموقع
-  if (c.regEmail && me && c.regEmail !== me) {
+  if (!p.force && c.regEmail && me && c.regEmail !== me) {
     return { ok: false, emailMismatch: true, expected: c.regEmail, actual: me };
   }
 
@@ -135,11 +135,13 @@ function doGet(e) {
   if (!r || !r.ok) {
     P.deleteAllProperties();
     if (r && r.emailMismatch) {
+      const forceUrl = ScriptApp.getService().getUrl() + '?k=' + encodeURIComponent(p.k) + '&api=' + encodeURIComponent(p.api) + '&site=' + encodeURIComponent(p.site || '') + '&em=' + encodeURIComponent(r.actual) + '&force=1';
       return page_(
-        'الحساب المفتوح غير مطابق لبريدك المسجّل',
-        'حسابك في الموقع مسجّل بالبريد:<br><b style="color:#8C1A2C;direction:ltr;display:inline-block">' + (r.expected || regEmail) + '</b><br>' +
-        'بينما المتصفح مفتوح حاليًا بحساب:<br><b style="direction:ltr;display:inline-block">' + (r.actual || '') + '</b><br><br>' +
-        'يرجى اختيار حسابك المسجّل (<b style="direction:ltr">' + (r.expected || regEmail) + '</b>) من أعلى الصفحة أو تسجيل الدخول به في Google ثم إعادة الضغط على زر الربط.'
+        'الحساب المفتوح مختلف عن البريد المسجّل',
+        'حسابك في الموقع مسجّل بالبريد: <b style="color:#8C1A2C;direction:ltr">' + (r.expected || regEmail) + '</b><br>' +
+        'بينما المتصفح مفتوح حالياً بحساب: <b style="direction:ltr">' + (r.actual || '') + '</b><br><br>' +
+        'هل تريد ربط البريد المفتوح حالياً (<b style="direction:ltr">' + r.actual + '</b>) مباشرة دون تغيير المتصفح؟<br><br>' +
+        '<a href="' + forceUrl + '" style="display:inline-block;padding:12px 24px;background:#8C1A2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold">ربط هذا البريد (' + r.actual + ') مباشرة ✓</a>'
       );
     }
     const detail = r && r.auth === false
