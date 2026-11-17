@@ -3,150 +3,219 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>وَصْل للتواصل</title>
+<title>وَصْل للتواصل | جمعية فرقان</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#faf7f5;--card:#fff;--ink:#2a1a1d;--mut:#7a6a6d;--line:#eadfe0;--acc:#7a1f2b;--acc2:#5e1822;--ok:#1f6b45;--warn:#9a5b00;--bad:#b3261e;}
-@media (prefers-color-scheme:dark){:root{--bg:#1a1214;--card:#251a1d;--ink:#f3e9ea;--mut:#b5a3a6;--line:#3a2a2e;--acc:#d4707e;--acc2:#e08d99;--ok:#58c28a;--warn:#e0a24a;--bad:#ef7b73;}}
+:root{--bg:#f7f4f1;--card:#fff;--ink:#2b1a1d;--mut:#7b6c6f;--line:#ebe1e2;--acc:#8C1A2C;--acc2:#6f1423;--gold:#C2AA85;--gray:#B0AEAE;--soft:#f6ecee;--ok:#1f6b45;--warn:#9a5b00;--bad:#b3261e;--sh:0 4px 20px rgba(60,20,28,.07)}
+@media (prefers-color-scheme:dark){:root{--bg:#171112;--card:#221a1c;--ink:#f4eaeb;--mut:#b7a6a9;--line:#3a2b2f;--acc:#d9707f;--acc2:#e58e9a;--soft:#2e2024;--ok:#58c28a;--warn:#e0a24a;--bad:#ef7b73;--sh:none}}
 *{box-sizing:border-box}
 body{margin:0;font-family:'Tajawal',system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.8}
-.wrap{max-width:640px;margin:0 auto;padding:28px 18px 60px}
 section{display:none}
-h1{font-size:30px;font-weight:800;margin:10px 0 4px;color:var(--acc)}
-.sub{color:var(--mut);margin:0 0 22px}
-.contacts{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:26px}
-.contacts a{flex:1 1 200px;display:block;padding:14px 16px;background:var(--card);border:1px solid var(--line);border-radius:10px;color:var(--ink);text-decoration:none}
-.contacts small{display:block;color:var(--mut);font-size:13px}
-.contacts b{font-size:17px;direction:ltr;unicode-bidi:plaintext}
-label{display:block;font-weight:500;margin:14px 0 4px}
-input,textarea{width:100%;padding:12px;font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:8px}
-input:focus,textarea:focus,button:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
-textarea{min-height:130px;resize:vertical}
-button{font:inherit;font-weight:700;cursor:pointer;border:0;border-radius:8px;padding:12px 20px;background:var(--acc);color:#fff}
-button:hover{background:var(--acc2)}
-button.ghost{background:transparent;color:var(--acc);border:1px solid var(--acc)}
-.msg{margin-top:12px;font-weight:500}
-.tabs{display:flex;gap:8px;margin:18px 0 4px}
-.tabs button{flex:1}
-.share{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:12px 0}
-.share small{color:var(--mut);display:block}
-.share code{display:block;direction:ltr;text-align:left;font-size:13px;word-break:break-all;margin:4px 0 8px}
-.bar{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
-.bar button{padding:8px 14px;font-size:14px}
-.bar button.on{background:var(--acc);color:#fff}
-.item{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:12px;border-right:5px solid var(--warn)}
-.item.replied{border-right-color:var(--ok)}
-.item.left{border-right-color:var(--mut)}
-.item.new{border-right-color:var(--acc)}
-.top{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
-.top b{font-size:17px}
-.date{color:var(--mut);font-size:13px}
-.meta{color:var(--mut);font-size:14px;direction:ltr;text-align:right;unicode-bidi:plaintext}
-.meta a{color:var(--acc)}
-.body{margin:8px 0;white-space:pre-wrap}
-.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
-.acts button{padding:7px 12px;font-size:14px}
-.acts button.danger{color:var(--bad);border-color:var(--bad)}
-.acts button.danger:hover{background:var(--bad);color:#fff}
-.bar button.danger{color:var(--bad);border-color:var(--bad);margin-inline-start:auto}
-.bar button.danger:hover{background:var(--bad);color:#fff}
-.tag{font-size:13px;font-weight:700}
-.note{margin-top:8px;font-size:14px}
+svg.i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.logo{width:56px;height:56px;object-fit:contain;border-radius:14px;background:#fff;padding:4px;border:1px solid var(--line)}
+.lf{display:none;width:56px;height:56px;border-radius:14px;place-items:center;background:var(--acc);color:#fff;font-size:30px;font-weight:800;border:2px solid var(--gold)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;font:inherit;font-weight:700;cursor:pointer;border:1px solid var(--acc);border-radius:10px;padding:10px 18px;background:var(--acc);color:#fff;transition:.15s}
+.btn:hover{background:var(--acc2)}.btn:disabled{opacity:.6;cursor:wait}
+.btn.ghost{background:transparent;color:var(--acc)}.btn.ghost:hover{background:var(--soft)}
+.btn.sm{padding:6px 12px;font-size:14px;border-radius:8px}
+.btn.danger{background:transparent;color:var(--bad);border-color:var(--bad)}.btn.danger:hover{background:var(--bad);color:#fff}
+.btn.solid-d{background:var(--bad);border-color:var(--bad)}
+.ib{width:40px;height:40px;padding:0;border-radius:10px;background:transparent;border:1px solid var(--line);color:var(--ink);cursor:pointer;display:grid;place-items:center}.ib:hover{background:var(--soft);color:var(--acc)}
+label{display:block;font-weight:500;font-size:14px;margin:14px 0 5px}
+input,textarea{width:100%;padding:12px 14px;font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:10px;transition:.15s}
+input:focus,textarea:focus,.btn:focus-visible,.ib:focus-visible{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 22%,transparent)}
+textarea{min-height:120px;resize:vertical}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--sh)}
+.msg{margin-top:12px;font-weight:500;min-height:1.6em}
+.lnk{background:none;border:0;color:var(--acc);font:inherit;font-size:14px;font-weight:500;cursor:pointer;padding:0;margin-top:10px}
+/* الدخول */
+#auth{min-height:100vh}
+.split{display:grid;grid-template-columns:1fr 1fr;min-height:100vh}
+.hero{background:linear-gradient(155deg,#8C1A2C,#5e0f1c);color:#fff;padding:48px;display:flex;flex-direction:column;justify-content:center;position:relative;overflow:hidden}
+.hero:after{content:"";position:absolute;inset:auto -80px -80px auto;width:320px;height:320px;border:2px solid rgba(194,170,133,.35);border-radius:50%;box-shadow:0 0 0 40px rgba(194,170,133,.08)}
+.hero .logo,.hero .lf{width:84px;height:84px}.hero h1{font-size:38px;font-weight:800;margin:22px 0 6px}
+.hero p{color:#ecd9dc;max-width:360px;margin:0}.hero .gold{color:var(--gold);font-weight:700;letter-spacing:.3px}
+.hero ul{list-style:none;padding:0;margin:26px 0 0;display:grid;gap:10px;color:#f6e9eb}.hero li{display:flex;gap:10px;align-items:center}
+.formside{display:grid;place-items:center;padding:28px 20px}.fbox{width:100%;max-width:400px}
+.seg{display:grid;grid-template-columns:1fr 1fr;background:var(--soft);border-radius:12px;padding:4px;margin:18px 0 6px}
+.seg button{border:0;background:transparent;font:inherit;font-weight:700;padding:9px;border-radius:9px;cursor:pointer;color:var(--mut)}.seg button.on{background:var(--card);color:var(--acc);box-shadow:var(--sh)}
+/* التطبيق */
+.top{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--card) 92%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.top .in{max-width:900px;margin:0 auto;padding:10px 18px;display:flex;align-items:center;gap:12px}
+.top .logo,.top .lf{width:44px;height:44px;font-size:24px}.top .ttl{flex:1;line-height:1.3}.top .ttl b{display:block;font-size:17px}.top .ttl small{color:var(--mut)}
+.wrap{max-width:900px;margin:0 auto;padding:22px 18px 70px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px}
+.stat{padding:14px 16px;border-right:4px solid var(--acc)}.stat.o{border-color:var(--ok)}.stat.w{border-color:var(--warn)}
+.stat b{display:block;font-size:26px;line-height:1.2}.stat span{color:var(--mut);font-size:14px}
+.share{padding:14px 16px;margin-bottom:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.share code{flex:1 1 220px;direction:ltr;text-align:left;font-size:13px;word-break:break-all;background:var(--soft);padding:8px 10px;border-radius:8px}
+.tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.panel{padding:16px;margin-bottom:14px;display:none}.panel small{display:block;color:var(--mut);margin:4px 0}
+.panel code{display:block;direction:ltr;text-align:left;font-size:12.5px;word-break:break-all;background:var(--soft);padding:10px;border-radius:8px;margin:8px 0;white-space:pre-wrap;max-height:200px;overflow:auto}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 16px;align-items:center}
+.chip{font:inherit;font-size:14px;font-weight:500;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:99px;padding:5px 14px}.chip.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.item{padding:16px 18px;margin-bottom:12px;display:grid;grid-template-columns:auto 1fr;gap:14px;border-right:5px solid var(--warn)}
+.item.replied{border-right-color:var(--ok)}.item.left{border-right-color:var(--gray)}.item.new{border-right-color:var(--acc)}
+.av{width:44px;height:44px;border-radius:50%;background:var(--soft);color:var(--acc);display:grid;place-items:center;font-weight:800;font-size:18px}
+.hd{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center}.hd b{font-size:17px}.date{color:var(--mut);font-size:13px}
+.meta{color:var(--mut);font-size:14px;display:flex;gap:14px;flex-wrap:wrap}.meta a{color:var(--acc);text-decoration:none}
+.body{margin:8px 0;white-space:pre-wrap;word-break:break-word}.note{font-size:14px;background:var(--soft);border-radius:8px;padding:6px 10px;margin:6px 0}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}.bd{font-size:12.5px;font-weight:700;border-radius:99px;padding:2px 10px;background:var(--soft);color:var(--acc);display:inline-flex;gap:5px;align-items:center}
+.bd.s{background:transparent;border:1px solid var(--line);color:var(--mut)}
+.acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.empty{text-align:center;color:var(--mut);padding:50px 10px}.empty .i{width:44px;height:44px;opacity:.5}
+.sk{height:96px;border-radius:16px;margin-bottom:12px;background:linear-gradient(90deg,var(--line),var(--soft),var(--line));background-size:200% 100%;animation:sk 1.2s infinite}@keyframes sk{to{background-position:-200% 0}}
+/* الزائر */
+.pub{max-width:560px;margin:0 auto;padding:24px 18px 60px}
+.ph{text-align:center;padding:26px 16px 20px}.ph .logo,.ph .lf{margin:0 auto 10px;width:72px;height:72px}.ph h1{margin:6px 0 4px;font-size:26px;color:var(--acc)}.ph p{margin:0;color:var(--mut)}
+.cts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}.cts a{padding:12px 14px;background:var(--card);border:1px solid var(--line);border-radius:12px;color:var(--ink);text-decoration:none}.cts small{display:block;color:var(--mut);font-size:13px}.cts b{direction:ltr;unicode-bidi:plaintext;font-size:15px;word-break:break-all}
+dialog{border:0;border-radius:18px;padding:22px;width:min(420px,92vw);background:var(--card);color:var(--ink);box-shadow:0 20px 60px rgba(0,0,0,.35)}dialog::backdrop{background:rgba(30,10,14,.5);backdrop-filter:blur(2px)}
+dialog h3{margin:0 0 4px;font-size:20px}dialog p{margin:0;color:var(--mut)}.dact{display:flex;gap:8px;margin-top:18px;justify-content:flex-start}
+#toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(30px);background:#2b1a1d;color:#fff;padding:11px 20px;border-radius:12px;opacity:0;pointer-events:none;transition:.25s;z-index:99;max-width:90vw}#toast.on{opacity:1;transform:translateX(-50%)}#toast.bad{background:var(--bad)}
+@media(max-width:760px){.split{grid-template-columns:1fr}.hero{padding:30px 22px}.hero ul,.hero:after{display:none}.hero h1{font-size:28px}.stats{gap:8px}.stat{padding:10px}.stat b{font-size:21px}.item{grid-template-columns:1fr}.av{display:none}.cts{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
-<div class="wrap">
+<svg width="0" height="0" style="position:absolute"><defs>
+<symbol id="key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2 21 2M16 7l3 3M14 9l2 2"/></symbol>
+<symbol id="out" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></symbol>
+<symbol id="ref" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5"/></symbol>
+<symbol id="cp" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></symbol>
+<symbol id="tr" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v5M14 11v5"/></symbol>
+<symbol id="ar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11h14V8M10 12h4"/></symbol>
+<symbol id="nt" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></symbol>
+<symbol id="wa" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 1-13.4 7.8L3 21l1.3-4.4A9 9 0 1 1 21 12Z"/></symbol>
+<symbol id="ml" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></symbol>
+<symbol id="fm" viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9ZM14 3v6h6M8 13h8M8 17h5"/></symbol>
+<symbol id="pl" viewBox="0 0 24 24"><path d="M9 2v6M15 2v6M6 8h12v4a6 6 0 0 1-12 0ZM12 18v4"/></symbol>
+<symbol id="ck" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+<symbol id="sh" viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6Z"/><path d="m9 12 2 2 4-4"/></symbol>
+<symbol id="in" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2M5.5 5h13L22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6Z"/></symbol>
+</defs></svg>
 
-<!-- صفحة الزائر: ?u=معرّف -->
-<section id="pub">
-  <h1 id="pTitle">تواصل معي</h1>
-  <p class="sub">يمكنكم الاتصال أو المراسلة مباشرةً، أو إرسال رسالة عبر النموذج أدناه.</p>
-  <div class="contacts">
-    <a id="phoneLink"><small>رقم الجوال</small><b id="phoneTxt"></b></a>
-    <a id="mailLink"><small>البريد الإلكتروني</small><b id="mailTxt"></b></a>
+<!-- صفحة الزائر -->
+<section id="pub"><div class="pub">
+  <div class="card ph"><span class="bm"></span><h1 id="pTitle">تواصل معنا</h1><p>جمعية فرقان لتحفيظ القرآن الكريم</p></div>
+  <div class="cts"><a id="phoneLink"><small>رقم الجوال</small><b id="phoneTxt">—</b></a><a id="mailLink"><small>البريد الإلكتروني</small><b id="mailTxt">—</b></a></div>
+  <div class="card" style="padding:20px">
+    <label for="n" style="margin-top:0">الاسم</label><input id="n" autocomplete="name">
+    <label for="p">رقم الجوال (اختياري)</label><input id="p" type="tel" inputmode="tel">
+    <label for="e">البريد الإلكتروني (اختياري)</label><input id="e" type="email">
+    <label for="m">الرسالة</label><textarea id="m"></textarea>
+    <p style="margin:16px 0 0"><button class="btn" id="send" style="width:100%">إرسال الرسالة</button></p>
+    <div class="msg" id="res" role="status"></div>
   </div>
-  <label for="n">الاسم</label><input id="n" autocomplete="name">
-  <label for="p">رقم الجوال (اختياري)</label><input id="p" type="tel" inputmode="tel">
-  <label for="e">البريد الإلكتروني (اختياري)</label><input id="e" type="email">
-  <label for="m">الرسالة</label><textarea id="m"></textarea>
-  <p><button id="send">إرسال الرسالة</button></p>
-  <div class="msg" id="res" role="status"></div>
-</section>
+</div></section>
 
-<!-- الدخول والتسجيل -->
-<section id="auth">
-  <h1>وَصْل للتواصل</h1>
-  <p class="sub">منصة موحدة لإدارة الرسائل</p>
-  <div class="tabs"><button id="tLogin">تسجيل الدخول</button><button id="tReg" class="ghost">حساب جديد</button></div>
-  <div id="fLogin">
-    <label for="li">رقم الجوال أو البريد الإلكتروني</label><input id="li" autocomplete="username">
-    <label for="lp">كلمة المرور</label><input id="lp" type="password" autocomplete="current-password">
-    <p><button id="doLogin">دخول</button></p>
-  </div>
-  <div id="fReg" style="display:none">
-    <label for="rn">الاسم</label><input id="rn" autocomplete="name">
-    <label for="rp">رقم الجوال</label><input id="rp" type="tel" inputmode="tel" placeholder="05xxxxxxxx">
-    <label for="re">البريد الإلكتروني</label><input id="re" type="email" autocomplete="email">
-    <label for="rw">كلمة المرور (6 أحرف فأكثر)</label><input id="rw" type="password" autocomplete="new-password">
-    <p><button id="doReg">إنشاء الحساب</button></p>
-  </div>
-  <div class="msg" id="aRes" role="status"></div>
-</section>
+<!-- الدخول -->
+<section id="auth"><div class="split">
+  <div class="hero"><span class="bm"></span><h1>وَصْل للتواصل</h1><p class="gold">جمعية فرقان لتحفيظ القرآن الكريم</p>
+    <p style="margin-top:10px">صندوق واحد منظّم لرسائل الواتساب والبريد والنموذج، بخصوصية تامة.</p>
+    <ul><li><svg class="i"><use href="#sh"/></svg>رسائل مشفّرة داخل الشيت</li><li><svg class="i"><use href="#in"/></svg>الواتساب والبريد في مكان واحد</li><li><svg class="i"><use href="#tr"/></svg>حذف نهائي بلا أي أثر</li></ul></div>
+  <div class="formside"><div class="fbox">
+    <h2 style="margin:0;font-size:26px">مرحبًا بكِ 👋</h2><p style="margin:2px 0 0;color:var(--mut)">سجّلي دخولك للمتابعة</p>
+    <div class="seg"><button id="tLogin" class="on">تسجيل الدخول</button><button id="tReg">حساب جديد</button></div>
+    <div id="fLogin">
+      <label for="li">رقم الجوال أو البريد الإلكتروني</label><input id="li" autocomplete="username">
+      <label for="lp">كلمة المرور</label><input id="lp" type="password" autocomplete="current-password">
+      <button class="lnk" id="forgot">نسيتِ كلمة المرور؟</button>
+      <p style="margin:14px 0 0"><button class="btn" id="doLogin" style="width:100%">دخول</button></p>
+    </div>
+    <div id="fReg" style="display:none">
+      <label for="rn">الاسم</label><input id="rn" autocomplete="name">
+      <label for="rp">رقم الجوال</label><input id="rp" type="tel" inputmode="tel" placeholder="05xxxxxxxx">
+      <label for="re">البريد الإلكتروني</label><input id="re" type="email" autocomplete="email">
+      <label for="rw">كلمة المرور (8 أحرف فأكثر)</label><input id="rw" type="password" autocomplete="new-password">
+      <p style="margin:14px 0 0"><button class="btn" id="doReg" style="width:100%">إنشاء الحساب</button></p>
+    </div>
+    <div class="msg" id="aRes" role="status"></div>
+  </div></div>
+</div></section>
 
-<!-- وَصْل للتواصل -->
+<!-- الصندوق -->
 <section id="inbox">
-  <h1 id="hi"></h1>
-  <div class="share"><small>رابط صفحتك الخاصة (شاركيه ليراسلك الناس عبره)</small><code id="myLink"></code>
-    <button class="ghost" id="copy">نسخ الرابط</button></div>
-  <p><button id="wToggle">إضافة محادثة واتساب</button> <button id="cToggle">ربط Chakra (رسمي)</button> <button class="ghost" id="qToggle">ربط واتساب بمسح QR</button> <button id="mToggle">ربط البريد الإلكتروني</button></p>
-  <div class="share" id="mBox" style="display:none">
-    <small>١) افتحي الرابط script.google.com وأنتِ داخلة بحساب Gmail الذي تصلكِ عليه الرسائل، ثم اختاري «مشروع جديد».</small>
-    <small>٢) احذفي كل ما في المحرر، والصقي الكود التالي مكانه ثم احفظي:</small>
-    <code id="mCode" style="white-space:pre-wrap;max-height:220px;overflow:auto"></code>
-    <button class="ghost" id="mCopy">نسخ الكود</button>
-    <small style="margin-top:8px">٣) من القائمة العلوية اختاري الدالة <b>setup</b> ثم «تشغيل»، ووافقي على الصلاحيات المطلوبة (إن ظهرت «لم يتم التحقق من هذا التطبيق» فاختاري «متقدّم» ثم «الانتقال إلى المشروع»).</small>
-    <small>٤) تظهر رسائل بريدك هنا خلال 5 دقائق، وعند ردّك على أي رسالة من بريدك تتحول حالتها إلى «تم الرد». الكود يقرأ بريدك أنتِ فقط ولا يمرّ على أي بريد آخر.</small>
-    <small>إن كان بريدك من غير Gmail (مثل Outlook) فعّلي فيه إعادة التوجيه إلى حساب Gmail لديك أولًا.</small>
+  <div class="top"><div class="in"><span class="bm"></span><div class="ttl"><b id="hi"></b><small>جمعية فرقان · وَصْل للتواصل</small></div>
+    <button class="ib" id="reload" title="تحديث" aria-label="تحديث"><svg class="i"><use href="#ref"/></svg></button>
+    <button class="ib" id="pwBtn" title="تغيير كلمة المرور" aria-label="تغيير كلمة المرور"><svg class="i"><use href="#key"/></svg></button>
+    <button class="ib" id="out" title="تسجيل الخروج" aria-label="تسجيل الخروج"><svg class="i"><use href="#out"/></svg></button></div></div>
+  <div class="wrap">
+    <div class="stats" id="stats"></div>
+    <div class="card share"><div style="flex:1 1 100%;color:var(--mut);font-size:14px">رابط صفحتك الخاصة — شاركيه ليراسلك الناس عبره</div><code id="myLink"></code>
+      <button class="btn ghost sm" id="copy"><svg class="i"><use href="#cp"/></svg>نسخ</button></div>
+    <div class="tools">
+      <button class="btn ghost sm" id="mToggle"><svg class="i"><use href="#ml"/></svg>ربط البريد</button>
+      <button class="btn ghost sm" id="qToggle"><svg class="i"><use href="#wa"/></svg>ربط واتساب (QR)</button>
+      <button class="btn ghost sm" id="cToggle"><svg class="i"><use href="#pl"/></svg>ربط Chakra</button>
+      <button class="btn ghost sm" id="wToggle"><svg class="i"><use href="#nt"/></svg>إضافة محادثة</button>
+    </div>
+    <div class="card panel" id="mBox">
+      <small>١) افتحي script.google.com وأنتِ داخلة بحساب Gmail الذي تصلكِ عليه الرسائل، ثم «مشروع جديد».</small>
+      <small>٢) احذفي كل ما في المحرر والصقي الكود التالي ثم احفظي:</small>
+      <code id="mCode"></code><button class="btn ghost sm" id="mCopy">نسخ الكود</button>
+      <small style="margin-top:10px"><b>٣) للأمان (يقلّل تنبيهات جوجل):</b> من ⚙ إعدادات المشروع فعّلي «إظهار ملف appsscript.json»، ثم افتحيه واستبدلي محتواه بما يلي، فيطلب الكود قراءة البريد فقط دون تعديل أو حذف:</small>
+      <code id="mMan">{
+  "timeZone": "Asia/Riyadh",
+  "runtimeVersion": "V8",
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/gmail.readonly",
+    "https://www.googleapis.com/auth/script.external_request",
+    "https://www.googleapis.com/auth/script.scriptapp",
+    "https://www.googleapis.com/auth/userinfo.email"
+  ]
+}</code><button class="btn ghost sm" id="mCopy2">نسخ الإعدادات</button>
+      <small style="margin-top:10px">٤) اختاري الدالة <b>setup</b> ثم «تشغيل» ووافقي على الصلاحيات (إن ظهرت «لم يتم التحقق من هذا التطبيق» فهذا طبيعي لأنه مشروعك أنتِ: «متقدّم» ثم «الانتقال إلى المشروع»).</small>
+      <small>٥) تظهر رسائلك هنا خلال 5 دقائق، وعند ردّك تتحول حالتها إلى «تم الرد». الكود يقرأ بريدك أنتِ فقط.</small>
+    </div>
+    <div class="card panel" id="cBox">
+      <small>في Chakra Chat: «WhatsApp Setup» ← «More» ← «Pass-through webhook url»، والصقي الرابط ثم احفظي:</small>
+      <code id="cUrl"></code><button class="btn ghost sm" id="cCopy">نسخ الرابط</button>
+    </div>
+    <div class="card panel" id="qBox">
+      <small>١) سجّلي في Whapi.Cloud وأنشئي قناة. ٢) واتساب ← الأجهزة المرتبطة ← ربط جهاز، وامسحي رمز QR.</small>
+      <small>٣) في Webhooks ضعي الرابط التالي وفعّلي الحدث messages بطريقة POST:</small>
+      <code id="qUrl"></code><button class="btn ghost sm" id="qCopy">نسخ الرابط</button>
+    </div>
+    <div class="card panel" id="wForm">
+      <label for="wn" style="margin-top:0">اسم صاحبة المحادثة</label><input id="wn">
+      <label for="wp">رقم جوالها (اختياري)</label><input id="wp" type="tel" inputmode="tel">
+      <label for="wm">ملخص الرسالة (اختياري)</label><textarea id="wm" style="min-height:70px"></textarea>
+      <p style="margin:14px 0 0"><button class="btn" id="wAdd">حفظ</button></p>
+    </div>
+    <div class="chips" id="filters"></div>
+    <div id="list"></div>
   </div>
-  <div class="share" id="cBox" style="display:none">
-    <small>في Chakra Chat: القائمة اليسرى «WhatsApp Setup» ثم تبويب «More» ثم الخانة «Pass-through webhook url»، والصقي فيها الرابط التالي ثم احفظي:</small>
-    <code id="cUrl"></code>
-    <button class="ghost" id="cCopy">نسخ الرابط</button>
-    <small style="margin-top:8px">ثم أرسلي رسالة تجريبية إلى رقمك من جوال آخر، فتظهر هنا بمصدر «واتساب». وعند ردّك من تطبيق واتساب للأعمال تتحول حالة المحادثة إلى «تم الرد».</small>
-  </div>
-  <div class="share" id="qBox" style="display:none">
-    <small>١) سجّلي في موقع Whapi.Cloud وأنشئي قناة (Channel).</small>
-    <small>٢) من واتساب في جوالك: الإعدادات ← الأجهزة المرتبطة ← ربط جهاز، ثم امسحي رمز QR الظاهر في الموقع.</small>
-    <small>٣) في إعدادات القناة افتحي Webhooks، وضعي الرابط التالي، وفعّلي حدث الرسائل (messages) بطريقة POST:</small>
-    <code id="qUrl"></code>
-    <button class="ghost" id="qCopy">نسخ الرابط</button>
-    <small style="margin-top:8px">٤) أرسلي رسالة تجريبية إلى رقمك من جوال آخر، فتظهر هنا. وعند ردّك من جوالك تتحول حالة المحادثة إلى «تم الرد».</small>
-  </div>
-  <div class="share" id="wForm" style="display:none">
-    <label for="wn">اسم صاحبة المحادثة</label><input id="wn">
-    <label for="wp">رقم جوالها (اختياري)</label><input id="wp" type="tel" inputmode="tel">
-    <label for="wm">ملخص الرسالة (اختياري)</label><textarea id="wm" style="min-height:70px"></textarea>
-    <p><button id="wAdd">حفظ</button></p>
-  </div>
-  <div class="bar" id="filters"></div>
-  <div id="list"></div>
-  <p><button class="ghost" id="reload">تحديث</button> <button class="ghost" id="out">تسجيل الخروج</button></p>
 </section>
 
-</div>
-<script>
-// ===== الإعدادات =====
-const API = 'https://script.google.com/macros/s/AKfycbzklFmG08Ccj4QwycD7Vinsv-hg-NbzxLeNDNnf-a5WPrdMvRyw22r9tHEjH6blTXE4pg/exec';
-// =====================
+<dialog id="dlg"><h3 id="dT"></h3><p id="dM"></p><div id="dF"></div><div class="dact"><button class="btn" id="dOk"></button><button class="btn ghost" id="dNo">إلغاء</button></div></dialog>
+<div id="toast" role="status"></div>
 
+<script>
+const API = 'https://script.google.com/macros/s/AKfycbzklFmG08Ccj4QwycD7Vinsv-hg-NbzxLeNDNnf-a5WPrdMvRyw22r9tHEjH6blTXE4pg/exec';
 const $ = id => document.getElementById(id);
-const STATUSES = ['جديدة', 'تم الرد', 'لم يُرد عليها'];
+const STATUSES = ['جديدة', 'تم الرد', 'لم يُرد عليها'], ARCHIVE = 'الأرشيف';
 const U = new URLSearchParams(location.search).get('u');
 let TOKEN = '', ME = null, ALL = [], ARCH = [], ARCHN = 0, FILTER = 'الكل';
-const ARCHIVE = 'الأرشيف';
 const show = id => ['pub','auth','inbox'].forEach(s => $(s).style.display = s===id ? 'block' : 'none');
 const disp = p => { p = String(p||''); return p.startsWith('966') ? '0' + p.slice(3) : p; };
+const ic = n => '<svg class="i"><use href="#'+n+'"/></svg>';
+function tg(id){ const b=$(id), on=b.style.display!=='block'; ['mBox','qBox','cBox','wForm'].forEach(x=>$(x).style.display='none'); if(on) b.style.display='block'; }
 
+/* الشعار: ضعي ملف الشعار باسم logo.png بجانب index.html — وإن لم يوجد يظهر الحرف «ف» */
+document.querySelectorAll('.bm').forEach(e => e.innerHTML = '<img class="logo" src="logo.png" alt="شعار جمعية فرقان" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'grid\'"><span class="lf">ف</span>');
+
+let tt; function toast(m,bad){ const t=$('toast'); t.textContent=m; t.className='on'+(bad?' bad':''); clearTimeout(tt); tt=setTimeout(()=>t.className='',3200); }
+function dlg(title,{text='',fields=[],ok='تأكيد',danger=false}={}){
+  return new Promise(res=>{
+    const d=$('dlg'); $('dT').textContent=title; $('dM').textContent=text;
+    const F=$('dF'); F.innerHTML='';
+    fields.forEach(f=>{const l=document.createElement('label');l.textContent=f.label;const i=document.createElement(f.area?'textarea':'input');if(!f.area)i.type=f.type||'text';i.value=f.value||'';i.autocomplete=f.ac||'off';i.id='df_'+f.k;if(f.m)i.inputMode=f.m;F.append(l,i);});
+    const b=$('dOk'); b.textContent=ok; b.className=danger?'btn solid-d':'btn';
+    let done=false; const fin=v=>{if(done)return;done=true;d.close();res(v);};
+    b.onclick=()=>{const o={};fields.forEach(f=>o[f.k]=$('df_'+f.k).value);fin(o);};
+    $('dNo').onclick=()=>fin(null); d.oncancel=e=>{e.preventDefault();fin(null);};
+    d.showModal(); const f1=F.querySelector('input,textarea'); if(f1)f1.focus();
+  });
+}
 async function post(o){
   const r = await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(o)});
   return r.json();
@@ -160,7 +229,7 @@ async function initPublic(){
     if(!r.ok){ $('pTitle').textContent = r.error||'الصفحة غير موجودة'; return; }
     $('pTitle').textContent = 'تواصل مع ' + r.user.name;
     $('phoneTxt').textContent = disp(r.user.phone); $('phoneLink').href = 'tel:+' + r.user.phone;
-    const mm = r.user.email; $('mailTxt').textContent = mm; $('mailLink').href = 'mailto:' + mm;
+    $('mailTxt').textContent = r.user.email; $('mailLink').href = 'mailto:' + r.user.email;
   }catch(e){ $('pTitle').textContent = 'تعذّر تحميل الصفحة'; }
 }
 $('send').onclick = async () => {
@@ -169,16 +238,15 @@ $('send').onclick = async () => {
   $('send').disabled=true; $('res').textContent='جارٍ الإرسال…';
   try{
     const r = await post({action:'add',owner:U,name,phone:$('p').value.trim(),email:$('e').value.trim(),message});
-    if(r.ok){$('res').textContent='تم إرسال رسالتكم بنجاح، شكرًا لتواصلكم.';['n','p','e','m'].forEach(i=>$(i).value='');}
+    if(r.ok){$('res').textContent='✅ تم إرسال رسالتكم بنجاح، شكرًا لتواصلكم.';['n','p','e','m'].forEach(i=>$(i).value='');}
     else $('res').textContent=r.error||'تعذّر الإرسال.';
   }catch(e){$('res').textContent='تعذّر الاتصال، يرجى المحاولة لاحقًا.';}
   $('send').disabled=false;
 };
 
 /* ---------- الدخول والتسجيل ---------- */
-$('tLogin').onclick=()=>{$('fLogin').style.display='block';$('fReg').style.display='none';$('tLogin').className='';$('tReg').className='ghost';$('aRes').textContent='';};
-$('tReg').onclick=()=>{$('fLogin').style.display='none';$('fReg').style.display='block';$('tReg').className='';$('tLogin').className='ghost';$('aRes').textContent='';};
-
+const tab=l=>{$('fLogin').style.display=l?'block':'none';$('fReg').style.display=l?'none':'block';$('tLogin').className=l?'on':'';$('tReg').className=l?'':'on';$('aRes').textContent='';};
+$('tLogin').onclick=()=>tab(true); $('tReg').onclick=()=>tab(false);
 async function authDone(r){
   if(!r.ok){$('aRes').textContent=r.error||'تعذّر تنفيذ الطلب.';return;}
   TOKEN=r.token; ME=r.user;
@@ -190,23 +258,44 @@ $('doLogin').onclick=async()=>{
   try{ authDone(await post({action:'login',identifier:$('li').value,password:$('lp').value})); }
   catch(e){$('aRes').textContent='تعذّر الاتصال.';}
 };
+$('lp').onkeydown=e=>{if(e.key==='Enter')$('doLogin').click();};
 $('doReg').onclick=async()=>{
   $('aRes').textContent='جارٍ إنشاء الحساب…';
   try{ authDone(await post({action:'register',name:$('rn').value,phone:$('rp').value,email:$('re').value,password:$('rw').value})); }
   catch(e){$('aRes').textContent='تعذّر الاتصال.';}
 };
 
-/* ---------- وَصْل للتواصل ---------- */
+/* نسيت كلمة المرور: رمز يصل إلى البريد المسجّل ثم كلمة جديدة */
+$('forgot').onclick=async()=>{
+  const a=await dlg('استعادة كلمة المرور',{text:'اكتبي بريدك أو جوالك، وسيصلك رمز تحقق على البريد المسجّل في الحساب.',fields:[{k:'id',label:'البريد أو رقم الجوال',ac:'username',value:$('li').value}],ok:'إرسال الرمز'});
+  if(!a||!a.id.trim()) return;
+  try{ await post({action:'forgot',identifier:a.id}); }catch(e){ toast('تعذّر الاتصال.',1); return; }
+  toast('إن كان الحساب مسجّلًا فقد أُرسل الرمز إلى بريده.');
+  const b=await dlg('رمز التحقق وكلمة المرور الجديدة',{text:'أدخلي الرمز المكوّن من 6 أرقام (صالح 15 دقيقة). افحصي مجلد الرسائل غير المرغوبة إن لم يصل.',fields:[{k:'code',label:'رمز التحقق',m:'numeric'},{k:'pw',label:'كلمة المرور الجديدة (8 أحرف فأكثر)',type:'password',ac:'new-password'}],ok:'تغيير كلمة المرور'});
+  if(!b) return;
+  try{
+    const r=await post({action:'reset',identifier:a.id,code:b.code,password:b.pw});
+    if(r.ok){ $('li').value=a.id; $('lp').value=''; toast('تم تغيير كلمة المرور، سجّلي الدخول.'); } else toast(r.error||'تعذّر التغيير.',1);
+  }catch(e){ toast('تعذّر الاتصال.',1); }
+};
+/* تغيير كلمة المرور بعد الدخول */
+$('pwBtn').onclick=async()=>{
+  const a=await dlg('تغيير كلمة المرور',{fields:[{k:'c',label:'كلمة المرور الحالية',type:'password',ac:'current-password'},{k:'n',label:'كلمة المرور الجديدة (8 أحرف فأكثر)',type:'password',ac:'new-password'},{k:'n2',label:'تأكيد كلمة المرور الجديدة',type:'password',ac:'new-password'}],ok:'حفظ'});
+  if(!a) return;
+  if(a.n!==a.n2){ toast('تأكيد كلمة المرور غير مطابق.',1); return; }
+  try{ const r=await post({action:'changePassword',token:TOKEN,current:a.c,password:a.n}); r.ok?toast('تم تغيير كلمة المرور.'):toast(r.error||'تعذّر التغيير.',1); }
+  catch(e){ toast('تعذّر الاتصال.',1); }
+};
+
+/* ---------- الصندوق ---------- */
 function openInbox(){
-  show('inbox');
-  $('hi').textContent = 'أهلًا ' + ME.name;
-  $('myLink').textContent = location.origin + location.pathname + '?u=' + ME.id;
-  load();
+  show('inbox'); $('hi').textContent = 'أهلًا ' + ME.name;
+  $('myLink').textContent = location.origin + location.pathname + '?u=' + ME.id; load();
 }
-$('copy').onclick=()=>{navigator.clipboard.writeText($('myLink').textContent).then(()=>{$('copy').textContent='تم النسخ';setTimeout(()=>$('copy').textContent='نسخ الرابط',1500);});};
+$('copy').onclick=()=>navigator.clipboard.writeText($('myLink').textContent).then(()=>toast('تم نسخ الرابط'));
 
 async function load(){
-  $('list').textContent='جارٍ التحميل…';
+  $('list').innerHTML='<div class="sk"></div><div class="sk"></div><div class="sk"></div>';
   const inArch = FILTER===ARCHIVE;
   try{
     const r = await post({action:'list',token:TOKEN,archived:inArch});
@@ -216,95 +305,81 @@ async function load(){
     ARCHN=r.archivedCount||0; render();
   }catch(e){$('list').textContent='تعذّر تحميل الرسائل.';}
 }
-
+const srcIc = s => s==='واتساب'?'wa':s==='البريد'?'ml':'fm';
 function render(){
-  const inArch = FILTER===ARCHIVE;
+  const inArch = FILTER===ARCHIVE, cnt=s=>ALL.filter(x=>x.status===s).length;
+  $('stats').innerHTML='<div class="card stat"><b>'+cnt('جديدة')+'</b><span>رسائل جديدة</span></div><div class="card stat o"><b>'+cnt('تم الرد')+'</b><span>تم الرد</span></div><div class="card stat w"><b>'+cnt('لم يُرد عليها')+'</b><span>لم يُرد عليها</span></div>';
   const f=$('filters'); f.innerHTML='';
   ['الكل',...STATUSES,ARCHIVE].forEach(s=>{
-    const c = s==='الكل'?ALL.length:s===ARCHIVE?ARCHN:ALL.filter(x=>x.status===s).length;
-    const b=document.createElement('button'); b.className='ghost'+(s===FILTER?' on':'');
-    b.textContent=s+' ('+c+')';
-    b.onclick=()=>{const was=FILTER===ARCHIVE; FILTER=s; (was||s===ARCHIVE)?load():render();};
-    f.appendChild(b);
+    const c = s==='الكل'?ALL.length:s===ARCHIVE?ARCHN:cnt(s);
+    const b=document.createElement('button'); b.className='chip'+(s===FILTER?' on':''); b.textContent=s+' ('+c+')';
+    b.onclick=()=>{const was=FILTER===ARCHIVE; FILTER=s; (was||s===ARCHIVE)?load():render();}; f.appendChild(b);
   });
   const L=$('list'); L.innerHTML='';
   const rows=(inArch?ARCH:ALL).filter(x=>inArch||FILTER==='الكل'||x.status===FILTER);
   if(!inArch&&FILTER==='تم الرد'&&rows.length){
-    const da=document.createElement('button'); da.className='ghost danger'; da.textContent='🗑 حذف الكل ('+rows.length+')';
-    da.title='حذف كل الرسائل التي تم الرد عليها'; da.onclick=delReplied; f.appendChild(da);
+    const da=document.createElement('button'); da.className='btn danger sm'; da.innerHTML=ic('tr')+'حذف الكل ('+rows.length+')'; da.onclick=delReplied; f.appendChild(da);
   }
-  if(!rows.length){L.textContent=inArch?'الأرشيف فارغ.':'لا توجد رسائل.';return;}
+  if(!rows.length){L.innerHTML='<div class="empty">'+ic('in')+'<p>'+(inArch?'الأرشيف فارغ.':'لا توجد رسائل هنا.')+'</p></div>';return;}
   rows.forEach(x=>{
     const cls = x.status==='تم الرد'?'replied':x.status==='لم يُرد عليها'?'left':x.status==='جديدة'?'new':'';
-    const d=document.createElement('div'); d.className='item '+cls;
+    const d=document.createElement('div'); d.className='card item '+cls;
     const date=new Date(x.date).toLocaleString('ar-SA',{dateStyle:'medium',timeStyle:'short'});
-    d.innerHTML=`<div class="top"><b></b><span class="date">${date}</span></div>
-      <div class="meta"></div><div class="body"></div>
-      <div class="tag">${x.source||'النموذج'} · الحالة: ${x.status}</div><div class="note"></div><div class="acts"></div>`;
-    d.querySelector('b').textContent=x.name;
+    d.innerHTML='<div class="av"></div><div><div class="hd"><b></b><span class="date">'+date+'</span></div><div class="meta"></div><div class="body"></div><div class="note" style="display:none"></div><div class="badges"><span class="bd">'+ic(srcIc(x.source))+(x.source||'النموذج')+'</span><span class="bd s">'+x.status+'</span></div><div class="acts"></div></div>';
+    d.querySelector('b').textContent=x.name; d.querySelector('.av').textContent=(x.name||'؟').trim().charAt(0);
     const meta=d.querySelector('.meta');
-    if(x.phone){const a=document.createElement('a');a.href='tel:'+x.phone;a.textContent=disp(x.phone);meta.appendChild(a);meta.append('  ');}
+    if(x.phone){const a=document.createElement('a');a.href='tel:'+x.phone;a.textContent=disp(x.phone);a.style.direction='ltr';meta.appendChild(a);}
     if(x.email){const a=document.createElement('a');a.href='mailto:'+x.email;a.textContent=x.email;meta.appendChild(a);}
     d.querySelector('.body').textContent=x.message;
-    d.querySelector('.note').textContent=x.note?'ملاحظة: '+x.note:'';
+    if(x.note){const n=d.querySelector('.note');n.style.display='block';n.textContent='ملاحظة: '+x.note;}
     const acts=d.querySelector('.acts');
-    if(x.source==='واتساب'){const w=document.createElement('a');w.href='https://wa.me/'+String(x.phone).replace(/\D/g,'');w.target='_blank';w.rel='noopener';w.textContent='فتح المحادثة في واتساب';w.style.cssText='color:var(--acc);font-weight:700;font-size:14px;align-self:center';acts.appendChild(w);}
-    STATUSES.filter(s=>s!==x.status&&s!=='جديدة').forEach(s=>{
-      const b=document.createElement('button'); b.textContent=s; b.onclick=()=>upd(x,{status:s}); acts.appendChild(b);
-    });
-    const nb=document.createElement('button'); nb.className='ghost'; nb.textContent='ملاحظة';
-    nb.onclick=()=>{const t=prompt('اكتبي الملاحظة:',x.note||''); if(t!==null) upd(x,{note:t});};
-    acts.appendChild(nb);
-    const ab=document.createElement('button'); ab.className='ghost'; ab.textContent=inArch?'إلغاء الأرشفة':'أرشفة';
-    ab.onclick=()=>archive(x,!inArch); acts.appendChild(ab);
-    const db=document.createElement('button'); db.className='ghost danger'; db.textContent='حذف';
-    db.onclick=()=>del(x); acts.appendChild(db);
+    const mk=(cl,ico,t,fn)=>{const b=document.createElement('button');b.className='btn sm '+cl;b.innerHTML=ico?ic(ico)+t:t;b.onclick=fn;acts.appendChild(b);};
+    if(x.source==='واتساب'&&x.phone) mk('ghost','wa','فتح واتساب',()=>window.open('https://wa.me/'+String(x.phone).replace(/\D/g,''),'_blank','noopener'));
+    STATUSES.filter(s=>s!==x.status&&s!=='جديدة').forEach(s=>mk('',s==='تم الرد'?'ck':'',s,()=>upd(x,{status:s})));
+    mk('ghost','nt','ملاحظة',async()=>{const a=await dlg('ملاحظة',{fields:[{k:'t',label:'اكتبي الملاحظة',area:1,value:x.note||''}],ok:'حفظ'}); if(a) upd(x,{note:a.t});});
+    mk('ghost','ar',inArch?'إلغاء الأرشفة':'أرشفة',()=>archive(x,!inArch));
+    mk('danger','tr','حذف',()=>del(x));
     L.appendChild(d);
   });
 }
-
 async function upd(x,patch){
   Object.assign(x,patch); render();
   const r=await post({action:'update',token:TOKEN,id:x.id,...patch});
-  if(!r.ok){alert(r.error||'تعذّر الحفظ');load();}
+  if(!r.ok){toast(r.error||'تعذّر الحفظ',1);load();}
 }
-
 async function archive(x,on){
   const L=on?ALL:ARCH, i=L.indexOf(x); if(i>=0) L.splice(i,1);
-  ARCHN=Math.max(0,ARCHN+(on?1:-1)); render();
+  ARCHN=Math.max(0,ARCHN+(on?1:-1)); render(); toast(on?'تمت الأرشفة':'أُعيدت إلى الوارد');
   const r=await post({action:'update',token:TOKEN,id:x.id,archived:on});
-  if(!r.ok){alert(r.error||'تعذّر الحفظ');load();}
+  if(!r.ok){toast(r.error||'تعذّر الحفظ',1);load();}
 }
 async function del(x){
-  if(!confirm('سيتم حذف هذه الرسالة نهائيًا ولا يمكن استرجاعها. هل أنتِ متأكدة؟')) return;
+  if(!await dlg('حذف الرسالة',{text:'سيتم حذف هذه الرسالة نهائيًا من الشيت ولا يمكن استرجاعها.',ok:'حذف نهائي',danger:true})) return;
   const inArch=FILTER===ARCHIVE, L=inArch?ARCH:ALL, i=L.indexOf(x); if(i>=0) L.splice(i,1);
   if(inArch) ARCHN=Math.max(0,ARCHN-1);
   render();
   const r=await post({action:'delete',token:TOKEN,id:x.id});
-  if(!r.ok){alert(r.error||'تعذّر الحذف');load();}
+  r.ok?toast('تم الحذف نهائيًا'):(toast(r.error||'تعذّر الحذف',1),load());
 }
-
 async function delReplied(){
   const n=ALL.filter(x=>x.status==='تم الرد').length; if(!n) return;
-  if(!confirm('سيتم حذف '+n+' رسالة تم الرد عليها نهائيًا ولا يمكن استرجاعها. هل أنتِ متأكدة؟')) return;
+  if(!await dlg('حذف كل الرسائل المردود عليها',{text:'سيتم حذف '+n+' رسالة نهائيًا من الشيت ولا يمكن استرجاعها.',ok:'حذف الكل',danger:true})) return;
   ALL=ALL.filter(x=>x.status!=='تم الرد'); render();
   const r=await post({action:'deleteReplied',token:TOKEN});
-  if(!r.ok){alert(r.error||'تعذّر الحذف');}
+  r.ok?toast('تم الحذف نهائيًا'):toast(r.error||'تعذّر الحذف',1);
   load();
 }
 
-$('wToggle').onclick=()=>{const f=$('wForm');f.style.display=f.style.display==='none'?'block':'none';};
+$('wToggle').onclick=()=>tg('wForm');
 $('wAdd').onclick=async()=>{
-  const name=$('wn').value.trim(); if(!name){alert('يرجى كتابة الاسم.');return;}
+  const name=$('wn').value.trim(); if(!name){toast('يرجى كتابة الاسم.',1);return;}
   const r=await post({action:'addManual',token:TOKEN,name,phone:$('wp').value.trim(),message:$('wm').value.trim()});
-  if(!r.ok){alert(r.error||'تعذّر الحفظ');return;}
+  if(!r.ok){toast(r.error||'تعذّر الحفظ',1);return;}
   ['wn','wp','wm'].forEach(i=>$(i).value='');$('wForm').style.display='none';load();
 };
-
-const cp=(id,btn)=>navigator.clipboard.writeText($(id).textContent).then(()=>{const t=btn.textContent;btn.textContent='تم النسخ';setTimeout(()=>btn.textContent=t,1500);});
-
+const cp=(id,btn)=>navigator.clipboard.writeText($(id).textContent).then(()=>toast('تم النسخ'));
 $('mToggle').onclick=()=>{
-  const b=$('mBox'); b.style.display=b.style.display==='none'?'block':'none';
+  tg('mBox');
   $('mCode').textContent=
 "const SITE = '"+location.origin+location.pathname+"';\n"+
 "const API_FALLBACK = '"+API+"';\n"+
@@ -335,18 +410,11 @@ $('mToggle').onclick=()=>{
 "  sync();\n"+
 "}\n";
 };
-$('mCopy').onclick=e=>cp('mCode',e.target);
 
-$('qToggle').onclick=()=>{
-  const b=$('qBox'); b.style.display=b.style.display==='none'?'block':'none';
-  $('qUrl').textContent=API+'?wh='+TOKEN;
-};
+$('mCopy').onclick=e=>cp('mCode',e.target); $('mCopy2').onclick=e=>cp('mMan',e.target);
+$('qToggle').onclick=()=>{ tg('qBox'); $('qUrl').textContent=API+'?wh='+TOKEN; };
 $('qCopy').onclick=e=>cp('qUrl',e.target);
-
-$('cToggle').onclick=()=>{
-  const b=$('cBox'); b.style.display=b.style.display==='none'?'block':'none';
-  $('cUrl').textContent=API+'?k='+TOKEN;
-};
+$('cToggle').onclick=()=>{ tg('cBox'); $('cUrl').textContent=API+'?k='+TOKEN; };
 $('cCopy').onclick=e=>cp('cUrl',e.target);
 
 function logout(){TOKEN='';ME=null;try{localStorage.removeItem('tok');localStorage.removeItem('me');}catch(e){} show('auth');}

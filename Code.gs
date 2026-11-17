@@ -1,16 +1,12 @@
+/** @OnlyCurrentDoc */
 // ===== الإعدادات =====
 const WA_VERIFY_TOKEN = 'furqan-wa-2026';   // أي كلمة تختارينها، وتكتبينها نفسها في Meta
 const MSG = 'الرسائل', USR = 'المستخدمون';
 const COLS = 11;                              // عدد أعمدة جدول الرسائل
-const DEL = 'محذوفة';                         // الرسالة المحذوفة: يُمسح محتواها كليًا ويبقى معرّفها فقط لمنع عودتها
+const DEL = 'محذوفة';                         // قديم: صفوف قديمة تُحذف تلقائيًا من الشيت ولا يُكتب هذا النص بعد الآن
 const STATUSES_ = ['جديدة', 'تم الرد', 'لم يُرد عليها'];
-// أي إيميل يصل إلى صندوق الوارد من أي مُرسِل (نستبعد فقط تصنيفي الترويج والاجتماعي)
-// استيراد بريد Gmail الخاص بالحساب الذي نشر السكربت: معطّل، فلا يُقرأ ولا يصل إلى ذلك البريد شيء.
-// الإشعارات تذهب فقط إلى البريد الذي سجّلت به كل مستخدمة مع رقم جوالها.
-const EMAIL_IMPORT = false;
-// إشعارات البريد لرسائل الواتساب: معطّلة حفاظًا على خصوصية المرسلين (لا يُرسل محتوى رسائل الواتساب إلى أي بريد).
+// إشعارات البريد لرسائل الواتساب: معطّلة حفاظًا على خصوصية المرسلين.
 const NOTIFY_WHATSAPP_BY_EMAIL = false;
-const MAIL_QUERY = 'newer_than:3d in:inbox -category:promotions -category:social';
 
 // ===== التشفير =====
 // كل بيانات الرسالة (الاسم، الجوال، البريد، النص، الملاحظة) تُحفظ في الشيت مشفّرة،
@@ -131,8 +127,8 @@ function doPost(e) {
     // ---- إنشاء حساب ----
     if (d.action === 'register') {
       const name = String(d.name || '').trim(), phone = norm_(d.phone), email = String(d.email || '').trim().toLowerCase(), pw = String(d.password || '');
-      if (!name || phone.length < 11 || email.indexOf('@') < 1 || pw.length < 6)
-        return out_({ ok: false, error: 'يرجى إدخال الاسم ورقم جوال صحيح وبريد صحيح وكلمة مرور لا تقل عن 6 أحرف.' });
+      if (!name || phone.length < 11 || email.indexOf('@') < 1 || pw.length < 8)
+        return out_({ ok: false, error: 'يرجى إدخال الاسم ورقم جوال صحيح وبريد صحيح وكلمة مرور لا تقل عن 8 أحرف.' });
       const dup = allUsers_().some(r => norm_(r[2]) === phone || String(r[3]).toLowerCase() === email);
       if (dup) return out_({ ok: false, error: 'رقم الجوال أو البريد مسجّل مسبقًا، يرجى تسجيل الدخول.' });
       const id = Utilities.getUuid().replace(/-/g, '').slice(0, 10), salt = Utilities.getUuid(), token = Utilities.getUuid();
@@ -143,9 +139,44 @@ function doPost(e) {
     // ---- تسجيل الدخول ----
     if (d.action === 'login') {
       const idf = String(d.identifier || '').trim().toLowerCase(), n = norm_(idf);
+      const cache = CacheService.getScriptCache();
+      const lk = 'lf_' + Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, idf)).slice(0, 12);
+      const tries = Number(cache.get(lk) || 0);
+      if (tries >= 8) return out_({ ok: false, error: 'محاولات كثيرة، يرجى المحاولة بعد 15 دقيقة.' });
       const u = allUsers_().find(r => String(r[3]).toLowerCase() === idf || (n && norm_(r[2]) === n));
-      if (!u || hash_(String(d.password || ''), u[5]) !== u[4]) return out_({ ok: false, error: 'بيانات الدخول غير صحيحة.' });
+      if (!u || hash_(String(d.password || ''), u[5]) !== u[4]) { cache.put(lk, String(tries + 1), 900); return out_({ ok: false, error: 'بيانات الدخول غير صحيحة.' }); }
+      cache.remove(lk);
       return out_({ ok: true, token: u[6], user: pub_(u) });
+    }
+
+    // ---- نسيت كلمة المرور: يُرسل رمز من 6 أرقام إلى البريد المسجّل (صالح 15 دقيقة) ----
+    if (d.action === 'forgot') {
+      const idf = String(d.identifier || '').trim().toLowerCase(), n = norm_(idf), cache = CacheService.getScriptCache();
+      const u = idf && allUsers_().find(r => String(r[3]).toLowerCase() === idf || (n && norm_(r[2]) === n));
+      if (u && !cache.get('rq_' + u[0])) {
+        const code = String(100000 + Math.floor(Math.random() * 900000));
+        cache.put('rq_' + u[0], '1', 60);
+        cache.put('rs_' + u[0], JSON.stringify({ h: hash_(code, u[5]), t: 0 }), 900);
+        sendMail_(u[3], 'رمز استعادة كلمة المرور', 'رمز التحقق: ' + code + '\n\nالرمز صالح لمدة 15 دقيقة. إن لم تطلبي استعادة كلمة المرور فتجاهلي هذه الرسالة، ولن يتغير شيء.');
+      }
+      return out_({ ok: true });   // نفس الرد دائمًا حتى لا يُعرف هل الحساب موجود
+    }
+    if (d.action === 'reset') {
+      const idf = String(d.identifier || '').trim().toLowerCase(), n = norm_(idf), cache = CacheService.getScriptCache();
+      const u = idf && allUsers_().find(r => String(r[3]).toLowerCase() === idf || (n && norm_(r[2]) === n));
+      const bad = out_({ ok: false, error: 'الرمز غير صحيح أو منتهي.' });
+      const raw = u && cache.get('rs_' + u[0]);
+      if (!raw) return bad;
+      const pw = String(d.password || '');
+      if (pw.length < 8) return out_({ ok: false, error: 'كلمة المرور الجديدة لا تقل عن 8 أحرف.' });
+      const st = JSON.parse(raw);
+      if (hash_(String(d.code || '').trim(), u[5]) !== st.h) {
+        st.t++; if (st.t >= 5) cache.remove('rs_' + u[0]); else cache.put('rs_' + u[0], JSON.stringify(st), 900);
+        return bad;
+      }
+      setPw_(u, pw); cache.remove('rs_' + u[0]);
+      sendMail_(u[3], 'تم تغيير كلمة المرور', 'تم تغيير كلمة مرور حسابك في صندوق الرسائل. إن لم تكوني أنتِ، فتواصلي مع المسؤول فورًا.');
+      return out_({ ok: true });
     }
 
     // ---- رسالة من زائر إلى صاحبة الصفحة ----
@@ -163,6 +194,15 @@ function doPost(e) {
     // ---- ما يلزم له تسجيل دخول ----
     const me = userByToken_(d.token);
     if (!me) return out_({ ok: false, error: 'انتهت الجلسة، يرجى تسجيل الدخول.', auth: false });
+
+    if (d.action === 'changePassword') {
+      const np = String(d.password || '');
+      if (hash_(String(d.current || ''), me[5]) !== me[4]) return out_({ ok: false, error: 'كلمة المرور الحالية غير صحيحة.' });
+      if (np.length < 8) return out_({ ok: false, error: 'كلمة المرور الجديدة لا تقل عن 8 أحرف.' });
+      setPw_(me, np);
+      sendMail_(me[3], 'تم تغيير كلمة المرور', 'تم تغيير كلمة مرور حسابك في صندوق الرسائل. إن لم تكوني أنتِ، فاستعيديها فورًا من خيار «نسيت كلمة المرور».');
+      return out_({ ok: true });
+    }
 
     if (d.action === 'waNotify') {
       const title = String(d.title || '').trim(), text = String(d.text || '').trim();
@@ -187,6 +227,7 @@ function doPost(e) {
     if (d.action === 'list') {
       const first = allUsers_()[0][0];
       const sh = msgs_(), wantArchived = !!d.archived;
+      cleanDeleted_(sh);
       let archivedCount = 0;
       const rows = [];
       if (sh.getLastRow() >= 2) {
@@ -214,24 +255,19 @@ function doPost(e) {
     if (d.action === 'delete') {
       const sh = msgs_(), f = findRow_(sh, d.id, me);
       if (!f) return out_({ ok: false, error: 'الرسالة غير موجودة.' });
-      // مسح كامل للمحتوى؛ يبقى المعرّف فقط حتى لا يعيد استيراد البريد/الواتساب الرسالة نفسها
-      sh.getRange(f.row, 2, 1, COLS - 1).setValues([[new Date(), '', '', '', '', DEL, '', f.vals[8], f.vals[9], '']]);
+      bury_([d.id]); sh.deleteRow(f.row);          // حذف الصف كاملًا من الشيت، بلا أي أثر نصي
       return out_({ ok: true });
     }
     if (d.action === 'deleteReplied') {
-      // حذف كل الرسائل التي تم الرد عليها (غير المؤرشفة) دفعة واحدة، بنفس مسح المحتوى الكامل
       const sh = msgs_();
       if (sh.getLastRow() < 2) return out_({ ok: true, deleted: 0 });
-      const first = allUsers_()[0][0], n = sh.getLastRow() - 1;
-      const vals = sh.getRange(2, 1, n, COLS).getValues();
-      let deleted = 0;
-      vals.forEach(r => {
+      const first = allUsers_()[0][0], ids = [], rows = [];
+      sh.getRange(2, 1, sh.getLastRow() - 1, COLS).getValues().forEach((r, i) => {
         if ((r[9] || first) !== me[0] || r[6] !== 'تم الرد' || r[10] === 'نعم') return;
-        r[1] = new Date(); r[2] = ''; r[3] = ''; r[4] = ''; r[5] = ''; r[6] = DEL; r[7] = ''; r[10] = '';
-        deleted++;
+        ids.push(r[0]); rows.push(i + 2);
       });
-      if (deleted) sh.getRange(2, 1, n, COLS).setValues(vals);
-      return out_({ ok: true, deleted });
+      if (ids.length) { bury_(ids); rows.reverse().forEach(x => sh.deleteRow(x)); }
+      return out_({ ok: true, deleted: ids.length });
     }
     return out_({ ok: false, error: 'طلب غير معروف.' });
   } finally { lock.releaseLock(); }
@@ -246,6 +282,7 @@ function mailIn_(me, items) {
   (Array.isArray(items) ? items : []).slice(0, 50).forEach(it => {
     if (!it || !it.id) return;
     const id = 'mail_' + me[0] + '_' + String(it.id).slice(0, 40);
+    if (isGone_(id)) return;
     const when = it.date ? new Date(Number(it.date)) : new Date();
     const text = (String(it.subject || '') + '\n' + String(it.body || '')).slice(0, 1000);
     if (id in index) {
@@ -277,7 +314,7 @@ function handleWhatsApp_(d, key) {
 
     (v.messages || []).forEach(m => {
       const ids = sh.getLastRow() > 1 ? sh.getRange(2, 1, sh.getLastRow() - 1, 1).getValues().flat() : [];
-      if (ids.indexOf(m.id) >= 0) return;
+      if (ids.indexOf(m.id) >= 0 || isGone_(m.id)) return;
       const c = (v.contacts || []).find(x => x.wa_id === m.from);
       const name = (c && c.profile && c.profile.name) || m.from;
       let text = m.type === 'text' ? m.text.body : m.type === 'button' ? m.button.text : '[رسالة من نوع: ' + m.type + ']';
@@ -312,108 +349,37 @@ function notify_(to, name, phone, email, message, source) {
 }
 
 
-// ===== استيراد البريد تلقائيًا (Gmail) =====
-// لكل مستخدمة عنوان استقبال خاص بها: (بريد الحساب الذي نشر السكربت) مع +المعرّف، مثل: inbox+a1b2c3d4e5@gmail.com
-// أي إيميل يُرسل لهذا العنوان (أو يُحوَّل إليه من بريدها) يظهر في صندوقها هي فقط.
-// الرسائل التي لا تخص أي مستخدمة لا تُستورد أبدًا.
-// شغّلي الدالة setupEmailTrigger مرة واحدة فقط لتفعيل الاستيراد كل 5 دقائق.
-function setupEmailTrigger() {
-  ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === 'importEmails').forEach(t => ScriptApp.deleteTrigger(t));
-  ScriptApp.newTrigger('importEmails').timeBased().everyMinutes(5).create();
-  importEmails();
+// ===== سجل منع العودة =====
+// عند الحذف يُمسح الصف كاملًا من الشيت. ولكي لا يعيد استيراد البريد (آخر 3 أيام) الرسالة نفسها،
+// نحفظ بصمة مقتطعة (Hash) لمعرّفها فقط في خصائص السكربت (ليس في الشيت)، وتُنسى بعد 5 أيام.
+function tb_(id) { return Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, 'tb:' + id)).slice(0, 8); }
+function tombs_() {
+  try { return JSON.parse(PropertiesService.getScriptProperties().getProperty('TOMB') || '[]'); } catch (e) { return []; }
+}
+function isGone_(id) { const h = tb_(id); return tombs_().some(x => x.slice(0, 8) === h); }
+function bury_(ids) {
+  const now = Math.floor(Date.now() / 60000), ttl = 5 * 1440;
+  const keep = tombs_().filter(x => now - parseInt(x.slice(8), 36) < ttl);
+  ids.forEach(id => keep.push(tb_(id) + now.toString(36)));
+  PropertiesService.getScriptProperties().setProperty('TOMB', JSON.stringify(keep.slice(-300)));
+}
+// تنظيف الصفوف القديمة المكتوب فيها «محذوفة»: تُحذف نهائيًا من الشيت
+function cleanDeleted_(sh) {
+  const n = sh.getLastRow() - 1; if (n < 1) return;
+  const gone = [], rows = [];
+  sh.getRange(2, 1, n, 7).getValues().forEach((r, i) => { if (r[6] === DEL) { gone.push(r[0]); rows.push(i + 2); } });
+  if (!gone.length) return;
+  bury_(gone); rows.reverse().forEach(x => sh.deleteRow(x));
 }
 
-function importEmails() {
-  if (!EMAIL_IMPORT) return;
-  const lock = LockService.getScriptLock();
-  lock.waitLock(20000);
-  try { importEmails_(); } finally { lock.releaseLock(); }
+// ===== كلمة المرور =====
+function sendMail_(to, subject, body) {
+  try { MailApp.sendEmail(to, subject, body, { name: 'صندوق الرسائل', noReply: true }); } catch (err) { Logger.log('تعذّر إرسال البريد: ' + err); }
 }
-
-function mailText_(t, last) {
-  return (t.getFirstMessageSubject() + '\n' + last.getPlainBody()).slice(0, 1000);
-}
-
-function baseMail_() {
-  return (Session.getEffectiveUser().getEmail() || Session.getActiveUser().getEmail() || '').toLowerCase();
-}
-// عنوان الاستقبال الخاص بالمستخدمة
-function mailAddr_(id) {
-  const me = baseMail_(), at = me.lastIndexOf('@');
-  return at < 0 ? '' : me.slice(0, at) + '+' + id + '@' + me.slice(at + 1);
-}
-
-// يحدد صاحبة الرسالة: عنوان الاستقبال (+المعرّف) في To/Cc، أو في ترويسة Delivered-To (للتحويل والنسخة المخفية)
-function routeMail_(last, users, meEmail) {
-  const hay = (last.getTo() + ' ' + last.getCc()).toLowerCase();
-  let m = hay.match(/\+([0-9a-f]{10})@/);
-  if (!m) {
-    try {
-      const raw = String(last.getRawContent()), end = raw.search(/\r?\n\r?\n/), head = raw.slice(0, end > 0 ? end : 20000).toLowerCase();
-      m = head.match(/^(?:delivered-to|x-original-to|x-forwarded-to):[^\n]*\+([0-9a-f]{10})@/m);
-    } catch (err) {}
-  }
-  if (m) return users.find(r => r[0] === m[1]) || null;
-  if (hay.indexOf(meEmail) >= 0) return users.find(r => String(r[3]).toLowerCase() === meEmail) || null;   // أُرسلت مباشرة لبريد الحساب نفسه
-  return null;
-}
-
-function importEmails_() {
-  const users = allUsers_();
-  if (!users.length) { Logger.log('لا يوجد أي حساب مسجّل في الموقع بعد.'); return; }
-  const meEmail = baseMail_();
-  if (!meEmail) { Logger.log('تعذّر معرفة بريد الحساب الذي نشر السكربت.'); return; }
-  const mine = [meEmail].concat(GmailApp.getAliases().map(a => a.toLowerCase()));
-  const cache = CacheService.getScriptCache();
-
-  const sh = msgs_();
-  purge_(sh);
-  const n = sh.getLastRow() - 1;
-  const vals = n > 0 ? sh.getRange(2, 1, n, COLS).getValues() : [];
-  const index = {};
-  vals.forEach((r, i) => { index[r[0]] = i; });
-
-  const threads = GmailApp.search(MAIL_QUERY, 0, 50);
-  let added = 0, skipped = 0;
-  threads.forEach(t => {
-    const msgs = t.getMessages(), last = msgs[msgs.length - 1];
-    const lastFrom = last.getFrom().toLowerCase();
-    const fromMe = mine.some(a => lastFrom.indexOf(a) >= 0);
-    const id = 'mail_' + t.getId();
-
-    if (id in index) {
-      const i = index[id], row = vals[i];
-      if (row[6] === DEL) return;                                    // محذوفة: لا تعود
-      if (fromMe && row[6] !== 'تم الرد') sh.getRange(i + 2, 7).setValue('تم الرد');
-      else if (!fromMe && (row[6] === 'تم الرد' || row[10] === 'نعم') && last.getDate() > new Date(row[1])) {   // وصل رد جديد بعد ردّك أو بعد الأرشفة
-        sh.getRange(i + 2, 7).setValue('جديدة');
-        sh.getRange(i + 2, 2).setValue(last.getDate());
-        sh.getRange(i + 2, 6).setValue(enc_(mailText_(t, last)));
-        sh.getRange(i + 2, 11).setValue('');
-      }
-      return;
-    }
-    if (fromMe) return;
-    if (cache.get('skip_' + t.getId())) return;                      // سبق أن تبيّن أنها لا تخص أي مستخدمة
-    const owner = routeMail_(last, users, meEmail);
-    if (!owner) { cache.put('skip_' + t.getId(), '1', 21600); skipped++; return; }
-    const from = last.getFrom();
-    const name = from.replace(/<.*>/, '').replace(/"/g, '').trim() || from;
-    const mail = (from.match(/<(.+?)>/) || [])[1] || from;
-    sh.appendRow([id, last.getDate(), enc_(name), '', enc_(mail), enc_(mailText_(t, last)), 'جديدة', '', 'البريد', owner[0], '']);
-    added++;
-  });
-  Logger.log('البريد: ' + meEmail + ' | سلاسل مطابقة: ' + threads.length + ' | أُضيف: ' + added + ' | لا تخص أحدًا: ' + skipped);
-}
-
-// تنظيف: حذف صفوف الرسائل المحذوفة نهائيًا بعد 7 أيام (لا تحمل أي محتوى أصلًا)
-function purge_(sh) {
-  const n = sh.getLastRow() - 1;
-  if (n < 1) return;
-  const vals = sh.getRange(2, 1, n, COLS).getValues(), cutoff = Date.now() - 7 * 86400000;
-  for (let i = n - 1; i >= 0; i--) {
-    if (vals[i][6] === DEL && new Date(vals[i][1]).getTime() < cutoff) sh.deleteRow(i + 2);
-  }
+function setPw_(u, pw) {
+  const i = allUsers_().findIndex(r => r[0] === u[0]); if (i < 0) return;
+  const salt = Utilities.getUuid();
+  users_().getRange(i + 2, 5, 1, 2).setValues([[hash_(pw, salt), salt]]);
 }
 
 // ===== تشفير الرسائل القديمة (شغّليها مرة واحدة فقط بعد تحديث الكود) =====
@@ -455,7 +421,7 @@ function handleWhapi_(token, d) {
       });
       return;
     }
-    if (vals.some(r => r[0] === m.id)) return;                       // منع التكرار
+    if (vals.some(r => r[0] === m.id) || isGone_(m.id)) return;                       // منع التكرار
     const text = m.type === 'text' ? ((m.text && m.text.body) || '') : '[رسالة من نوع: ' + m.type + ']';
     const when = m.timestamp ? new Date(Number(m.timestamp) * 1000) : new Date();
     sh.appendRow([m.id, when, enc_(m.from_name || phone), enc_(phone), '', enc_(text), 'جديدة', '', 'واتساب', me[0], '']);
@@ -464,31 +430,3 @@ function handleWhapi_(token, d) {
 }
 
 
-// ===== فحص الاستيراد: شغّليها من المحرر ثم افتحي «سجل التنفيذ» (Execution log) =====
-// تبيّن لكل رسالة من آخر 3 أيام: لمن ستُنسب؟ وهل ستُستورد؟ وإن لا فما السبب.
-function diagnoseEmail() {
-  const users = allUsers_(), meEmail = baseMail_();
-  Logger.log('حساب Google الذي نشر السكربت (صندوق البريد الذي يُقرأ): ' + meEmail);
-  users.forEach(r => Logger.log('مستخدمة: ' + r[1] + ' ← عنوان استقبالها: ' + mailAddr_(r[0])));
-  const mine = [meEmail].concat(GmailApp.getAliases().map(a => a.toLowerCase()));
-  const sh = msgs_(), n = sh.getLastRow() - 1;
-  const state = {};
-  (n > 0 ? sh.getRange(2, 1, n, COLS).getValues() : []).forEach(r => { state[r[0]] = r[6]; });
-  const passed = {};
-  GmailApp.search(MAIL_QUERY, 0, 50).forEach(t => { passed[t.getId()] = 1; });
-  const all = GmailApp.search('newer_than:3d', 0, 20);
-  Logger.log('رسائل آخر 3 أيام: ' + all.length + ' | تمرّ من الفلتر: ' + Object.keys(passed).length);
-  all.forEach(t => {
-    const ms = t.getMessages(), last = ms[ms.length - 1], from = last.getFrom().toLowerCase();
-    let why;
-    if (!passed[t.getId()]) why = 'مستبعدة بالفلتر (تصنيف ترويج/اجتماعي، أو ليست في الوارد)';
-    else if (mine.some(a => from.indexOf(a) >= 0)) why = 'آخر رسالة فيها منك أنتِ فلا تُستورد';
-    else if (state['mail_' + t.getId()] === DEL) why = 'سبق أن حُذفت من الموقع';
-    else if (('mail_' + t.getId()) in state) why = 'مستوردة سابقًا (الحالة: ' + state['mail_' + t.getId()] + ')';
-    else {
-      const o = routeMail_(last, users, meEmail);
-      why = o ? 'ستُنسب إلى: ' + o[1] + ' وتُستورد' : 'لا تخص أي مستخدمة (لم تُرسل إلى عنوان استقبال أحد) فلن تُستورد';
-    }
-    Logger.log('• ' + String(t.getFirstMessageSubject()).slice(0, 40) + ' | من: ' + last.getFrom().slice(0, 40) + ' → ' + why);
-  });
-}
