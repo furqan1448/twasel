@@ -190,11 +190,11 @@ dialog h3{margin:0 0 4px;font-size:20px}dialog p{margin:0;color:var(--mut)}.dact
 <div id="toast" role="status"></div>
 
 <script>
-const API = 'https://script.google.com/macros/s/AKfycbyqfkW-4CnNAuI1yTr2E5zAgBpzt6axn6z2c40HnBBON4tHwAMwjViSlGbr23vyekJvOg/exec';
+const API = 'https://script.google.com/macros/s/AKfycbzklFmG08Ccj4QwycD7Vinsv-hg-NbzxLeNDNnf-a5WPrdMvRyw22r9tHEjH6blTXE4pg/exec';
 const $ = id => document.getElementById(id);
 const STATUSES = ['جديدة', 'تم الرد', 'لم يُرد عليها'], ARCHIVE = 'الأرشيف';
 const U = new URLSearchParams(location.search).get('u');
-let TOKEN = '', ME = null, ALL = [], ARCH = [], ARCHN = 0, FILTER = 'الكل';
+let TOKEN = '', KEY = '', ME = null, ALL = [], ARCH = [], ARCHN = 0, FILTER = 'الكل';
 const show = id => ['pub','auth','inbox'].forEach(s => $(s).style.display = s===id ? 'block' : 'none');
 const disp = p => { p = String(p||''); return p.startsWith('966') ? '0' + p.slice(3) : p; };
 const ic = n => '<svg class="i"><use href="#'+n+'"/></svg>';
@@ -283,7 +283,7 @@ $('pwBtn').onclick=async()=>{
   const a=await dlg('تغيير كلمة المرور',{fields:[{k:'c',label:'كلمة المرور الحالية',type:'password',ac:'current-password'},{k:'n',label:'كلمة المرور الجديدة (8 أحرف فأكثر)',type:'password',ac:'new-password'},{k:'n2',label:'تأكيد كلمة المرور الجديدة',type:'password',ac:'new-password'}],ok:'حفظ'});
   if(!a) return;
   if(a.n!==a.n2){ toast('تأكيد كلمة المرور غير مطابق.',1); return; }
-  try{ const r=await post({action:'changePassword',token:TOKEN,current:a.c,password:a.n}); r.ok?toast('تم تغيير كلمة المرور.'):toast(r.error||'تعذّر التغيير.',1); }
+  try{ const r=await post({action:'changePassword',token:TOKEN,current:a.c,password:a.n}); if(r.ok){ TOKEN=r.token; try{localStorage.setItem('tok',TOKEN);}catch(e){} toast('تم تغيير كلمة المرور.'); } else toast(r.error||'تعذّر التغيير.',1); }
   catch(e){ toast('تعذّر الاتصال.',1); }
 };
 
@@ -377,13 +377,14 @@ $('wAdd').onclick=async()=>{
   if(!r.ok){toast(r.error||'تعذّر الحفظ',1);return;}
   ['wn','wp','wm'].forEach(i=>$(i).value='');$('wForm').style.display='none';load();
 };
+async function getKey(){ if(!KEY){ const r=await post({action:'keys',token:TOKEN}); if(r.auth===false){logout();return '';} KEY=r.key||''; } return KEY; }
 const cp=(id,btn)=>navigator.clipboard.writeText($(id).textContent).then(()=>toast('تم النسخ'));
-$('mToggle').onclick=()=>{
+$('mToggle').onclick=async()=>{ const KY=await getKey();
   tg('mBox');
   $('mCode').textContent=
 "const SITE = '"+location.origin+location.pathname+"';\n"+
 "const API_FALLBACK = '"+API+"';\n"+
-"const TOKEN = '"+TOKEN+"';\n\n"+
+"const TOKEN = '"+KY+"';\n\n"+
 "// يقرأ رابط النشر الحالي من الموقع، فلا تحتاجين تغيير الكود إذا تغيّر الرابط\n"+
 "function api_() {\n"+
 "  try {\n"+
@@ -412,12 +413,12 @@ $('mToggle').onclick=()=>{
 };
 
 $('mCopy').onclick=e=>cp('mCode',e.target); $('mCopy2').onclick=e=>cp('mMan',e.target);
-$('qToggle').onclick=()=>{ tg('qBox'); $('qUrl').textContent=API+'?wh='+TOKEN; };
+$('qToggle').onclick=async()=>{ tg('qBox'); $('qUrl').textContent=API+'?wh='+await getKey(); };
 $('qCopy').onclick=e=>cp('qUrl',e.target);
-$('cToggle').onclick=()=>{ tg('cBox'); $('cUrl').textContent=API+'?k='+TOKEN; };
+$('cToggle').onclick=async()=>{ tg('cBox'); $('cUrl').textContent=API+'?k='+await getKey(); };
 $('cCopy').onclick=e=>cp('cUrl',e.target);
 
-function logout(){TOKEN='';ME=null;try{localStorage.removeItem('tok');localStorage.removeItem('me');}catch(e){} show('auth');}
+function logout(){ if(TOKEN) post({action:'logout',token:TOKEN}).catch(()=>{}); KEY='';TOKEN='';ME=null;try{localStorage.removeItem('tok');localStorage.removeItem('me');}catch(e){} show('auth');}
 $('reload').onclick=load; $('out').onclick=logout;
 
 /* ---------- البداية ---------- */

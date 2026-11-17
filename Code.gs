@@ -80,7 +80,30 @@ function hash_(pw, salt) {
 function pub_(r) { return { id: r[0], name: r[1], phone: r[2], email: r[3] }; }
 
 function allUsers_() { const sh = users_(); return sh.getLastRow() < 2 ? [] : sh.getRange(2, 1, sh.getLastRow() - 1, 8).getValues(); }
-function userByToken_(t) { return t ? allUsers_().find(r => r[6] === t) : null; }
+// ===== الجلسات: منفصلة تمامًا عن «مفتاح الربط» =====
+// الجلسة (تسجيل الدخول من الموقع): تُحفظ بصمتها فقط، وتنتهي بعد 30 يومًا، وتُلغى عند تغيير/استعادة كلمة المرور.
+// مفتاح الربط (العمود «الرمز» في المستخدمون): يُستخدم في روابط الواتساب وسكربت البريد، ويسمح بإضافة الرسائل فقط ولا يقرأ شيئًا.
+function sh_(s) { return Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, 'ss:' + s)).slice(0, 16); }
+function sessions_(id) { try { return JSON.parse(PropertiesService.getScriptProperties().getProperty('S_' + id) || '[]'); } catch (e) { return []; } }
+function newSession_(id) {
+  const secret = Utilities.getUuid() + Utilities.getUuid(), now = Math.floor(Date.now() / 60000);
+  const keep = sessions_(id).filter(x => parseInt(x.slice(16), 36) > now).slice(-4);
+  keep.push(sh_(secret) + (now + 30 * 1440).toString(36));
+  PropertiesService.getScriptProperties().setProperty('S_' + id, JSON.stringify(keep));
+  return id + '.' + secret;
+}
+function endSessions_(id) { PropertiesService.getScriptProperties().deleteProperty('S_' + id); }
+function dropSession_(t) {
+  t = String(t || ''); const i = t.indexOf('.'); if (i < 1) return;
+  const id = t.slice(0, i), h = sh_(t.slice(i + 1));
+  PropertiesService.getScriptProperties().setProperty('S_' + id, JSON.stringify(sessions_(id).filter(x => x.slice(0, 16) !== h)));
+}
+function userBySession_(t) {
+  t = String(t || ''); const i = t.indexOf('.'); if (i < 1) return null;
+  const id = t.slice(0, i), h = sh_(t.slice(i + 1)), now = Math.floor(Date.now() / 60000);
+  return sessions_(id).some(x => x.slice(0, 16) === h && parseInt(x.slice(16), 36) > now) ? (userById_(id) || null) : null;
+}
+function userByKey_(k) { return k ? allUsers_().find(r => r[6] === k) : null; }
 function userById_(id) { return allUsers_().find(r => r[0] === id); }
 function userByPhone_(p) { const n = norm_(p); return n ? allUsers_().find(r => norm_(r[2]) === n) : null; }
 
@@ -133,7 +156,7 @@ function doPost(e) {
       if (dup) return out_({ ok: false, error: 'رقم الجوال أو البريد مسجّل مسبقًا، يرجى تسجيل الدخول.' });
       const id = Utilities.getUuid().replace(/-/g, '').slice(0, 10), salt = Utilities.getUuid(), token = Utilities.getUuid();
       users_().appendRow([id, name, phone, email, hash_(pw, salt), salt, token, new Date()]);
-      return out_({ ok: true, token, user: { id, name, phone, email } });
+      return out_({ ok: true, token: newSession_(id), user: { id, name, phone, email } });
     }
 
     // ---- تسجيل الدخول ----
@@ -146,7 +169,7 @@ function doPost(e) {
       const u = allUsers_().find(r => String(r[3]).toLowerCase() === idf || (n && norm_(r[2]) === n));
       if (!u || hash_(String(d.password || ''), u[5]) !== u[4]) { cache.put(lk, String(tries + 1), 900); return out_({ ok: false, error: 'بيانات الدخول غير صحيحة.' }); }
       cache.remove(lk);
-      return out_({ ok: true, token: u[6], user: pub_(u) });
+      return out_({ ok: true, token: newSession_(u[0]), user: pub_(u) });
     }
 
     // ---- نسيت كلمة المرور: يُرسل رمز من 6 أرقام إلى البريد المسجّل (صالح 15 دقيقة) ----
@@ -174,7 +197,7 @@ function doPost(e) {
         st.t++; if (st.t >= 5) cache.remove('rs_' + u[0]); else cache.put('rs_' + u[0], JSON.stringify(st), 900);
         return bad;
       }
-      setPw_(u, pw); cache.remove('rs_' + u[0]);
+      setPw_(u, pw); endSessions_(u[0]); cache.remove('rs_' + u[0]);
       sendMail_(u[3], 'تم تغيير كلمة المرور', 'تم تغيير كلمة مرور حسابك في صندوق الرسائل. إن لم تكوني أنتِ، فتواصلي مع المسؤول فورًا.');
       return out_({ ok: true });
     }
@@ -192,16 +215,19 @@ function doPost(e) {
     }
 
     // ---- ما يلزم له تسجيل دخول ----
-    const me = userByToken_(d.token);
+    const me = (d.action === 'waNotify' || d.action === 'mailIn') ? userByKey_(d.token) : userBySession_(d.token);
     if (!me) return out_({ ok: false, error: 'انتهت الجلسة، يرجى تسجيل الدخول.', auth: false });
+
+    if (d.action === 'keys') return out_({ ok: true, key: me[6] });
+    if (d.action === 'logout') { dropSession_(d.token); return out_({ ok: true }); }
 
     if (d.action === 'changePassword') {
       const np = String(d.password || '');
       if (hash_(String(d.current || ''), me[5]) !== me[4]) return out_({ ok: false, error: 'كلمة المرور الحالية غير صحيحة.' });
       if (np.length < 8) return out_({ ok: false, error: 'كلمة المرور الجديدة لا تقل عن 8 أحرف.' });
-      setPw_(me, np);
+      setPw_(me, np); endSessions_(me[0]);
       sendMail_(me[3], 'تم تغيير كلمة المرور', 'تم تغيير كلمة مرور حسابك في صندوق الرسائل. إن لم تكوني أنتِ، فاستعيديها فورًا من خيار «نسيت كلمة المرور».');
-      return out_({ ok: true });
+      return out_({ ok: true, token: newSession_(me[0]) });
     }
 
     if (d.action === 'waNotify') {
@@ -306,7 +332,7 @@ function mailIn_(me, items) {
 }
 
 function handleWhatsApp_(d, key) {
-  const owner = key ? userByToken_(key) : null;          // الرابط الخاص بكل حساب يحمل مفتاحه (?k=...)
+  const owner = key ? userByKey_(key) : null;          // الرابط الخاص بكل حساب يحمل مفتاحه (?k=...)
   if (!owner) return;
   const sh = msgs_();
   (d.entry || []).forEach(entry => (entry.changes || []).forEach(ch => {
@@ -405,7 +431,7 @@ function migrateEncrypt() {
 
 // ===== استقبال الواتساب من Whapi.Cloud (ربط بمسح QR) =====
 function handleWhapi_(token, d) {
-  const me = userByToken_(token);
+  const me = userByKey_(token);
   if (!me) return;
   const sh = msgs_();
   (d.messages || []).forEach(m => {
