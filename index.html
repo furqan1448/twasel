@@ -400,7 +400,7 @@ function mailBtn(){ const ok=MAILAT&&Date.now()-MAILAT<7200000; $('mLbl').textCo
 $('mToggle').onclick=async()=>{ const KY=await getKey();
   tg('mBox');
   const site=location.origin+location.pathname, ok=MAILAT&&Date.now()-MAILAT<7200000;
-  $('mAuto').style.display=MAIL_LINK?'block':'none'; $('mMan').open=!MAIL_LINK;
+  $('mAuto').style.display=MAIL_LINK?'block':'none'; $('mMan').open=true;
   $('mSt').textContent=ok?'✅ بريدك مرتبط ويعمل. آخر مزامنة: '+new Date(MAILAT).toLocaleTimeString('ar-SA',{timeStyle:'short'}):'البريد غير مرتبط بعد.';
   if(MAIL_LINK) $('mGo').href=MAIL_LINK+'?k='+encodeURIComponent(KY)+'&api='+encodeURIComponent(API)+'&site='+encodeURIComponent(site);
   $('mCode').textContent=
@@ -409,7 +409,7 @@ $('mToggle').onclick=async()=>{ const KY=await getKey();
 "const TOKEN = '"+KY+"';\n\n"+
 "function cfg_() { return { key: TOKEN, api: PropertiesService.getUserProperties().getProperty('API') || API_FALLBACK, site: SITE }; }\n"+
 MCORE+"\n"+
-"function setup() {\n  ScriptApp.getProjectTriggers().forEach(t => ScriptApp.deleteTrigger(t));\n  ScriptApp.newTrigger('sync').timeBased().everyMinutes(1).create();\n  sync();\n}\n";
+"function setup() {\n  ScriptApp.getProjectTriggers().forEach(t => ScriptApp.deleteTrigger(t));\n  ScriptApp.newTrigger('sync').timeBased().everyMinutes(1).create();\n  Logger.log('النتيجة: ' + JSON.stringify(sync()));\n}\n";
 };
 
 $('mCopy').onclick=e=>cp('mCode',e.target);
