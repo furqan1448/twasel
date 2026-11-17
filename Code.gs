@@ -472,10 +472,6 @@ function handleWhapi_(token, d) {
     notify_(me[3], m.from_name || phone, phone, '', text, 'واتساب');
   });
 }
-
-
-
-
 // ===== للمسؤولة: إعادة تعيين كلمة مرور أي مستخدمة بدون بريد =====
 // غيّري القيمتين ثم اختاري adminResetPassword وشغّليها من المحرر، ثم امسحي كلمة المرور من الكود.
 function adminResetPassword() {
@@ -486,4 +482,9 @@ function adminResetPassword() {
   if (NEW_PASSWORD.length < 8) { Logger.log('كلمة المرور لا تقل عن 8 أحرف.'); return; }
   setPw_(u, NEW_PASSWORD); endSessions_(u[0]);
   Logger.log('تم تعيين كلمة مرور جديدة للحساب: ' + u[1] + '. يمكنها الدخول بها الآن.');
+}
+
+function diag() {
+  Logger.log('الرصيد اليومي المتبقي: ' + MailApp.getRemainingDailyQuota());
+  MailApp.sendEmail(Session.getEffectiveUser().getEmail(), 'تجربة', 'وصلت الرسالة');
 }
