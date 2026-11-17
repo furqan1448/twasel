@@ -1,6 +1,7 @@
 /** @OnlyCurrentDoc */
 // ===== الإعدادات =====
 const WA_VERIFY_TOKEN = 'furqan-wa-2026';   // أي كلمة تختارينها، وتكتبينها نفسها في Meta
+const VERSION = '2026-11-17-b';               // رقم الإصدار: يظهر عند فتح رابط النشر في المتصفح، ليُعرف هل النشر يعمل بآخر كود
 const MSG = 'الرسائل', USR = 'المستخدمون';
 const COLS = 11;                              // عدد أعمدة جدول الرسائل
 const DEL = 'محذوفة';                         // قديم: صفوف قديمة تُحذف تلقائيًا من الشيت ولا يُكتب هذا النص بعد الآن
@@ -145,7 +146,7 @@ function doGet(e) {
     const u = userById_(p.u);
     return u ? out_({ ok: true, user: { name: u[1], phone: u[2], email: u[3] } }) : out_({ ok: false, error: 'الصفحة غير موجودة' });
   }
-  return out_({ ok: true });
+  return out_({ ok: true, v: VERSION });
 }
 
 function doPost(e) {
