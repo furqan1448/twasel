@@ -3,7 +3,7 @@
 // مهم: عند أي تحديث لا تنشئي «عملية نشر جديدة». استخدمي: نشر ← إدارة عمليات النشر ← ✏️ تعديل ← الإصدار: «إصدار جديد» ← نشر.
 // بهذه الطريقة يبقى رابط /exec نفسه، فلا يحتاج أي مستخدم لتغيير رابط Meta أو أي ربط آخر.
 const WA_VERIFY_TOKEN = 'furqan-wa-2026';   // أي كلمة تختارينها، وتكتبينها نفسها في Meta
-const VERSION = '2026-11-17-d';               // رقم الإصدار: يظهر عند فتح رابط النشر في المتصفح، ليُعرف هل النشر يعمل بآخر كود
+const VERSION = '2026-11-18-a';               // رقم الإصدار: يظهر عند فتح رابط النشر في المتصفح، ليُعرف هل النشر يعمل بآخر كود
 const MSG = 'الرسائل', USR = 'المستخدمون';
 const COLS = 11;                              // عدد أعمدة جدول الرسائل
 const DEL = 'محذوفة';                         // قديم: صفوف قديمة تُحذف تلقائيًا من الشيت ولا يُكتب هذا النص بعد الآن
@@ -69,6 +69,10 @@ function users_() {
   if (!P.getProperty('PH_FMT')) { sh.getRange('C:C').setNumberFormat('@'); P.setProperty('PH_FMT', '1'); }   // مرة واحدة فقط (كانت تُنفَّذ مع كل طلب فتبطّئ الموقع)
   return sh;
 }
+
+// علامة «تغيّر شيء» لكل مستخدمة: يفحصها الموقع كل بضع ثوانٍ بطلب خفيف، فتظهر الرسائل الجديدة فورًا دون تحديث الصفحة
+function touch_(id) { PropertiesService.getScriptProperties().setProperty('CH_' + id, String(Date.now())); }
+function chOf_(id) { return Number(PropertiesService.getScriptProperties().getProperty('CH_' + id) || 0); }
 
 function out_(o) {
   return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
@@ -179,7 +183,7 @@ function doPost(e) {
     d = { action: 'waNotify', token: p[1], title: p[2], text: p.slice(3).join('§§') };
   } else d = JSON.parse(raw);
   const lock = LockService.getScriptLock();
-  const needLock = d.action !== 'list' && d.action !== 'keys';   // القراءة لا تنتظر بعضها، فيسرع الموقع
+  const needLock = d.action !== 'list' && d.action !== 'keys' && d.action !== 'poll';   // القراءة لا تنتظر بعضها، فيسرع الموقع
   if (needLock) lock.waitLock(20000);
   try {
     if (e.parameter && e.parameter.wh) { handleWhapi_(e.parameter.wh, d); return out_({ ok: true }); }   // Whapi.Cloud
@@ -248,6 +252,7 @@ function doPost(e) {
       const name = String(d.name).slice(0, 200), message = String(d.message).slice(0, 5000);
       const phone = String(d.phone || '').slice(0, 50), email = String(d.email || '').slice(0, 200);
       msgs_().appendRow([Utilities.getUuid(), new Date(), enc_(name), enc_(phone), enc_(email), enc_(message), 'جديدة', '', 'النموذج', owner[0], '']);
+      touch_(owner[0]);
       notify_(owner[3], name, phone, email, message, 'النموذج');
       return out_({ ok: true });
     }
@@ -256,6 +261,7 @@ function doPost(e) {
     const me = (d.action === 'waNotify' || d.action === 'mailIn') ? userByKey_(d.token) : userBySession_(d.token);
     if (!me) return out_({ ok: false, error: 'انتهت الجلسة، يرجى تسجيل الدخول.', auth: false });
 
+    if (d.action === 'poll') return out_({ ok: true, ch: chOf_(me[0]), mail: Number(PropertiesService.getScriptProperties().getProperty('ML_' + me[0]) || 0) });
     if (d.action === 'keys') return out_({ ok: true, key: me[6] });
     if (d.action === 'logout') { dropSession_(d.token); return out_({ ok: true }); }
 
@@ -277,6 +283,7 @@ function doPost(e) {
       const recent = n > 0 ? sh.getRange(Math.max(2, n - 98), 1, Math.min(n, 100), COLS).getValues() : [];
       if (recent.some(r => r[9] === me[0] && r[6] !== DEL && dec_(r[2]) === title && dec_(r[5]) === text)) return out_({ ok: true });   // منع التكرار
       sh.appendRow([Utilities.getUuid(), new Date(), enc_(title), '', '', enc_(text), 'جديدة', '', 'واتساب', me[0], '']);
+      touch_(me[0]);
       return out_({ ok: true });
     }
 
@@ -287,6 +294,7 @@ function doPost(e) {
         return out_({ ok: false, emailMismatch: true, expected: regEmail, actual: senderEmail });
       }
       mailIn_(me, d.items);
+      if (Array.isArray(d.items) && d.items.length) touch_(me[0]);
       PropertiesService.getScriptProperties().setProperty('ML_' + me[0], String(Date.now()));
       return out_({ ok: true, expected: regEmail });
     }
@@ -294,6 +302,7 @@ function doPost(e) {
     if (d.action === 'addManual') {
       if (!d.name) return out_({ ok: false, error: 'الاسم مطلوب.' });
       msgs_().appendRow([Utilities.getUuid(), new Date(), enc_(String(d.name).slice(0, 200)), enc_(norm_(d.phone)), '', enc_(String(d.message || '').slice(0, 5000)), 'جديدة', '', 'واتساب', me[0], '']);
+      touch_(me[0]);
       return out_({ ok: true });
     }
 
@@ -314,7 +323,7 @@ function doPost(e) {
       }
       const ord = new Map(mine.map((r, i) => [r, i]));
       mine.sort((a, b) => (new Date(b[1]).getTime() || 0) - (new Date(a[1]).getTime() || 0) || ord.get(b) - ord.get(a));   // الأحدث أولًا
-      return out_({ ok: true, v: VERSION, rows: mine.slice(0, limit).map(rowOut_), archivedCount, counts, total: mine.length, mail: Number(PropertiesService.getScriptProperties().getProperty('ML_' + me[0]) || 0) });
+      return out_({ ok: true, v: VERSION, rows: mine.slice(0, limit).map(rowOut_), archivedCount, counts, total: mine.length, ch: chOf_(me[0]), mail: Number(PropertiesService.getScriptProperties().getProperty('ML_' + me[0]) || 0) });
     }
 
     if (d.action === 'update') {
@@ -324,13 +333,14 @@ function doPost(e) {
       if (d.status !== undefined) sh.getRange(f.row, 7).setValue(d.status);
       if (d.note !== undefined) sh.getRange(f.row, 8).setValue(enc_(String(d.note).slice(0, 2000)));
       if (d.archived !== undefined) sh.getRange(f.row, 11).setValue(d.archived ? 'نعم' : '');
+      touch_(me[0]);
       return out_({ ok: true });
     }
 
     if (d.action === 'delete') {
       const sh = msgs_(), f = findRow_(sh, d.id, me);
       if (!f) return out_({ ok: false, error: 'الرسالة غير موجودة.' });
-      buryRows_([f.vals], me[0]); sh.deleteRow(f.row);          // حذف الصف كاملًا من الشيت، بلا أي أثر نصي
+      buryRows_([f.vals], me[0]); sh.deleteRow(f.row); touch_(me[0]);          // حذف الصف كاملًا من الشيت، بلا أي أثر نصي
       return out_({ ok: true });
     }
     if (d.action === 'deleteReplied') {
@@ -341,7 +351,7 @@ function doPost(e) {
         if ((r[9] || first) !== me[0] || r[6] !== 'تم الرد' || r[10] === 'نعم') return;
         ids.push(r); rows.push(i + 2);
       });
-      if (ids.length) { buryRows_(ids, me[0]); rows.reverse().forEach(x => sh.deleteRow(x)); }
+      if (ids.length) { buryRows_(ids, me[0]); rows.reverse().forEach(x => sh.deleteRow(x)); touch_(me[0]); }
       return out_({ ok: true, deleted: ids.length });
     }
     return out_({ ok: false, error: 'طلب غير معروف.' });
@@ -405,6 +415,7 @@ function handleWhatsApp_(d, key) {
       });
     });
   }));
+  touch_(owner[0]);
 }
 
 // الإشعار يُرسل دائمًا إلى البريد المسجّل لصاحبة الصندوق فقط، ولا تُرسل نسخة إلى أي بريد آخر.
@@ -530,6 +541,7 @@ function handleWhapi_(token, d) {
     const when = m.timestamp ? new Date(Number(m.timestamp) * 1000) : new Date();
     sh.appendRow([m.id, when, enc_(m.from_name || phone), enc_(phone), '', enc_(text), 'جديدة', '', 'واتساب', me[0], '']);
   });
+  touch_(me[0]);
 }
 // ===== للمسؤولة: إعادة تعيين كلمة مرور أي مستخدمة بدون بريد =====
 // غيّري القيمتين ثم اختاري adminResetPassword وشغّليها من المحرر، ثم امسحي كلمة المرور من الكود.
