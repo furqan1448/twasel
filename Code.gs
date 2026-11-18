@@ -3,7 +3,7 @@
 // مهم: عند أي تحديث لا تنشئي «عملية نشر جديدة». استخدمي: نشر ← إدارة عمليات النشر ← ✏️ تعديل ← الإصدار: «إصدار جديد» ← نشر.
 // بهذه الطريقة يبقى رابط /exec نفسه، فلا يحتاج أي مستخدم لتغيير رابط Meta أو أي ربط آخر.
 const WA_VERIFY_TOKEN = 'furqan-wa-2026';   // أي كلمة تختارينها، وتكتبينها نفسها في Meta
-const VERSION = '2026-11-18-a';               // رقم الإصدار: يظهر عند فتح رابط النشر في المتصفح، ليُعرف هل النشر يعمل بآخر كود
+const VERSION = '2026-11-18-b';               // رقم الإصدار: يظهر عند فتح رابط النشر في المتصفح، ليُعرف هل النشر يعمل بآخر كود
 const MSG = 'الرسائل', USR = 'المستخدمون';
 const COLS = 11;                              // عدد أعمدة جدول الرسائل
 const DEL = 'محذوفة';                         // قديم: صفوف قديمة تُحذف تلقائيًا من الشيت ولا يُكتب هذا النص بعد الآن
@@ -131,7 +131,7 @@ function userByPhone_(p) { const n = norm_(p); return n ? allUsers_().find(r => 
 function rowOut_(r) {
   return {
     id: r[0], date: r[1], name: dec_(r[2]), phone: dec_(r[3]), email: dec_(r[4]), message: dec_(r[5]),
-    status: r[6], note: dec_(r[7]), source: r[8] || 'النموذج', archived: r[10] === 'نعم'
+    status: r[6], note: dec_(r[7]), source: r[8] || 'النموذج', starred: r[10] === 'نعم'
   };
 }
 // يجد رسالة تخص هذه المستخدمة (الرسائل القديمة بلا مالكة تعود لأول حساب)
@@ -309,21 +309,22 @@ function doPost(e) {
     if (d.action === 'list') {
       // يُرجع أحدث رسائل العرض المطلوب فقط (الافتراضي 100) مع أعداد الحالات كاملة، ويفك تشفير المعروض فقط
       const first = allUsers_()[0][0];
-      const sh = msgs_(), wantArchived = !!d.archived, limit = Math.min(Math.max(Number(d.limit) || 100, 1), 1000);
+      const sh = msgs_(), wantStarred = !!(d.starred || d.archived), limit = Math.min(Math.max(Number(d.limit) || 100, 1), 1000);
       cleanDeleted_(sh);
-      let archivedCount = 0;
+      let starredCount = 0;
       const mine = [], counts = {};
       if (sh.getLastRow() >= 2) {
         sh.getRange(2, 1, sh.getLastRow() - 1, COLS).getValues().forEach(r => {
           if ((r[9] || first) !== me[0] || r[6] === DEL) return;       // الرسائل القديمة بلا مالكة تعود لأول حساب
-          const isArch = r[10] === 'نعم';
-          if (isArch) archivedCount++; else counts[r[6]] = (counts[r[6]] || 0) + 1;
-          if (isArch === wantArchived) mine.push(r);
+          const isStar = r[10] === 'نعم';                              // عمود «نعم» القديم (الأرشيف) صار يعني: مميزة بنجمة
+          if (isStar) starredCount++;
+          counts[r[6]] = (counts[r[6]] || 0) + 1;
+          if (!wantStarred || isStar) mine.push(r);
         });
       }
       const ord = new Map(mine.map((r, i) => [r, i]));
       mine.sort((a, b) => (new Date(b[1]).getTime() || 0) - (new Date(a[1]).getTime() || 0) || ord.get(b) - ord.get(a));   // الأحدث أولًا
-      return out_({ ok: true, v: VERSION, rows: mine.slice(0, limit).map(rowOut_), archivedCount, counts, total: mine.length, ch: chOf_(me[0]), mail: Number(PropertiesService.getScriptProperties().getProperty('ML_' + me[0]) || 0) });
+      return out_({ ok: true, v: VERSION, rows: mine.slice(0, limit).map(rowOut_), starredCount, counts, total: mine.length, ch: chOf_(me[0]), mail: Number(PropertiesService.getScriptProperties().getProperty('ML_' + me[0]) || 0) });
     }
 
     if (d.action === 'update') {
@@ -332,7 +333,8 @@ function doPost(e) {
       if (d.status !== undefined && STATUSES_.indexOf(d.status) < 0) return out_({ ok: false, error: 'حالة غير صحيحة.' });
       if (d.status !== undefined) sh.getRange(f.row, 7).setValue(d.status);
       if (d.note !== undefined) sh.getRange(f.row, 8).setValue(enc_(String(d.note).slice(0, 2000)));
-      if (d.archived !== undefined) sh.getRange(f.row, 11).setValue(d.archived ? 'نعم' : '');
+      const st = d.starred !== undefined ? d.starred : d.archived;
+      if (st !== undefined) sh.getRange(f.row, 11).setValue(st ? 'نعم' : '');
       touch_(me[0]);
       return out_({ ok: true });
     }
@@ -342,6 +344,26 @@ function doPost(e) {
       if (!f) return out_({ ok: false, error: 'الرسالة غير موجودة.' });
       buryRows_([f.vals], me[0]); sh.deleteRow(f.row); touch_(me[0]);          // حذف الصف كاملًا من الشيت، بلا أي أثر نصي
       return out_({ ok: true });
+    }
+    if (d.action === 'bulk') {
+      // إجراء جماعي على رسائل محددة: status (تم الرد...) | star (تمييز/إزالة) | delete
+      const ids = (Array.isArray(d.ids) ? d.ids : []).map(String).slice(0, 1000), set = new Set(ids);
+      if (!set.size) return out_({ ok: true, count: 0 });
+      if (['status', 'star', 'delete'].indexOf(d.op) < 0) return out_({ ok: false, error: 'إجراء غير صحيح.' });
+      if (d.op === 'status' && STATUSES_.indexOf(d.value) < 0) return out_({ ok: false, error: 'حالة غير صحيحة.' });
+      const sh = msgs_();
+      if (sh.getLastRow() < 2) return out_({ ok: true, count: 0 });
+      const first = allUsers_()[0][0], hit = [];
+      sh.getRange(2, 1, sh.getLastRow() - 1, COLS).getValues().forEach((r, i) => {
+        if ((r[9] || first) === me[0] && set.has(String(r[0]))) hit.push({ row: i + 2, vals: r });
+      });
+      if (d.op === 'delete') {
+        if (hit.length) { buryRows_(hit.map(h => h.vals), me[0]); hit.slice().reverse().forEach(h => sh.deleteRow(h.row)); }
+      } else {
+        hit.forEach(h => d.op === 'status' ? sh.getRange(h.row, 7).setValue(d.value) : sh.getRange(h.row, 11).setValue(d.value ? 'نعم' : ''));
+      }
+      if (hit.length) touch_(me[0]);
+      return out_({ ok: true, count: hit.length });
     }
     if (d.action === 'deleteReplied') {
       const sh = msgs_();

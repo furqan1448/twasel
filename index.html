@@ -55,6 +55,12 @@ textarea{min-height:120px;resize:vertical}
 .panel{padding:16px;margin-bottom:14px;display:none}.panel small{display:block;color:var(--mut);margin:4px 0}
 .panel code{display:block;direction:ltr;text-align:left;font-size:12.5px;word-break:break-all;background:var(--soft);padding:10px;border-radius:8px;margin:8px 0;white-space:pre-wrap;max-height:200px;overflow:auto}
 .chips{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 16px;align-items:center}
+.ck{display:inline-flex;align-items:center;gap:8px;cursor:pointer;margin:0;font-weight:500}.ck input{width:18px;height:18px;padding:0;margin:0;accent-color:var(--acc);flex:none}
+.selbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 14px;margin-bottom:12px;position:sticky;top:8px;z-index:4}.selbar .ck{margin-inline-end:auto}
+.item.picked{box-shadow:0 0 0 2px var(--acc)}
+.star{color:#e0a100;align-items:center}.star .i{fill:#f5b800;stroke:#c98f00}
+.btn.ghost.on{color:#b57f00;background:#fff6d6;border-color:#f0cf6a}.btn.ghost.on .i{fill:#f5b800}
+.chip .i{width:14px;height:14px;vertical-align:-2px}
 .chip{font:inherit;font-size:14px;font-weight:500;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:99px;padding:5px 14px}.chip.on{background:var(--acc);border-color:var(--acc);color:#fff}
 .item{padding:16px 18px;margin-bottom:12px;display:grid;grid-template-columns:auto 1fr;gap:14px;border-right:5px solid var(--warn)}
 .item.replied{border-right-color:var(--ok)}.item.left{border-right-color:var(--gray)}.item.new{border-right-color:var(--acc)}
@@ -117,6 +123,7 @@ dialog h3{margin:0 0 4px;font-size:20px}dialog p{margin:0;color:var(--mut)}.dact
 <symbol id="ref" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5"/></symbol>
 <symbol id="cp" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></symbol>
 <symbol id="tr" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v5M14 11v5"/></symbol>
+<symbol id="st" viewBox="0 0 24 24"><path d="m12 2.8 2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.6l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9Z"/></symbol>
 <symbol id="ar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11h14V8M10 12h4"/></symbol>
 <symbol id="nt" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></symbol>
 <symbol id="wa" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 1-13.4 7.8L3 21l1.3-4.4A9 9 0 1 1 21 12Z"/><path transform="translate(6.1 6.1) scale(.5)" stroke-width="3.6" d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></symbol>
@@ -180,7 +187,6 @@ dialog h3{margin:0 0 4px;font-size:20px}dialog p{margin:0;color:var(--mut)}.dact
       <button class="btn ghost sm" id="copy"><svg class="i"><use href="#cp"/></svg>نسخ</button></div>
     <div class="tools">
       <button class="btn ghost sm" id="mToggle"><svg class="i"><use href="#ml"/></svg><span id="mLbl">ربط البريد</span></button>
-      <button class="btn ghost sm" id="qToggle"><svg class="i"><use href="#wa"/></svg>ربط واتساب (QR)</button>
       <button class="btn ghost sm" id="cToggle"><svg class="i"><use href="#pl"/></svg>ربط Chakra</button>
       <button class="btn ghost sm" id="wToggle"><svg class="i"><use href="#nt"/></svg>إضافة محادثة</button>
     </div>
@@ -201,11 +207,6 @@ dialog h3{margin:0 0 4px;font-size:20px}dialog p{margin:0;color:var(--mut)}.dact
       <small>في Chakra Chat: «WhatsApp Setup» ← «More» ← «Pass-through webhook url»، والصقي الرابط ثم احفظي:</small>
       <code id="cUrl"></code><button class="btn ghost sm" id="cCopy">نسخ الرابط</button>
     </div>
-    <div class="card panel" id="qBox">
-      <small>١) سجّلي في Whapi.Cloud وأنشئي قناة. ٢) واتساب ← الأجهزة المرتبطة ← ربط جهاز، وامسحي رمز QR.</small>
-      <small>٣) في Webhooks ضعي الرابط التالي وفعّلي الحدث messages بطريقة POST:</small>
-      <code id="qUrl"></code><button class="btn ghost sm" id="qCopy">نسخ الرابط</button>
-    </div>
     <div class="card panel" id="wForm">
       <label for="wn" style="margin-top:0">اسم صاحبة المحادثة</label><input id="wn">
       <label for="wp">رقم جوالها (اختياري)</label><input id="wp" type="tel" inputmode="tel">
@@ -224,13 +225,13 @@ dialog h3{margin:0 0 4px;font-size:20px}dialog p{margin:0;color:var(--mut)}.dact
 <script>
 const API = 'https://script.google.com/macros/s/AKfycbyYNynORQNPIXim81afwjxMxGMUn7l0t_-oiyK3ogYFbn43ZVwOko9g_uqD4uTvC0Zgxw/exec';
 const $ = id => document.getElementById(id);
-const STATUSES = ['جديدة', 'تم الرد', 'لم يُرد عليها'], ARCHIVE = 'الأرشيف';
+const STATUSES = ['جديدة', 'تم الرد', 'لم يُرد عليها'], STAR = 'المميز بنجمة';
 const U = new URLSearchParams(location.search).get('u');
-let CH = 0, POLLING = false, MAILAT = 0, TOKEN = '', KEY = '', ME = null, ALL = [], ARCH = [], ARCHN = 0, COUNTS = {}, LIMIT = 100, FILTER = 'الكل';
+let CH = 0, POLLING = false, MAILAT = 0, TOKEN = '', KEY = '', ME = null, ALL = [], STARN = 0, COUNTS = {}, LIMIT = 100, FILTER = 'جديدة', SEL = new Set();
 const show = id => ['pub','auth','inbox'].forEach(s => $(s).style.display = s===id ? 'block' : 'none');
 const disp = p => { p = String(p||''); return p.startsWith('966') ? '0' + p.slice(3) : p; };
 const ic = n => '<svg class="i"><use href="#'+n+'"/></svg>';
-function tg(id){ const b=$(id), on=b.style.display!=='block'; ['mBox','qBox','cBox','wForm'].forEach(x=>$(x).style.display='none'); if(on) b.style.display='block'; }
+function tg(id){ const b=$(id), on=b.style.display!=='block'; ['mBox','cBox','wForm'].forEach(x=>$(x).style.display='none'); if(on) b.style.display='block'; }
 
 /* الشعار: ضعي ملف الشعار باسم logo.png بجانب index.html — وإن لم يوجد يظهر الحرف «ف» */
 document.querySelectorAll('.bm').forEach(e => e.innerHTML = '<img class="logo" src="logo.png" alt="شعار جمعية فرقان" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'grid\'"><span class="lf">ف</span>');
@@ -336,40 +337,56 @@ $('copy').onclick=()=>navigator.clipboard.writeText($('myLink').textContent).the
 
 async function load(silent){
   if(!silent) $('list').innerHTML='<div class="sk"></div><div class="sk"></div><div class="sk"></div>';
-  const inArch = FILTER===ARCHIVE;
+  const inStar = FILTER===STAR;
   try{
     const tk=TOKEN; if(!tk) return;
-    const r = await post({action:'list',token:tk,archived:inArch,limit:LIMIT});
+    const r = await post({action:'list',token:tk,starred:inStar,limit:LIMIT});
     if(!TOKEN) return; /* خرجت المستخدمة أثناء التحميل */
     if(r.auth===false){logout();return;}
     if(!r.ok){if(!silent)$('list').textContent=r.error||'تعذّر التحميل.';return;}
     $('ver').textContent = r.v ? ('إصدار الخادم: '+r.v) : 'تنبيه: الخادم يعمل بكود قديم، يرجى نشر إصدار جديد من Apps Script.';
-    if(inArch) ARCH=r.rows; else ALL=r.rows;
-    ARCHN=r.archivedCount||0; COUNTS=r.counts||{}; MAILAT=r.mail||0; CH=r.ch||0; mailBtn(); render();
+    ALL=r.rows; STARN=r.starredCount||0; COUNTS=r.counts||{}; MAILAT=r.mail||0; CH=r.ch||0; mailBtn(); render();
   }catch(e){if(!silent)$('list').textContent='تعذّر تحميل الرسائل.';}
 }
 const srcIc = s => s==='واتساب'?'wa':s==='البريد'?'ml':'fm';
 function render(){
-  const inArch = FILTER===ARCHIVE, cnt=s=>COUNTS[s]||0, SUM=Object.values(COUNTS).reduce((a,b)=>a+b,0);
+  const inStar = FILTER===STAR, cnt=s=>COUNTS[s]||0, SUM=Object.values(COUNTS).reduce((a,b)=>a+b,0);
   $('stats').innerHTML='<div class="card stat"><b>'+cnt('جديدة')+'</b><span>رسائل جديدة</span></div><div class="card stat o"><b>'+cnt('تم الرد')+'</b><span>تم الرد</span></div><div class="card stat w"><b>'+cnt('لم يُرد عليها')+'</b><span>لم يُرد عليها</span></div>';
   const f=$('filters'); f.innerHTML='';
-  ['الكل',...STATUSES,ARCHIVE].forEach(s=>{
-    const c = s==='الكل'?SUM:s===ARCHIVE?ARCHN:cnt(s);
-    const b=document.createElement('button'); b.className='chip'+(s===FILTER?' on':''); b.textContent=s+' ('+c+')';
-    b.onclick=()=>{const sw=FILTER===ARCHIVE||s===ARCHIVE; FILTER=s; if(sw)LIMIT=100; sw?load():render();}; f.appendChild(b);
+  [...STATUSES,STAR].forEach(s=>{
+    const c = s===STAR?STARN:cnt(s);
+    const b=document.createElement('button'); b.className='chip'+(s===FILTER?' on':''); b.innerHTML=(s===STAR?ic('st')+' ':'')+s+' ('+c+')';
+    b.onclick=()=>{const sw=FILTER===STAR||s===STAR; FILTER=s; SEL.clear(); if(sw)LIMIT=100; sw?load():render();}; f.appendChild(b);
   });
   const L=$('list'); L.innerHTML='';
-  const rows=(inArch?ARCH:ALL).filter(x=>inArch||FILTER==='الكل'||x.status===FILTER).sort((a,b)=>(new Date(b.date)||0)-(new Date(a.date)||0));
-  if(!inArch&&FILTER==='تم الرد'&&rows.length){
-    const da=document.createElement('button'); da.className='btn danger sm'; da.innerHTML=ic('tr')+'حذف الكل ('+cnt('تم الرد')+')'; da.onclick=delReplied; f.appendChild(da);
+  const rows=ALL.filter(x=>inStar||x.status===FILTER).sort((a,b)=>(new Date(b.date)||0)-(new Date(a.date)||0));
+  const vis=new Set(rows.map(x=>x.id)); SEL.forEach(id=>{if(!vis.has(id))SEL.delete(id);});
+  const more=()=>{const tot=inStar?STARN:(FILTER==='جديدة'||STATUSES.includes(FILTER)?cnt(FILTER):SUM), left=tot-rows.length; if(left>0){const m=document.createElement('button');m.className='btn ghost';m.style.cssText='display:flex;margin:12px auto';m.textContent='عرض الأقدم ('+left+')';m.onclick=()=>{LIMIT+=100;load();};L.appendChild(m);}};
+  if(!rows.length){L.innerHTML='<div class="empty">'+ic('in')+'<p>'+(inStar?'لا توجد رسائل مميزة بنجمة.':'لا توجد رسائل هنا.')+'</p></div>';more();return;}
+
+  /* شريط التحديد والإجراءات الجماعية */
+  const bar=document.createElement('div'); bar.className='card selbar';
+  const all=document.createElement('label'); all.className='ck';
+  const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=SEL.size===rows.length; cb.indeterminate=SEL.size>0&&SEL.size<rows.length;
+  cb.onchange=()=>{SEL.clear(); if(cb.checked) rows.forEach(x=>SEL.add(x.id)); render();};
+  all.appendChild(cb); all.appendChild(document.createTextNode(SEL.size?('تم تحديد '+SEL.size+' من '+rows.length):'تحديد الكل ('+rows.length+')'));
+  bar.appendChild(all);
+  if(SEL.size){
+    const picked=rows.filter(x=>SEL.has(x.id)), allStar=picked.every(x=>x.starred);
+    const bb=(cl,ico,t,fn)=>{const b=document.createElement('button');b.className='btn sm '+cl;b.innerHTML=ic(ico)+t;b.onclick=fn;bar.appendChild(b);};
+    bb('','ck','تم الرد',()=>bulk('status',picked,'تم الرد'));
+    bb('ghost','st',allStar?'إزالة النجمة':'تمييز بنجمة',()=>bulk('star',picked,!allStar));
+    bb('danger','tr','حذف',()=>bulk('delete',picked));
   }
-  const more=()=>{const tot=inArch?ARCHN:SUM, left=tot-(inArch?ARCH:ALL).length; if(left>0){const m=document.createElement('button');m.className='btn ghost';m.style.cssText='display:flex;margin:12px auto';m.textContent='عرض الأقدم ('+left+')';m.onclick=()=>{LIMIT+=100;load();};L.appendChild(m);}};
-  if(!rows.length){L.innerHTML='<div class="empty">'+ic('in')+'<p>'+(inArch?'الأرشيف فارغ.':'لا توجد رسائل هنا.')+'</p></div>';more();return;}
+  L.appendChild(bar);
+
   rows.forEach(x=>{
     const cls = x.status==='تم الرد'?'replied':x.status==='لم يُرد عليها'?'left':x.status==='جديدة'?'new':'';
-    const d=document.createElement('div'); d.className='card item s'+srcIc(x.source)+' '+cls;
+    const d=document.createElement('div'); d.className='card item s'+srcIc(x.source)+' '+cls+(SEL.has(x.id)?' picked':'');
     const date=new Date(x.date).toLocaleString('ar-SA',{dateStyle:'medium',timeStyle:'short'});
-    d.innerHTML='<div class="av"></div><div><div class="hd"><b></b><span class="date">'+date+'</span></div><div class="meta"></div><div class="body"></div><div class="note" style="display:none"></div><div class="badges"><span class="bd">'+ic(srcIc(x.source))+(x.source||'النموذج')+'</span><span class="bd s">'+x.status+'</span></div><div class="acts"></div></div>';
+    d.innerHTML='<div class="av"></div><div><div class="hd"><label class="ck"><input type="checkbox" class="pk"><b></b><span class="star" style="display:none">'+ic('st')+'</span></label><span class="date">'+date+'</span></div><div class="meta"></div><div class="body"></div><div class="note" style="display:none"></div><div class="badges"><span class="bd">'+ic(srcIc(x.source))+(x.source||'النموذج')+'</span><span class="bd s">'+x.status+'</span></div><div class="acts"></div></div>';
+    const pk=d.querySelector('.pk'); pk.checked=SEL.has(x.id); pk.onchange=()=>{pk.checked?SEL.add(x.id):SEL.delete(x.id); render();};
+    if(x.starred) d.querySelector('.star').style.display='inline-flex';
     d.querySelector('b').textContent=x.name; d.querySelector('.av').textContent=(x.name||'؟').trim().charAt(0);
     const meta=d.querySelector('.meta');
     if(x.phone){const a=document.createElement('a');a.href='tel:'+x.phone;a.textContent=disp(x.phone);a.style.direction='ltr';meta.appendChild(a);}
@@ -381,7 +398,7 @@ function render(){
     if(x.source==='واتساب'&&x.phone) mk('ghost','wa','فتح واتساب',()=>window.open('https://wa.me/'+String(x.phone).replace(/\D/g,''),'_blank','noopener'));
     STATUSES.filter(s=>s!==x.status&&s!=='جديدة').forEach(s=>mk('',s==='تم الرد'?'ck':'',s,()=>upd(x,{status:s})));
     mk('ghost','nt','ملاحظة',async()=>{const a=await dlg('ملاحظة',{fields:[{k:'t',label:'اكتبي الملاحظة',area:1,value:x.note||''}],ok:'حفظ'}); if(a) upd(x,{note:a.t});});
-    mk('ghost','ar',inArch?'إلغاء الأرشفة':'أرشفة',()=>archive(x,!inArch));
+    mk('ghost'+(x.starred?' on':''),'st',x.starred?'إزالة النجمة':'تمييز بنجمة',()=>star(x,!x.starred));
     mk('danger','tr','حذف',()=>del(x));
     L.appendChild(d);
   });
@@ -393,29 +410,37 @@ async function upd(x,patch){
   const r=await post({action:'update',token:TOKEN,id:x.id,...patch});
   if(!r.ok){toast(r.error||'تعذّر الحفظ',1);load();}
 }
-async function archive(x,on){
-  const L=on?ALL:ARCH, i=L.indexOf(x); if(i>=0) L.splice(i,1);
-  ARCHN=Math.max(0,ARCHN+(on?1:-1)); COUNTS[x.status]=Math.max(0,(COUNTS[x.status]||0)+(on?-1:1)); render(); toast(on?'تمت الأرشفة':'أُعيدت إلى الوارد');
-  const r=await post({action:'update',token:TOKEN,id:x.id,archived:on});
+async function star(x,on){
+  x.starred=on; STARN=Math.max(0,STARN+(on?1:-1));
+  if(!on&&FILTER===STAR) ALL=ALL.filter(y=>y!==x);
+  render(); toast(on?'تم التمييز بنجمة':'أُزيلت النجمة');
+  const r=await post({action:'update',token:TOKEN,id:x.id,starred:on});
   if(!r.ok){toast(r.error||'تعذّر الحفظ',1);load();}
 }
 async function del(x){
   if(!await dlg('حذف الرسالة',{text:'سيتم حذف هذه الرسالة نهائيًا من الشيت ولا يمكن استرجاعها.',ok:'حذف نهائي',danger:true})) return;
-  const inArch=FILTER===ARCHIVE, L=inArch?ARCH:ALL, i=L.indexOf(x); if(i>=0) L.splice(i,1);
-  if(inArch) ARCHN=Math.max(0,ARCHN-1); else COUNTS[x.status]=Math.max(0,(COUNTS[x.status]||0)-1);
-  render();
+  ALL=ALL.filter(y=>y!==x); COUNTS[x.status]=Math.max(0,(COUNTS[x.status]||0)-1); if(x.starred) STARN=Math.max(0,STARN-1);
+  SEL.delete(x.id); render();
   const r=await postSafe({action:'delete',token:TOKEN,id:x.id});
   if(r.auth===false){logout();return;}
   (r.ok||r.error==='الرسالة غير موجودة.')?toast('تم الحذف نهائيًا'):(toast(r.error||'تعذّر الحذف',1),load());
 }
-async function delReplied(){
-  const n=COUNTS['تم الرد']||0; if(!n) return;
-  if(!await dlg('حذف كل الرسائل المردود عليها',{text:'سيتم حذف '+n+' رسالة نهائيًا من الشيت ولا يمكن استرجاعها.',ok:'حذف الكل',danger:true})) return;
-  ALL=ALL.filter(x=>x.status!=='تم الرد'); COUNTS['تم الرد']=0; render();
-  const r=await postSafe({action:'deleteReplied',token:TOKEN});
+/* إجراء جماعي على الرسائل المحددة */
+async function bulk(op,picked,value){
+  const n=picked.length, ids=picked.map(x=>x.id);
+  if(op==='delete' && !await dlg('حذف الرسائل المحددة',{text:'سيتم حذف '+n+' رسالة نهائيًا من الشيت ولا يمكن استرجاعها.',ok:'حذف نهائي',danger:true})) return;
+  picked.forEach(x=>{
+    if(op==='status'){ if(x.status!==value){COUNTS[x.status]=Math.max(0,(COUNTS[x.status]||0)-1);COUNTS[value]=(COUNTS[value]||0)+1;} x.status=value; }
+    else if(op==='star'){ if(!!x.starred!==value) STARN=Math.max(0,STARN+(value?1:-1)); x.starred=value; }
+    else { COUNTS[x.status]=Math.max(0,(COUNTS[x.status]||0)-1); if(x.starred) STARN=Math.max(0,STARN-1); }
+  });
+  if(op==='delete') ALL=ALL.filter(x=>!SEL.has(x.id));
+  if(op==='star'&&!value&&FILTER===STAR) ALL=ALL.filter(x=>!SEL.has(x.id));
+  SEL.clear(); render();
+  const r=await postSafe({action:'bulk',token:TOKEN,op,ids,value});
   if(r.auth===false){logout();return;}
-  r.ok?toast('تم الحذف نهائيًا'):toast(r.error||'تعذّر الحذف',1);
-  load();
+  r.ok?toast(op==='delete'?'تم الحذف نهائيًا':op==='star'?(value?'تم التمييز بنجمة':'أُزيلت النجمة'):'تم تحديث '+n+' رسالة'):toast(r.error||'تعذّر تنفيذ الإجراء',1);
+  load(true);
 }
 
 $('wToggle').onclick=()=>tg('wForm');
@@ -449,15 +474,13 @@ MCORE+"\n"+
 "function setup() {\n  const r = sync(true);\n  Logger.log(JSON.stringify(r));\n  if (r && r.emailMismatch) throw new Error('هذا الحساب (' + r.actual + ') ليس البريد المسجّل (' + r.expected + '). افتحي script.google.com بالحساب المسجّل.');\n  if (!r || !r.ok) throw new Error('تعذّر الربط: ' + JSON.stringify(r));\n  ScriptApp.getProjectTriggers().forEach(t => ScriptApp.deleteTrigger(t));\n  ScriptApp.newTrigger('tick').timeBased().everyMinutes(1).create();\n  Logger.log('تم الربط ✓');\n}\n";
 };
 $('mCodeCopy').onclick=()=>navigator.clipboard.writeText($('mCode').textContent).then(()=>toast('تم نسخ الكود'));
-$('qToggle').onclick=async()=>{ tg('qBox'); $('qUrl').textContent=API+'?wh='+await getKey(); };
-$('qCopy').onclick=e=>cp('qUrl',e.target);
 $('cToggle').onclick=async()=>{ tg('cBox'); $('cUrl').textContent=API+'?k='+await getKey(); };
 $('cCopy').onclick=e=>cp('cUrl',e.target);
 
 function logout(){
   const t=TOKEN;
   /* الخروج الفوري من الواجهة أولًا، دون انتظار الخادم */
-  KEY='';TOKEN='';ME=null;ALL=[];ARCH=[];
+  KEY='';TOKEN='';ME=null;ALL=[];SEL=new Set();
   try{localStorage.removeItem('tok');localStorage.removeItem('me');}catch(e){}
   show('auth');
   /* إنهاء الجلسة في الخادم في الخلفية */
