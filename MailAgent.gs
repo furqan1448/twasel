@@ -106,6 +106,9 @@ function sync(forceAll) {
   return r || { ok: false };
 }
 
+// المشغّل الزمني يمرّر كائن حدث للدالة، فنستخدم دالة وسيطة حتى لا تُعاد مزامنة كل الرسائل كل دقيقة
+function tick() { sync(false); }
+
 function page_(title, text) {
   return HtmlService.createHtmlOutput(
     '<div dir="rtl" style="font-family:Tahoma,Arial,sans-serif;max-width:460px;margin:10vh auto;padding:24px;text-align:center;line-height:2;border:1px solid #ebe1e2;border-radius:16px">' +
@@ -145,7 +148,7 @@ function doGet(e) {
         'حسابك في الموقع مسجّل بالبريد: <b style="color:#8C1A2C;direction:ltr">' + targetEmail + '</b><br>' +
         'بينما المتصفح مفتوح حالياً بحساب مختلف (<b style="direction:ltr">' + (r.actual || '') + '</b>).<br><br>' +
         'اضغطي على الزر أدناه لاختيار أو تسجيل الدخول ببريدك المسجّل:<br><br>' +
-        '<a href="' + chooserUrl + '" style="display:inline-block;padding:12px 24px;background:#8C1A2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold">ربط البريد المسجّل (' + targetEmail + ') ✓</a>'
+        '<a href="' + chooserUrl + '" target="_top" style="display:inline-block;padding:12px 24px;background:#8C1A2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold">ربط البريد المسجّل (' + targetEmail + ') ✓</a>'
       );
     }
     const detail = r && r.auth === false
@@ -153,10 +156,10 @@ function doGet(e) {
       : 'تعذّر الاتصال بالموقع' + (r && r._http ? ' (رمز: ' + r._http + ')' : '') + '.';
     return page_('تعذّر الربط', detail);
   }
-  ScriptApp.newTrigger('sync').timeBased().everyMinutes(1).create();
+  ScriptApp.newTrigger('tick').timeBased().everyMinutes(1).create();
   const site = P.getProperty('SITE');
   const em = r.email ? '<br><small style="color:#666">تم ربط بريدك الخاص: <b style="direction:ltr">' + r.email + '</b></small>' : '';
   const cnt = '<br><small style="color:#1f6b45">تمت مزامنة ' + (r.synced || 0) + ' محادثة من بريدك الخاص.</small>';
-  const backBtn = site ? '<p style="margin-top:18px"><a href="' + site + '" style="display:inline-block;padding:10px 24px;background:#8C1A2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold">العودة إلى الصندوق</a></p>' : '';
+  const backBtn = site ? '<p style="margin-top:18px"><a href="' + site + '" target="_top" style="display:inline-block;padding:10px 24px;background:#8C1A2C;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold">العودة إلى الصندوق</a></p>' : '';
   return page_('تم ربط بريدك الخاص بنجاح ✓', 'ستصل رسائل بريدك الخاص إلى صندوقك في الموقع خلال دقيقة تقريبًا.' + em + cnt + backBtn);
 }
