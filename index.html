@@ -157,7 +157,7 @@ dialog h3{margin:0 0 4px;font-size:20px}dialog p{margin:0;color:var(--mut)}.dact
           <a class="btn sm" id="mGo" target="_blank" rel="noopener"><svg class="i"><use href="#pl"/></svg>ربط بريدي الخاص بنقرة واحدة</a>
           <a class="btn danger sm" id="mOff" target="_blank" rel="noopener" style="display:none">إيقاف الربط</a>
         </div>
-        <small style="margin-top:10px">سيتم ربط بريدكِ الخاص المسجّل في الحساب (<b id="mRegEmail" style="direction:ltr"></b>). اضغطي الزر واختاري نفس هذا الحساب في نافذة Google ثم وافقي على الصلاحيات.</small>
+        <small style="margin-top:10px">سيتم ربط بريدكِ الخاص المسجّل في الحساب (<b id="mRegEmail" style="direction:ltr"></b>). اضغطي الزر وسجّلي دخولك بهذا الحساب إن طُلب منك، ثم وافقي على الصلاحيات.</small>
       </div>
     </div>
     <div class="card panel" id="cBox">
@@ -186,7 +186,7 @@ dialog h3{margin:0 0 4px;font-size:20px}dialog p{margin:0;color:var(--mut)}.dact
 
 <script>
 const API = 'https://script.google.com/macros/s/AKfycbwmhptZq1ePNHZgpIdIcFx7IWO8HA-PAgSwnsA7_6i6Gu_gdFDB1qN6GjD07UgGXpoprQ/exec';
-const MAIL_LINK = 'https://script.google.com/macros/s/AKfycbwfHsaQjiMRUwYJMgJG4kgFmfozghBBJE4jXqPKnQUtbPL7RJfTtZwSeEJ2yHForMNQpw/exec';   // رابط نشر MailAgent (ينتهي بـ /exec) — يوضع مرة واحدة
+const MAIL_LINK = 'https://script.google.com/macros/s/AKfycbzlGyojnlKCiL_ROSPRQ3ukRUpceTMKfFSeMp4IS9rzySTXJUrHAmM2bJNt1-tFrhYwkQ/exec';   // رابط نشر MailAgent (ينتهي بـ /exec) — يوضع مرة واحدة
 const $ = id => document.getElementById(id);
 const STATUSES = ['جديدة', 'تم الرد', 'لم يُرد عليها'], ARCHIVE = 'الأرشيف';
 const U = new URLSearchParams(location.search).get('u');
@@ -404,7 +404,7 @@ $('mToggle').onclick=async()=>{
   if(!KY){ $('mSt').textContent='تعذّر تجهيز الرابط، أعيدي تسجيل الدخول.'; return; }
   const site=location.origin+location.pathname;
   const targetUrl=MAIL_LINK+'?k='+encodeURIComponent(KY)+'&api='+encodeURIComponent(API)+'&site='+encodeURIComponent(site)+'&em='+encodeURIComponent(userEmail);
-  $('mGo').href='https://accounts.google.com/AccountChooser?Email='+encodeURIComponent(userEmail)+'&continue='+encodeURIComponent(targetUrl);
+  $('mGo').href=targetUrl;   // رابط مباشر بدون وسيط: يعمل على أي متصفح
 };
 $('qToggle').onclick=async()=>{ tg('qBox'); $('qUrl').textContent=API+'?wh='+await getKey(); };
 $('qCopy').onclick=e=>cp('qUrl',e.target);
