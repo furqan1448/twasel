@@ -96,58 +96,18 @@ dialog h3{margin:0 0 4px;font-size:20px}dialog p{margin:0;color:var(--mut)}.dact
 #outBtn{margin-top:0}.wrap{margin:0 auto;padding:18px 14px 70px}
 }
 
-/* ===== تنسيقات العنابي (اختاري واحدًا) ===== */
-.hero:after{display:none}
-.hero:before{content:"";position:absolute;inset:0;pointer-events:none}
-/* 1) ملكي عميق */
-html[data-t="1"] .hero,html[data-t="1"] .top{background:radial-gradient(120% 90% at 85% 0%,#a8283d 0%,#7a1426 45%,#4a0b17 100%)}
-html[data-t="1"] .hero:before{background:radial-gradient(circle at 15% 90%,rgba(194,170,133,.22),transparent 40%)}
-/* 2) حريري ناعم */
-html[data-t="2"]{--acc:#9b2237;--soft:#f9eef0}
-html[data-t="2"] .hero,html[data-t="2"] .top{background:linear-gradient(160deg,#b02a44 0%,#8c1a2c 50%,#6a1222 100%)}
-html[data-t="2"] .hero:before{background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.10) 45%,transparent 60%)}
-html[data-t="2"] .top small,html[data-t="2"] .hero .gold{color:#f1d9b5}
-/* 3) داكن فاخر */
-html[data-t="3"]{--acc:#7a1426;--gold:#d8bd86}
-html[data-t="3"] .hero,html[data-t="3"] .top{background:linear-gradient(170deg,#5a0f1e 0%,#3a0913 55%,#220509 100%)}
-html[data-t="3"] .hero:before{background:radial-gradient(circle at 80% 15%,rgba(216,189,134,.18),transparent 45%);border:1px solid rgba(216,189,134,.25);inset:14px;border-radius:18px}
-html[data-t="3"] .top .ttl small,html[data-t="3"] .hero .gold{color:#d8bd86}
-/* 4) زخرفة إسلامية */
-html[data-t="4"] .hero,html[data-t="4"] .top{background-color:#7d1527;background-image:linear-gradient(160deg,rgba(140,26,44,.92),rgba(74,11,23,.96)),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Cpath d='M30 4l8 14 16 2-12 11 3 16-15-8-15 8 3-16L6 20l16-2z' fill='none' stroke='%23C2AA85' stroke-opacity='.28' stroke-width='1'/%3E%3C/svg%3E")}
-html[data-t="4"] .hero:before{background:radial-gradient(circle at 100% 100%,rgba(194,170,133,.18),transparent 50%)}
-/* زر اختيار التنسيق (مؤقت) */
-#themePick{position:fixed;left:14px;bottom:14px;z-index:200;display:flex;gap:6px;align-items:center;background:#fff;border:1px solid #ddd;border-radius:99px;padding:6px 10px;box-shadow:0 4px 16px rgba(0,0,0,.15);font:600 12px inherit;color:#444;direction:rtl}
-#themePick button{width:26px;height:26px;border-radius:50%;border:2px solid #fff;outline:1px solid #ccc;cursor:pointer;padding:0}
-#themePick button.on{outline:2px solid #8C1A2C}
 
-/* ===== تنسيقات إضافية ===== */
+/* ===== دوائر زخرفية (على طراز الدائرة الأصلية) ===== */
 .hero>*{position:relative;z-index:1}
-/* 5) زجاجي */
-html[data-t="5"] .hero,html[data-t="5"] .top{background:radial-gradient(60% 50% at 15% 10%,rgba(214,90,116,.55),transparent 70%),radial-gradient(55% 45% at 90% 90%,rgba(194,170,133,.30),transparent 70%),linear-gradient(160deg,#7a1426,#4a0b17)}
-html[data-t="5"] .hero li{background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.2);backdrop-filter:blur(10px);padding:13px 16px;border-radius:14px;max-width:380px}
-html[data-t="5"] .top .ib{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(8px)}
-html[data-t="5"] .top .ib:hover{background:rgba(255,255,255,.2)}
-html[data-t="5"] .hero .gold,html[data-t="5"] .top .ttl small{color:#ecd3a8}
-/* 6) شريط كريمي أنيق */
-html[data-t="6"] .top{background:#fbf6f1;color:#6f1423;border-left:1px solid #eadcd9;box-shadow:-6px 0 30px rgba(110,20,35,.06)}
-html[data-t="6"] .top .ttl b{color:#7a1426}html[data-t="6"] .top .ttl small{color:#a98750}
-html[data-t="6"] .top .ib{color:#7a1426}html[data-t="6"] .top .ib:hover{background:#f3e4e6;color:#5e0f1c}
-html[data-t="6"] .hero{background:linear-gradient(160deg,#8C1A2C,#5e0f1c)}
-html[data-t="6"] .hero:before{content:"";position:absolute;inset:18px;border:1px solid rgba(194,170,133,.45);border-radius:20px}
-@media(max-width:760px){html[data-t="6"] .top .ib{border-color:#e6d6d3}}
-/* 7) أورورا */
-html[data-t="7"] .hero,html[data-t="7"] .top{background:#3d0a14}
-html[data-t="7"] .hero:before,html[data-t="7"] .top:before{content:"";position:absolute;inset:-20%;background:radial-gradient(40% 35% at 25% 20%,#c23553 0%,transparent 70%),radial-gradient(35% 30% at 85% 35%,#8C1A2C 0%,transparent 70%),radial-gradient(40% 35% at 60% 95%,rgba(194,170,133,.55) 0%,transparent 70%);filter:blur(30px);pointer-events:none}
-html[data-t="7"] .top>*{position:relative;z-index:1}
-html[data-t="7"] .hero .gold,html[data-t="7"] .top .ttl small{color:#f0d9b2}
-/* 8) علامة مائية ذهبية */
-html[data-t="8"] .hero,html[data-t="8"] .top{background:linear-gradient(180deg,#701123,#520c19)}
-html[data-t="8"] .hero:after{display:block;content:"صِلة";position:absolute;inset:auto auto -50px -20px;width:auto;height:auto;border:0;border-radius:0;box-shadow:none;font:800 300px/1 inherit;color:rgba(194,170,133,.10)}
-html[data-t="8"] .hero:before{border-top:3px solid #C2AA85;inset:0 0 auto 0;height:0}
-html[data-t="8"] .top{border-left:3px solid #C2AA85}
-html[data-t="8"] .top .ttl{border-bottom:1px solid rgba(194,170,133,.35);padding-bottom:16px}
-@media(max-width:760px){html[data-t="8"] .top{border-left:0;border-bottom:3px solid #C2AA85}}
-#themePick{flex-wrap:wrap;max-width:230px;justify-content:center}#themePick span{width:100%;text-align:center}
+.hero:before,.hero:after,.top:before{content:"";position:absolute;pointer-events:none;border-radius:50%;z-index:0}
+/* الدائرة الأصلية أسفل اليمين + حلقات إضافية */
+.hero:after{inset:auto -80px -80px auto;width:320px;height:320px;border:2px solid rgba(194,170,133,.35);box-shadow:0 0 0 40px rgba(194,170,133,.08),0 0 0 84px rgba(194,170,133,.04)}
+/* دائرة أعلى اليسار */
+.hero:before{inset:-90px auto auto -90px;width:230px;height:230px;border:2px solid rgba(194,170,133,.28);box-shadow:0 0 0 30px rgba(194,170,133,.07),0 0 0 62px rgba(194,170,133,.035)}
+/* الشريط الجانبي */
+.top{overflow:hidden}.top .in{position:relative;z-index:1}
+.top:before{inset:auto auto -60px -60px;width:190px;height:190px;border:2px solid rgba(194,170,133,.3);box-shadow:0 0 0 26px rgba(194,170,133,.07),0 0 0 54px rgba(194,170,133,.035)}
+@media(max-width:760px){.top:before{display:none}.hero:before{width:150px;height:150px;inset:-60px auto auto -60px;box-shadow:0 0 0 20px rgba(194,170,133,.07)}}
 </style>
 </head>
 <body>
@@ -532,8 +492,5 @@ else{
   if(TOKEN&&ME) openInbox(); else show('auth');
 }
 </script>
-<div id="themePick"><span id="tn">التنسيق</span><button data-t="1" style="background:linear-gradient(135deg,#a8283d,#4a0b17)" title="ملكي عميق"></button><button data-t="2" style="background:linear-gradient(135deg,#b02a44,#6a1222)" title="حريري ناعم"></button><button data-t="3" style="background:linear-gradient(135deg,#5a0f1e,#220509)" title="داكن فاخر"></button><button data-t="4" style="background:linear-gradient(135deg,#8C1A2C,#4a0b17)" title="زخرفة إسلامية"></button><button data-t="5" style="background:linear-gradient(135deg,#d65a74,#4a0b17)" title="زجاجي"></button><button data-t="6" style="background:linear-gradient(135deg,#fbf6f1,#8C1A2C)" title="شريط كريمي"></button><button data-t="7" style="background:linear-gradient(135deg,#c23553,#3d0a14)" title="أورورا"></button><button data-t="8" style="background:linear-gradient(135deg,#C2AA85,#701123)" title="علامة مائية"></button></div>
-<script>(function(){var N={'1': 'ملكي عميق', '2': 'حريري ناعم', '3': 'داكن فاخر', '4': 'زخرفة إسلامية', '5': 'زجاجي', '6': 'شريط كريمي', '7': 'أورورا', '8': 'علامة مائية'};var h=document.documentElement,bs=document.querySelectorAll('#themePick button'),tn=document.getElementById('tn');function set(t){h.setAttribute('data-t',t);tn.textContent=t+' - '+N[t];bs.forEach(function(b){b.classList.toggle('on',b.dataset.t===t)});try{localStorage.setItem('twT',t)}catch(e){}}
-var t='1';try{t=localStorage.getItem('twT')||'1'}catch(e){}if(!N[t])t='1';set(t);bs.forEach(function(b){b.onclick=function(){set(b.dataset.t)}})})();</script>
 </body>
 </html>
