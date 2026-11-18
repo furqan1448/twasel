@@ -75,6 +75,26 @@ dialog{border:0;border-radius:18px;padding:22px;width:min(420px,92vw);background
 dialog h3{margin:0 0 4px;font-size:20px}dialog p{margin:0;color:var(--mut)}.dact{display:flex;gap:8px;margin-top:18px;justify-content:flex-start}
 #toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(30px);background:#2b1a1d;color:#fff;padding:11px 20px;border-radius:12px;opacity:0;pointer-events:none;transition:.25s;z-index:99;max-width:90vw}#toast.on{opacity:1;transform:translateX(-50%)}#toast.bad{background:var(--bad)}
 @media(max-width:760px){.split{grid-template-columns:1fr}.hero{padding:30px 22px}.hero ul,.hero:after{display:none}.hero h1{font-size:28px}.stats{gap:8px}.stat{padding:10px}.stat b{font-size:21px}.item{grid-template-columns:1fr}.av{display:none}.cts{grid-template-columns:1fr}}
+/* ===== الاتجاه الأول: شريط جانبي عنابي ملكي ===== */
+.top{position:fixed;top:0;bottom:0;right:0;width:230px;background:linear-gradient(180deg,#8C1A2C,#5e0f1c);color:#fff;border:0;backdrop-filter:none;z-index:6}
+.top .in{max-width:none;height:100%;flex-direction:column;align-items:stretch;padding:28px 16px;gap:8px}
+.top .ttl{flex:none;margin-bottom:18px}.top .ttl b{font-size:24px}.top .ttl small{color:var(--gold)}
+.top .ib{width:auto;height:auto;padding:10px 14px;display:flex;align-items:center;justify-content:flex-start;gap:10px;color:#ffffffcc;border:0;background:transparent;border-radius:10px}
+.top .ib:hover{background:#ffffff1f;color:#fff}.top .ib::after{content:attr(title);font-weight:700;font-size:15px}
+#outBtn{margin-top:auto}
+.wrap{max-width:1130px;margin:0 230px 0 0;padding:30px 40px 70px}
+.gr{font-size:26px;font-weight:800;margin:0 0 16px}
+.item{border-radius:16px;transition:box-shadow .2s,transform .2s}.item:hover{box-shadow:0 8px 24px rgba(60,20,28,.1);transform:translateY(-1px)}
+.item.swa .av{background:#1f9d551f;color:#1f9d55}.item.sml .av{background:#3b6fd41f;color:#3b6fd4}
+.item.swa .bd:not(.s){background:#1f9d551f;color:#1f9d55}.item.sml .bd:not(.s){background:#3b6fd41f;color:#3b6fd4}
+.item.new{box-shadow:0 0 0 2px color-mix(in srgb,var(--acc) 14%,transparent)}
+@media(max-width:760px){
+.top{position:sticky;top:0;bottom:auto;width:auto;height:auto}
+.top .in{flex-direction:row;align-items:center;height:auto;padding:10px 14px;gap:10px}
+.top .ttl{flex:1;margin:0}.top .ttl b{font-size:17px}.top .ttl small{display:none}
+.top .ib{width:40px;height:40px;padding:0;justify-content:center;border:1px solid #ffffff44}.top .ib::after{display:none}
+#outBtn{margin-top:0}.wrap{margin:0 auto;padding:18px 14px 70px}
+}
 </style>
 </head>
 <body>
@@ -136,11 +156,12 @@ dialog h3{margin:0 0 4px;font-size:20px}dialog p{margin:0;color:var(--mut)}.dact
 
 <!-- الصندوق -->
 <section id="inbox">
-  <div class="top"><div class="in"><span class="bm"></span><div class="ttl"><b id="hi"></b><small>جمعية فرقان · وَصْل للتواصل</small></div>
+  <div class="top"><div class="in"><span class="bm"></span><div class="ttl"><b>وَصْل</b><small>جمعية فرقان</small></div>
     <button class="ib" id="reload" title="تحديث" aria-label="تحديث"><svg class="i"><use href="#ref"/></svg></button>
     <button class="ib" id="pwBtn" title="تغيير كلمة المرور" aria-label="تغيير كلمة المرور"><svg class="i"><use href="#key"/></svg></button>
     <button class="ib" id="outBtn" title="تسجيل الخروج" aria-label="تسجيل الخروج"><svg class="i"><use href="#out"/></svg></button></div></div>
   <div class="wrap">
+    <h2 class="gr" id="hi"></h2>
     <div class="stats" id="stats"></div>
     <div class="card share"><div style="flex:1 1 100%;color:var(--mut);font-size:14px">رابط صفحتك الخاصة — شاركيه ليراسلك الناس عبره</div><code id="myLink"></code>
       <button class="btn ghost sm" id="copy"><svg class="i"><use href="#cp"/></svg>نسخ</button></div>
@@ -188,7 +209,7 @@ dialog h3{margin:0 0 4px;font-size:20px}dialog p{margin:0;color:var(--mut)}.dact
 <div id="toast" role="status"></div>
 
 <script>
-const API = 'https://script.google.com/macros/s/AKfycbyYNynORQNPIXim81afwjxMxGMUn7l0t_-oiyK3ogYFbn43ZVwOko9g_uqD4uTvC0Zgxw/exec';
+const API = 'https://script.google.com/macros/s/AKfycbz4aQlQahnB970___RUNa3W9QMOaNI16YYJtJxwSPjAGpI8EfEjKbcO5aze4Cj5aAK_4Q/exec';
 const $ = id => document.getElementById(id);
 const STATUSES = ['جديدة', 'تم الرد', 'لم يُرد عليها'], ARCHIVE = 'الأرشيف';
 const U = new URLSearchParams(location.search).get('u');
@@ -333,7 +354,7 @@ function render(){
   if(!rows.length){L.innerHTML='<div class="empty">'+ic('in')+'<p>'+(inArch?'الأرشيف فارغ.':'لا توجد رسائل هنا.')+'</p></div>';more();return;}
   rows.forEach(x=>{
     const cls = x.status==='تم الرد'?'replied':x.status==='لم يُرد عليها'?'left':x.status==='جديدة'?'new':'';
-    const d=document.createElement('div'); d.className='card item '+cls;
+    const d=document.createElement('div'); d.className='card item s'+srcIc(x.source)+' '+cls;
     const date=new Date(x.date).toLocaleString('ar-SA',{dateStyle:'medium',timeStyle:'short'});
     d.innerHTML='<div class="av"></div><div><div class="hd"><b></b><span class="date">'+date+'</span></div><div class="meta"></div><div class="body"></div><div class="note" style="display:none"></div><div class="badges"><span class="bd">'+ic(srcIc(x.source))+(x.source||'النموذج')+'</span><span class="bd s">'+x.status+'</span></div><div class="acts"></div></div>';
     d.querySelector('b').textContent=x.name; d.querySelector('.av').textContent=(x.name||'؟').trim().charAt(0);
