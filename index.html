@@ -155,9 +155,10 @@ dialog h3{margin:0 0 4px;font-size:20px}dialog p{margin:0;color:var(--mut)}.dact
         <small id="mSt"></small>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
           <a class="btn sm" id="mGo" target="_blank" rel="noopener"><svg class="i"><use href="#pl"/></svg>ربط بريدي الخاص بنقرة واحدة</a>
+          <button class="btn ghost sm" id="mCopy" type="button"><svg class="i"><use href="#cp"/></svg>نسخ رابط الربط</button>
           <a class="btn danger sm" id="mOff" target="_blank" rel="noopener" style="display:none">إيقاف الربط</a>
         </div>
-        <small style="margin-top:10px">سيتم ربط بريدكِ الخاص المسجّل في الحساب (<b id="mRegEmail" style="direction:ltr"></b>). اضغطي الزر وسجّلي دخولك بهذا الحساب إن طُلب منك، ثم وافقي على الصلاحيات.</small>
+        <small style="margin-top:10px">سيتم ربط بريدكِ الخاص المسجّل في الحساب (<b id="mRegEmail" style="direction:ltr"></b>). اضغطي الزر وسجّلي دخولك بهذا الحساب إن طُلب منك، ثم وافقي على الصلاحيات. وإن ظهر خطأ من Google (403 أو «تعذّر فتح الملف») فاضغطي «نسخ رابط الربط» وافتحيه في نافذة خاصة (Private/Incognito) وسجّلي بحساب واحد فقط.</small>
       </div>
     </div>
     <div class="card panel" id="cBox">
@@ -185,8 +186,8 @@ dialog h3{margin:0 0 4px;font-size:20px}dialog p{margin:0;color:var(--mut)}.dact
 <div id="toast" role="status"></div>
 
 <script>
-const API = 'https://script.google.com/macros/s/AKfycbx9t1kXYlqJV3jrWkXLfW-C1JlQpOu3MdDU8lP8N7edT4hD0SO8Z6W130kf_-86LsOWug/exec';
-const MAIL_LINK = 'https://script.google.com/macros/s/AKfycbwjLTpwqFx_cajKGfSwT_1G645reljlmnBzE_huOVOHgQyDMazA7lJC2SF04ygEa4yTdw/exec';   // رابط نشر MailAgent (ينتهي بـ /exec) — يوضع مرة واحدة
+const API = 'https://script.google.com/macros/s/AKfycbwmhptZq1ePNHZgpIdIcFx7IWO8HA-PAgSwnsA7_6i6Gu_gdFDB1qN6GjD07UgGXpoprQ/exec';
+const MAIL_LINK = 'https://script.google.com/macros/s/AKfycbzlGyojnlKCiL_ROSPRQ3ukRUpceTMKfFSeMp4IS9rzySTXJUrHAmM2bJNt1-tFrhYwkQ/exec';   // رابط نشر MailAgent (ينتهي بـ /exec) — يوضع مرة واحدة
 const $ = id => document.getElementById(id);
 const STATUSES = ['جديدة', 'تم الرد', 'لم يُرد عليها'], ARCHIVE = 'الأرشيف';
 const U = new URLSearchParams(location.search).get('u');
@@ -390,6 +391,8 @@ $('wAdd').onclick=async()=>{
   ['wn','wp','wm'].forEach(i=>$(i).value='');$('wForm').style.display='none';load();
 };
 async function getKey(){ if(!KEY){ const r=await post({action:'keys',token:TOKEN}); if(r.auth===false){logout();return '';} KEY=r.key||''; } return KEY; }
+let MAILURL='';
+$('mCopy').onclick=()=>{ if(!MAILURL){toast('افتحي القسم مرة أخرى.',1);return;} navigator.clipboard.writeText(MAILURL).then(()=>toast('تم نسخ الرابط، افتحيه في نافذة خاصة (Private)')); };
 const cp=(id,btn)=>navigator.clipboard.writeText($(id).textContent).then(()=>toast('تم النسخ'));
 function mailBtn(){ const ok=MAILAT&&Date.now()-MAILAT<7200000; $('mLbl').textContent=ok?'البريد مرتبط ✓':'ربط البريد'; }
 $('mToggle').onclick=async()=>{
@@ -405,6 +408,7 @@ $('mToggle').onclick=async()=>{
   const site=location.origin+location.pathname;
   const targetUrl=MAIL_LINK+'?k='+encodeURIComponent(KY)+'&api='+encodeURIComponent(API)+'&site='+encodeURIComponent(site)+'&em='+encodeURIComponent(userEmail);
   $('mGo').href=targetUrl;   // رابط مباشر بدون وسيط: يعمل على أي متصفح
+  MAILURL=targetUrl;
 };
 $('qToggle').onclick=async()=>{ tg('qBox'); $('qUrl').textContent=API+'?wh='+await getKey(); };
 $('qCopy').onclick=e=>cp('qUrl',e.target);
