@@ -364,7 +364,7 @@ function render(){
   });
   $('archNote').textContent = inArch
     ? 'هنا الرسائل الأقدم من '+ARCHD+' يومًا. تُعرض للاطّلاع والحذف فقط.'
-    : 'تنبيه: الرسائل الأقدم من '+ARCHD+' يومًا تُنقل تلقائيًا إلى «الأرشيف»، وتبقى الرسائل المميّزة بنجمة ظاهرة دائمًا.';
+    : 'تنبيه: الرسائل الأقدم من '+ARCHD+' يومًا تُنقل تلقائيًا إلى «الأرشيف»،.';
   const L=$('list'); L.innerHTML='';
   const rows=ALL.filter(x=>inStar||inArch||x.status===FILTER).sort((a,b)=>(new Date(b.date)||0)-(new Date(a.date)||0));
   const vis=new Set(rows.map(x=>x.id)); SEL.forEach(id=>{if(!vis.has(id))SEL.delete(id);});
