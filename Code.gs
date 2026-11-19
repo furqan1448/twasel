@@ -3,7 +3,7 @@
 // مهم: عند أي تحديث لا تنشئي «عملية نشر جديدة». استخدمي: نشر ← إدارة عمليات النشر ← ✏️ تعديل ← الإصدار: «إصدار جديد» ← نشر.
 // بهذه الطريقة يبقى رابط /exec نفسه، فلا يحتاج أي مستخدم لتغيير رابط Meta أو أي ربط آخر.
 const WA_VERIFY_TOKEN = 'furqan-wa-2026';   // أي كلمة تختارينها، وتكتبينها نفسها في Meta
-const VERSION = '2026-11-18-b';               // رقم الإصدار: يظهر عند فتح رابط النشر في المتصفح، ليُعرف هل النشر يعمل بآخر كود
+const VERSION = '2026-11-20-a';               // رقم الإصدار: يظهر عند فتح رابط النشر في المتصفح، ليُعرف هل النشر يعمل بآخر كود
 const MSG = 'الرسائل', USR = 'المستخدمون';
 const COLS = 11;                              // عدد أعمدة جدول الرسائل
 const DEL = 'محذوفة';                         // قديم: صفوف قديمة تُحذف تلقائيًا من الشيت ولا يُكتب هذا النص بعد الآن
@@ -308,6 +308,7 @@ function doPost(e) {
 
     if (d.action === 'list') {
       // يُرجع أحدث رسائل العرض المطلوب فقط (الافتراضي 100) مع أعداد الحالات كاملة، ويفك تشفير المعروض فقط
+      if (d.archive) return listArchive_(me, d);   // عرض الرسائل المؤرشفة (للقراءة والحذف فقط)
       const first = allUsers_()[0][0];
       const sh = msgs_(), wantStarred = !!(d.starred || d.archived), limit = Math.min(Math.max(Number(d.limit) || 100, 1), 1000);
       cleanDeleted_(sh);
@@ -324,7 +325,22 @@ function doPost(e) {
       }
       const ord = new Map(mine.map((r, i) => [r, i]));
       mine.sort((a, b) => (new Date(b[1]).getTime() || 0) - (new Date(a[1]).getTime() || 0) || ord.get(b) - ord.get(a));   // الأحدث أولًا
-      return out_({ ok: true, v: VERSION, rows: mine.slice(0, limit).map(rowOut_), starredCount, counts, total: mine.length, ch: chOf_(me[0]), mail: Number(PropertiesService.getScriptProperties().getProperty('ML_' + me[0]) || 0) });
+      return out_({ ok: true, v: VERSION, rows: mine.slice(0, limit).map(rowOut_), starredCount, counts, total: mine.length, archDays: ARCHIVE_DAYS, ch: chOf_(me[0]), mail: Number(PropertiesService.getScriptProperties().getProperty('ML_' + me[0]) || 0) });
+    }
+
+    // ---- حذف رسالة مؤرشفة نهائيًا ----
+    if (d.action === 'archDelete') {
+      const first = allUsers_()[0][0];
+      for (const id of archIds_()) {
+        try {
+          const ash = SpreadsheetApp.openById(id).getSheetByName('الأرشيف');
+          if (!ash || ash.getLastRow() < 2) continue;
+          const vals = ash.getRange(2, 1, ash.getLastRow() - 1, COLS).getValues();
+          const i = vals.findIndex(r => r[0] === d.id && (r[9] || first) === me[0]);
+          if (i >= 0) { ash.deleteRow(i + 2); return out_({ ok: true }); }
+        } catch (e) {}
+      }
+      return out_({ ok: false, error: 'الرسالة غير موجودة.' });
     }
 
     if (d.action === 'update') {
@@ -580,4 +596,71 @@ function adminResetPassword() {
 function diag() {
   Logger.log('الرصيد اليومي المتبقي: ' + MailApp.getRemainingDailyQuota());
   MailApp.sendEmail(Session.getEffectiveUser().getEmail(), 'تجربة', 'وصلت الرسالة');
+}
+
+
+// ===== الأرشفة التلقائية: تحافظ على سرعة الموقع مهما كثرت الرسائل =====
+// الرسائل الأقدم من ARCHIVE_DAYS يومًا (وغير المميّزة بنجمة) تُنقل تلقائيًا كل يوم إلى ملف أرشيف منفصل
+// (بنفس التشفير، وبلا حد المليون خلية للملف الرئيسي)، فيبقى شيت الرسائل صغيرًا وسريعًا.
+// لا تظهر الرسائل المؤرشفة في الموقع. المميّزة بنجمة تبقى دائمًا.
+// تشغيل مرة واحدة فقط من المحرر: installArchiveTrigger  (ثم امنحي الصلاحيات)
+const ARCHIVE_DAYS = 90, ARCHIVE_MAX_ROWS = 800000;
+
+function archSheet_(need) {
+  const P = PropertiesService.getScriptProperties();
+  let id = P.getProperty('ARCH_ID'), ss = null;
+  if (id) { try { ss = SpreadsheetApp.openById(id); } catch (e) { ss = null; } }
+  let sh = ss && ss.getSheetByName('الأرشيف');
+  if (sh && sh.getLastRow() + need > ARCHIVE_MAX_ROWS) { ss = null; sh = null; }   // امتلأ ملف الأرشيف → ملف جديد
+  if (!sh) {
+    ss = SpreadsheetApp.create('أرشيف صندوق الرسائل - ' + Utilities.formatDate(new Date(), 'Asia/Riyadh', 'yyyy-MM-dd'));
+    sh = ss.getSheets()[0]; sh.setName('الأرشيف');
+    sh.appendRow(msgs_().getRange(1, 1, 1, COLS).getValues()[0]); sh.setFrozenRows(1);
+    P.setProperty('ARCH_ID', ss.getId());
+    P.setProperty('ARCH_ALL', (P.getProperty('ARCH_ALL') ? P.getProperty('ARCH_ALL') + ',' : '') + ss.getId());   // سجل بكل ملفات الأرشيف
+  }
+  return sh;
+}
+
+function archiveOld() {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const sh = msgs_(), n = sh.getLastRow() - 1;
+    if (n < 1) return;
+    const vals = sh.getRange(2, 1, n, COLS).getValues(), cutoff = Date.now() - ARCHIVE_DAYS * 86400000;
+    const move = [], keep = [];
+    vals.forEach(r => {
+      const t = new Date(r[1]).getTime();
+      (t && t < cutoff && r[10] !== 'نعم') ? move.push(r) : keep.push(r);
+    });
+    if (!move.length) { Logger.log('لا توجد رسائل للأرشفة.'); return; }
+    const ar = archSheet_(move.length);
+    ar.getRange(ar.getLastRow() + 1, 1, move.length, COLS).setValues(move);   // أولًا نكتب في الأرشيف، وبعدها فقط نحذف من الأصل
+    sh.getRange(2, 1, n, COLS).clearContent();
+    if (keep.length) sh.getRange(2, 1, keep.length, COLS).setValues(keep);
+    if (n > keep.length && sh.getMaxRows() - (keep.length + 1) > 1) sh.deleteRows(keep.length + 2, Math.min(n - keep.length, sh.getMaxRows() - (keep.length + 1)));
+    Logger.log('تمت أرشفة ' + move.length + ' رسالة، وبقي ' + keep.length + ' في الصندوق.');
+  } finally { lock.releaseLock(); }
+}
+
+function installArchiveTrigger() {
+  ScriptApp.getProjectTriggers().forEach(t => { if (t.getHandlerFunction() === 'archiveOld') ScriptApp.deleteTrigger(t); });
+  ScriptApp.newTrigger('archiveOld').timeBased().everyDays(1).atHour(3).create();
+  Logger.log('تم ضبط الأرشفة اليومية (الساعة 3 فجرًا). يمكنك تشغيل archiveOld الآن للتجربة.');
+}
+
+
+function archIds_() { return (PropertiesService.getScriptProperties().getProperty('ARCH_ALL') || '').split(',').filter(Boolean); }
+// يقرأ رسائل هذه المستخدمة فقط من كل ملفات الأرشيف، الأحدث أولًا
+function listArchive_(me, d) {
+  const first = allUsers_()[0][0], limit = Math.min(Math.max(Number(d.limit) || 100, 1), 1000), mine = [];
+  archIds_().forEach(id => {
+    try {
+      const ash = SpreadsheetApp.openById(id).getSheetByName('الأرشيف');
+      if (ash && ash.getLastRow() >= 2) ash.getRange(2, 1, ash.getLastRow() - 1, COLS).getValues().forEach(r => { if ((r[9] || first) === me[0]) mine.push(r); });
+    } catch (e) {}
+  });
+  mine.sort((a, b) => (new Date(b[1]).getTime() || 0) - (new Date(a[1]).getTime() || 0));
+  return out_({ ok: true, v: VERSION, archive: true, archDays: ARCHIVE_DAYS, rows: mine.slice(0, limit).map(rowOut_), total: mine.length });
 }

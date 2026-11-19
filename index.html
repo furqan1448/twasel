@@ -214,6 +214,7 @@ dialog h3{margin:0 0 4px;font-size:20px}dialog p{margin:0;color:var(--mut)}.dact
       <p style="margin:14px 0 0"><button class="btn" id="wAdd">حفظ</button></p>
     </div>
     <div class="chips" id="filters"></div>
+    <p id="archNote" style="margin:2px 2px 12px;font-size:13px;color:var(--mut);line-height:1.8"></p>
     <div id="list"></div>
     <p id="ver" style="text-align:center;font-size:12px;color:var(--mut);margin:18px 0 6px"></p>
   </div>
@@ -225,9 +226,9 @@ dialog h3{margin:0 0 4px;font-size:20px}dialog p{margin:0;color:var(--mut)}.dact
 <script>
 const API = 'https://script.google.com/macros/s/AKfycbwa-aQfUfw6gCo3_8e7R5psOJFHrqKKp3XHX_-VUkteAqm0APZ17tYPuKb0c40L9MZnUw/exec';
 const $ = id => document.getElementById(id);
-const STATUSES = ['جديدة', 'تم الرد', 'لم يُرد عليها'], STAR = 'المميز بنجمة';
+const STATUSES = ['جديدة', 'تم الرد', 'لم يُرد عليها'], STAR = 'المميز بنجمة', ARCH = 'الأرشيف';
 const U = new URLSearchParams(location.search).get('u');
-let CH = 0, POLLING = false, MAILAT = 0, TOKEN = '', KEY = '', ME = null, ALL = [], STARN = 0, COUNTS = {}, LIMIT = 100, FILTER = 'جديدة', SEL = new Set();
+let CH = 0, POLLING = false, MAILAT = 0, TOKEN = '', KEY = '', ME = null, ALL = [], STARN = 0, COUNTS = {}, ARCHN = null, ARCHD = 90, LIMIT = 100, FILTER = 'جديدة', SEL = new Set();
 const show = id => ['pub','auth','inbox'].forEach(s => $(s).style.display = s===id ? 'block' : 'none');
 const disp = p => { p = String(p||''); return p.startsWith('966') ? '0' + p.slice(3) : p; };
 const ic = n => '<svg class="i"><use href="#'+n+'"/></svg>';
@@ -337,32 +338,38 @@ $('copy').onclick=()=>navigator.clipboard.writeText($('myLink').textContent).the
 
 async function load(silent){
   if(!silent) $('list').innerHTML='<div class="sk"></div><div class="sk"></div><div class="sk"></div>';
-  const inStar = FILTER===STAR;
+  const inStar = FILTER===STAR, inArch = FILTER===ARCH;
+  if(inArch && silent) return; /* لا نعيد تحميل الأرشيف مع التحديث التلقائي */
   try{
     const tk=TOKEN; if(!tk) return;
-    const r = await post({action:'list',token:tk,starred:inStar,limit:LIMIT});
+    const r = await post(inArch?{action:'list',token:tk,archive:true,limit:LIMIT}:{action:'list',token:tk,starred:inStar,limit:LIMIT});
     if(!TOKEN) return; /* خرجت المستخدمة أثناء التحميل */
     if(r.auth===false){logout();return;}
     if(!r.ok){if(!silent)$('list').textContent=r.error||'تعذّر التحميل.';return;}
     $('ver').textContent = r.v ? ('إصدار الخادم: '+r.v) : 'تنبيه: الخادم يعمل بكود قديم، يرجى نشر إصدار جديد من Apps Script.';
+    if(r.archDays) ARCHD=r.archDays;
+    if(inArch){ ALL=r.rows; ARCHN=r.total||0; render(); return; }
     ALL=r.rows; STARN=r.starredCount||0; COUNTS=r.counts||{}; MAILAT=r.mail||0; CH=r.ch||0; mailBtn(); render();
   }catch(e){if(!silent)$('list').textContent='تعذّر تحميل الرسائل.';}
 }
 const srcIc = s => s==='واتساب'?'wa':s==='البريد'?'ml':'fm';
 function render(){
-  const inStar = FILTER===STAR, cnt=s=>COUNTS[s]||0, SUM=Object.values(COUNTS).reduce((a,b)=>a+b,0);
+  const inStar = FILTER===STAR, inArch = FILTER===ARCH, cnt=s=>COUNTS[s]||0, SUM=Object.values(COUNTS).reduce((a,b)=>a+b,0);
   $('stats').innerHTML='<div class="card stat"><b>'+cnt('جديدة')+'</b><span>رسائل جديدة</span></div><div class="card stat o"><b>'+cnt('تم الرد')+'</b><span>تم الرد</span></div><div class="card stat w"><b>'+cnt('لم يُرد عليها')+'</b><span>لم يُرد عليها</span></div>';
   const f=$('filters'); f.innerHTML='';
-  [...STATUSES,STAR].forEach(s=>{
-    const c = s===STAR?STARN:cnt(s);
-    const b=document.createElement('button'); b.className='chip'+(s===FILTER?' on':''); b.innerHTML=(s===STAR?ic('st')+' ':'')+s+' ('+c+')';
-    b.onclick=()=>{const sw=FILTER===STAR||s===STAR; FILTER=s; SEL.clear(); if(sw)LIMIT=100; sw?load():render();}; f.appendChild(b);
+  [...STATUSES,STAR,ARCH].forEach(s=>{
+    const c = s===STAR?STARN:s===ARCH?ARCHN:cnt(s);
+    const b=document.createElement('button'); b.className='chip'+(s===FILTER?' on':''); b.innerHTML=(s===STAR?ic('st')+' ':'')+s+(c==null?'':' ('+c+')');
+    b.onclick=()=>{const sw=FILTER===STAR||s===STAR||FILTER===ARCH||s===ARCH; FILTER=s; SEL.clear(); if(sw)LIMIT=100; sw?load():render();}; f.appendChild(b);
   });
+  $('archNote').textContent = inArch
+    ? 'هنا الرسائل الأقدم من '+ARCHD+' يومًا. تُعرض للاطّلاع والحذف فقط.'
+    : 'تنبيه: الرسائل الأقدم من '+ARCHD+' يومًا تُنقل تلقائيًا إلى «الأرشيف»، وتبقى الرسائل المميّزة بنجمة ظاهرة دائمًا.';
   const L=$('list'); L.innerHTML='';
-  const rows=ALL.filter(x=>inStar||x.status===FILTER).sort((a,b)=>(new Date(b.date)||0)-(new Date(a.date)||0));
+  const rows=ALL.filter(x=>inStar||inArch||x.status===FILTER).sort((a,b)=>(new Date(b.date)||0)-(new Date(a.date)||0));
   const vis=new Set(rows.map(x=>x.id)); SEL.forEach(id=>{if(!vis.has(id))SEL.delete(id);});
-  const more=()=>{const tot=inStar?STARN:(FILTER==='جديدة'||STATUSES.includes(FILTER)?cnt(FILTER):SUM), left=tot-rows.length; if(left>0){const m=document.createElement('button');m.className='btn ghost';m.style.cssText='display:flex;margin:12px auto';m.textContent='عرض الأقدم ('+left+')';m.onclick=()=>{LIMIT+=100;load();};L.appendChild(m);}};
-  if(!rows.length){L.innerHTML='<div class="empty">'+ic('in')+'<p>'+(inStar?'لا توجد رسائل مميزة بنجمة.':'لا توجد رسائل هنا.')+'</p></div>';more();return;}
+  const more=()=>{const tot=inArch?ARCHN:inStar?STARN:(FILTER==='جديدة'||STATUSES.includes(FILTER)?cnt(FILTER):SUM), left=tot-rows.length; if(left>0){const m=document.createElement('button');m.className='btn ghost';m.style.cssText='display:flex;margin:12px auto';m.textContent='عرض الأقدم ('+left+')';m.onclick=()=>{LIMIT+=100;load();};L.appendChild(m);}};
+  if(!rows.length){L.innerHTML='<div class="empty">'+ic('in')+'<p>'+(inArch?'لا توجد رسائل مؤرشفة.':inStar?'لا توجد رسائل مميزة بنجمة.':'لا توجد رسائل هنا.')+'</p></div>';more();return;}
 
   /* شريط التحديد والإجراءات الجماعية */
   const bar=document.createElement('div'); bar.className='card selbar';
@@ -378,13 +385,13 @@ function render(){
     bb('ghost','st',allStar?'إزالة النجمة':'تمييز بنجمة',()=>bulk('star',picked,!allStar));
     bb('danger','tr','حذف',()=>bulk('delete',picked));
   }
-  L.appendChild(bar);
+  if(!inArch) L.appendChild(bar);
 
   rows.forEach(x=>{
     const cls = x.status==='تم الرد'?'replied':x.status==='لم يُرد عليها'?'left':x.status==='جديدة'?'new':'';
     const d=document.createElement('div'); d.className='card item s'+srcIc(x.source)+' '+cls+(SEL.has(x.id)?' picked':'');
     const date=new Date(x.date).toLocaleString('ar-SA',{dateStyle:'medium',timeStyle:'short'});
-    d.innerHTML='<div class="av"></div><div><div class="hd"><label class="ck"><input type="checkbox" class="pk"><b></b><span class="star" style="display:none">'+ic('st')+'</span></label><span class="date">'+date+'</span></div><div class="meta"></div><div class="body"></div><div class="note" style="display:none"></div><div class="badges"><span class="bd">'+ic(srcIc(x.source))+(x.source||'النموذج')+'</span><span class="bd s">'+x.status+'</span></div><div class="acts"></div></div>';
+    d.innerHTML='<div class="av"></div><div><div class="hd"><label class="ck"'+(inArch?' style="pointer-events:none"':'')+'><input type="checkbox" class="pk"'+(inArch?' style="display:none"':'')+'><b></b><span class="star" style="display:none">'+ic('st')+'</span></label><span class="date">'+date+'</span></div><div class="meta"></div><div class="body"></div><div class="note" style="display:none"></div><div class="badges"><span class="bd">'+ic(srcIc(x.source))+(x.source||'النموذج')+'</span><span class="bd s">'+x.status+'</span></div><div class="acts"></div></div>';
     const pk=d.querySelector('.pk'); pk.checked=SEL.has(x.id); pk.onchange=()=>{pk.checked?SEL.add(x.id):SEL.delete(x.id); render();};
     if(x.starred) d.querySelector('.star').style.display='inline-flex';
     d.querySelector('b').textContent=x.name; d.querySelector('.av').textContent=(x.name||'؟').trim().charAt(0);
@@ -396,6 +403,7 @@ function render(){
     const acts=d.querySelector('.acts');
     const mk=(cl,ico,t,fn)=>{const b=document.createElement('button');b.className='btn sm '+cl;b.innerHTML=ico?ic(ico)+t:t;b.onclick=fn;acts.appendChild(b);};
     if(x.source==='واتساب'&&x.phone) mk('ghost','wa','فتح واتساب',()=>window.open('https://wa.me/'+String(x.phone).replace(/\D/g,''),'_blank','noopener'));
+    if(inArch){ mk('danger','tr','حذف',()=>delArch(x)); L.appendChild(d); return; }
     STATUSES.filter(s=>s!==x.status&&s!=='جديدة').forEach(s=>mk('',s==='تم الرد'?'ck':'',s,()=>upd(x,{status:s})));
     mk('ghost','nt','ملاحظة',async()=>{const a=await dlg('ملاحظة',{fields:[{k:'t',label:'اكتبي الملاحظة',area:1,value:x.note||''}],ok:'حفظ'}); if(a) upd(x,{note:a.t});});
     mk('ghost'+(x.starred?' on':''),'st',x.starred?'إزالة النجمة':'تمييز بنجمة',()=>star(x,!x.starred));
@@ -416,6 +424,13 @@ async function star(x,on){
   render(); toast(on?'تم التمييز بنجمة':'أُزيلت النجمة');
   const r=await post({action:'update',token:TOKEN,id:x.id,starred:on});
   if(!r.ok){toast(r.error||'تعذّر الحفظ',1);load();}
+}
+async function delArch(x){
+  if(!await dlg('حذف الرسالة',{text:'سيتم حذف هذه الرسالة المؤرشفة نهائيًا ولا يمكن استرجاعها.',ok:'حذف نهائي',danger:true})) return;
+  ALL=ALL.filter(y=>y!==x); ARCHN=Math.max(0,(ARCHN||0)-1); render();
+  const r=await postSafe({action:'archDelete',token:TOKEN,id:x.id});
+  if(r.auth===false){logout();return;}
+  (r.ok||r.error==='الرسالة غير موجودة.')?toast('تم الحذف نهائيًا'):(toast(r.error||'تعذّر الحذف',1),load());
 }
 async function del(x){
   if(!await dlg('حذف الرسالة',{text:'سيتم حذف هذه الرسالة نهائيًا من الشيت ولا يمكن استرجاعها.',ok:'حذف نهائي',danger:true})) return;
