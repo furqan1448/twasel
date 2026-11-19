@@ -224,7 +224,7 @@ dialog h3{margin:0 0 4px;font-size:20px}dialog p{margin:0;color:var(--mut)}.dact
 <div id="toast" role="status"></div>
 
 <script>
-const API = 'https://script.google.com/macros/s/AKfycbyzg93gfMSOHDkmxNjgRv-JMyBwXTPqNLFLjDg1sbYxfNcETaLfQ-UZEBa-UhYaSjPzeg/exec';
+const API = 'https://script.google.com/macros/s/AKfycbwa-aQfUfw6gCo3_8e7R5psOJFHrqKKp3XHX_-VUkteAqm0APZ17tYPuKb0c40L9MZnUw/exec';
 const $ = id => document.getElementById(id);
 const STATUSES = ['جديدة', 'تم الرد', 'لم يُرد عليها'], STAR = 'المميز بنجمة', ARCH = 'الأرشيف';
 const U = new URLSearchParams(location.search).get('u');
@@ -362,9 +362,9 @@ function render(){
     const b=document.createElement('button'); b.className='chip'+(s===FILTER?' on':''); b.innerHTML=(s===STAR?ic('st')+' ':'')+s+(c==null?'':' ('+c+')');
     b.onclick=()=>{const sw=FILTER===STAR||s===STAR||FILTER===ARCH||s===ARCH; FILTER=s; SEL.clear(); if(sw)LIMIT=100; sw?load():render();}; f.appendChild(b);
   });
-  $('archNote').textContent = inArch
+  $('archNote').textContent = inStar ? '' : inArch
     ? 'هنا الرسائل الأقدم من '+ARCHD+' يومًا. تُعرض للاطّلاع والحذف فقط.'
-    : 'تنبيه: الرسائل الأقدم من '+ARCHD+' يومًا تُنقل تلقائيًا إلى «الأرشيف»،.';
+    : 'تنبيه: الرسائل الأقدم من '+ARCHD+' يومًا تُنقل تلقائيًا إلى «الأرشيف»، وتبقى الرسائل المميّزة بنجمة ظاهرة دائمًا.';
   const L=$('list'); L.innerHTML='';
   const rows=ALL.filter(x=>inStar||inArch||x.status===FILTER).sort((a,b)=>(new Date(b.date)||0)-(new Date(a.date)||0));
   const vis=new Set(rows.map(x=>x.id)); SEL.forEach(id=>{if(!vis.has(id))SEL.delete(id);});
