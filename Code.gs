@@ -8,6 +8,7 @@ const MSG = 'الرسائل', USR = 'المستخدمون';
 const COLS = 11;                              // عدد أعمدة جدول الرسائل
 const DEL = 'محذوفة';                         // قديم: صفوف قديمة تُحذف تلقائيًا من الشيت ولا يُكتب هذا النص بعد الآن
 const STATUSES_ = ['جديدة', 'تم الرد', 'لم يُرد عليها'];
+const AUTO_REPLIED = false;                   // false = «تم الرد» تُضبط يدويًا فقط من الموقع (لا تتغير تلقائيًا عند الرد من الجوال أو البريد)
 // إشعارات البريد: تُرسل لرسائل «النموذج» فقط. رسائل الواتساب والبريد لا يُرسل عنها أي إشعار إطلاقًا.
 
 // ===== التشفير =====
@@ -411,7 +412,7 @@ function mailIn_(me, items) {
     if (id in index) {
       const i = index[id], row = vals[i];
       if (row[9] !== me[0] || row[6] === DEL) return;
-      if (it.fromMe) { if (row[6] !== 'تم الرد') sh.getRange(i + 2, 7).setValue('تم الرد'); }
+      if (it.fromMe) { if (AUTO_REPLIED && row[6] !== 'تم الرد') sh.getRange(i + 2, 7).setValue('تم الرد'); }
       else if ((row[6] === 'تم الرد' || row[10] === 'نعم') && when > new Date(row[1])) {   // رسالة جديدة بعد ردّك أو بعد الأرشفة
         sh.getRange(i + 2, 7).setValue('جديدة');
         sh.getRange(i + 2, 2).setValue(when);
@@ -447,7 +448,7 @@ function handleWhatsApp_(d, key) {
 
     (v.message_echoes || []).forEach(m => {
       const to = norm_(m.to);
-      if (!to || sh.getLastRow() < 2) return;
+      if (!AUTO_REPLIED || !to || sh.getLastRow() < 2) return;
       sh.getRange(2, 1, sh.getLastRow() - 1, COLS).getValues().forEach((r, i) => {
         if (r[8] === 'واتساب' && r[9] === owner[0] && r[6] !== 'تم الرد' && r[6] !== DEL && norm_(dec_(r[3])) === to) sh.getRange(i + 2, 7).setValue('تم الرد');
       });
@@ -569,7 +570,7 @@ function handleWhapi_(token, d) {
     const vals = n > 0 ? sh.getRange(2, 1, n, COLS).getValues() : [];
 
     if (m.from_me) {                                                 // ردّك من الجوال: تُعلَّم المحادثة «تم الرد»
-      vals.forEach((r, i) => {
+      if (AUTO_REPLIED) vals.forEach((r, i) => {
         if (r[9] === me[0] && r[8] === 'واتساب' && r[6] !== 'تم الرد' && r[6] !== DEL && norm_(dec_(r[3])) === phone) sh.getRange(i + 2, 7).setValue('تم الرد');
       });
       return;
