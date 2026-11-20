@@ -3,7 +3,7 @@
 // مهم: عند أي تحديث لا تنشئي «عملية نشر جديدة». استخدمي: نشر ← إدارة عمليات النشر ← ✏️ تعديل ← الإصدار: «إصدار جديد» ← نشر.
 // بهذه الطريقة يبقى رابط /exec نفسه، فلا يحتاج أي مستخدم لتغيير رابط Meta أو أي ربط آخر.
 const WA_VERIFY_TOKEN = 'furqan-wa-2026';   // أي كلمة تختارينها، وتكتبينها نفسها في Meta
-const VERSION = '2026-11-20-b';               // رقم الإصدار: يظهر عند فتح رابط النشر في المتصفح، ليُعرف هل النشر يعمل بآخر كود
+const VERSION = '2026-11-20-c';               // رقم الإصدار: يظهر عند فتح رابط النشر في المتصفح، ليُعرف هل النشر يعمل بآخر كود
 const MSG = 'الرسائل', USR = 'المستخدمون';
 const COLS = 11;                              // عدد أعمدة جدول الرسائل
 const DEL = 'محذوفة';                         // قديم: صفوف قديمة تُحذف تلقائيًا من الشيت ولا يُكتب هذا النص بعد الآن
@@ -399,18 +399,20 @@ function doPost(e) {
 
 // بريد المستخدمة: يصل من سكربت تشغّله هي في حسابها (Gmail) فلا يُقرأ بريد أي حساب آخر
 function mailIn_(me, items) {
+  items = Array.isArray(items) ? items.slice(0, 50) : [];
+  if (!items.length) return;                                        // لا شيء لمعالجته: لا نقرأ الشيت أصلًا
   const sh = msgs_(), n = sh.getLastRow() - 1;
-  const vals = n > 0 ? sh.getRange(2, 1, n, COLS).getValues() : [];
+  const idCol = n > 0 ? sh.getRange(2, 1, n, 1).getValues() : [];   // عمود المعرّفات فقط (أسرع بكثير من قراءة كل الأعمدة)
   const index = {};
-  vals.forEach((r, i) => { index[r[0]] = i; });
-  (Array.isArray(items) ? items : []).slice(0, 50).forEach(it => {
+  idCol.forEach((r, i) => { index[r[0]] = i; });
+  items.forEach(it => {
     if (!it || !it.id) return;
     const id = 'mail_' + me[0] + '_' + String(it.id).slice(0, 40);
     if (isGone_(id)) return;
     const when = it.date ? new Date(Number(it.date)) : new Date();
     const text = (String(it.subject || '') + '\n' + String(it.body || '')).slice(0, 1000);
     if (id in index) {
-      const i = index[id], row = vals[i];
+      const i = index[id], row = sh.getRange(i + 2, 1, 1, COLS).getValues()[0];   // نقرأ الصف المطلوب فقط
       if (row[9] !== me[0] || row[6] === DEL) return;
       if (it.fromMe) { if (AUTO_REPLIED && row[6] !== 'تم الرد') sh.getRange(i + 2, 7).setValue('تم الرد'); }
       else if ((row[6] === 'تم الرد' || row[10] === 'نعم') && when > new Date(row[1])) {   // رسالة جديدة بعد ردّك أو بعد الأرشفة
@@ -433,12 +435,14 @@ function handleWhatsApp_(d, key) {
   const owner = key ? userByKey_(key) : null;          // الرابط الخاص بكل حساب يحمل مفتاحه (?k=...)
   if (!owner) return;
   const sh = msgs_();
+  let ids = null;
   (d.entry || []).forEach(entry => (entry.changes || []).forEach(ch => {
     const v = ch.value || {};
 
     (v.messages || []).forEach(m => {
-      const ids = sh.getLastRow() > 1 ? sh.getRange(2, 1, sh.getLastRow() - 1, 1).getValues().flat() : [];
+      if (!ids) ids = sh.getLastRow() > 1 ? sh.getRange(2, 1, sh.getLastRow() - 1, 1).getValues().flat() : [];   // مرة واحدة لكل طلب
       if (ids.indexOf(m.id) >= 0 || isGone_(m.id)) return;
+      ids.push(m.id);
       const c = (v.contacts || []).find(x => x.wa_id === m.from);
       const name = (c && c.profile && c.profile.name) || m.from;
       let text = m.type === 'text' ? m.text.body : m.type === 'button' ? m.button.text : '[رسالة من نوع: ' + m.type + ']';
