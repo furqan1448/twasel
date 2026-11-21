@@ -3,7 +3,7 @@
 // مهم: عند أي تحديث لا تنشئي «عملية نشر جديدة». استخدمي: نشر ← إدارة عمليات النشر ← ✏️ تعديل ← الإصدار: «إصدار جديد» ← نشر.
 // بهذه الطريقة يبقى رابط /exec نفسه، فلا يحتاج أي مستخدم لتغيير رابط Meta أو أي ربط آخر.
 const WA_VERIFY_TOKEN = 'furqan-wa-2026';   // أي كلمة تختارينها، وتكتبينها نفسها في Meta
-const VERSION = '2026-11-20-c';               // رقم الإصدار: يظهر عند فتح رابط النشر في المتصفح، ليُعرف هل النشر يعمل بآخر كود
+const VERSION = '2026-11-21-a';               // رقم الإصدار: يظهر عند فتح رابط النشر في المتصفح، ليُعرف هل النشر يعمل بآخر كود
 const MSG = 'الرسائل', USR = 'المستخدمون';
 const COLS = 11;                              // عدد أعمدة جدول الرسائل
 const DEL = 'محذوفة';                         // قديم: صفوف قديمة تُحذف تلقائيًا من الشيت ولا يُكتب هذا النص بعد الآن
@@ -64,6 +64,27 @@ function msgs_() {
   }
   return sh;
 }
+// ===== التذكيرات والمتابعات =====
+// تُحفظ في ورقة مستقلة «التذكيرات»، والعنوان والملاحظة وبيانات الشخص مشفّرة بنفس طريقة الرسائل. الموعد (رقم) والحالة فقط ظاهران.
+const REM = 'التذكيرات', RCOLS = 13;
+function rems_() {
+  return sheet_(REM, ['المعرف', 'الإنشاء', 'المالكة', 'الموعد', 'الحالة', 'العنوان', 'ملاحظة', 'معرّف الرسالة', 'الاسم', 'الجوال', 'البريد', 'المصدر', 'تاريخ الإكمال']);
+}
+function remOut_(r) {
+  return {
+    id: r[0], created: new Date(r[1]).getTime() || 0, due: Number(r[3]) || 0, done: r[4] === 'مكتمل', doneAt: Number(r[12]) || 0,
+    title: dec_(r[5]), note: dec_(r[6]), msgId: String(r[7] || ''), name: dec_(r[8]), phone: dec_(r[9]), email: dec_(r[10]), source: r[11] || ''
+  };
+}
+function rtouch_(id) { const v = String(Date.now()); PropertiesService.getScriptProperties().setProperty('RC_' + id, v); return Number(v); }
+function remChOf_(id) { return Number(PropertiesService.getScriptProperties().getProperty('RC_' + id) || 0); }
+function findRem_(sh, id, me) {
+  const n = sh.getLastRow() - 1; if (n < 1) return null;
+  const vals = sh.getRange(2, 1, n, RCOLS).getValues(), i = vals.findIndex(r => r[0] === id && r[2] === me[0]);
+  return i < 0 ? null : { row: i + 2, vals: vals[i] };
+}
+function dueOk_(v) { v = Number(v); return isFinite(v) && v > 946684800000 && v < 4102444800000; }
+
 function users_() {
   const sh = sheet_(USR, ['المعرف', 'الاسم', 'الجوال', 'البريد', 'التجزئة', 'الملح', 'الرمز', 'التاريخ']);
   const P = PropertiesService.getScriptProperties();
@@ -184,7 +205,7 @@ function doPost(e) {
     d = { action: 'waNotify', token: p[1], title: p[2], text: p.slice(3).join('§§') };
   } else d = JSON.parse(raw);
   const lock = LockService.getScriptLock();
-  const needLock = d.action !== 'list' && d.action !== 'keys' && d.action !== 'poll';   // القراءة لا تنتظر بعضها، فيسرع الموقع
+  const needLock = d.action !== 'list' && d.action !== 'keys' && d.action !== 'poll' && d.action !== 'remList' && d.action !== 'msgOne';   // القراءة لا تنتظر بعضها، فيسرع الموقع
   if (needLock) lock.waitLock(20000);
   try {
     if (e.parameter && e.parameter.wh) { handleWhapi_(e.parameter.wh, d); return out_({ ok: true }); }   // Whapi.Cloud
@@ -262,7 +283,7 @@ function doPost(e) {
     const me = (d.action === 'waNotify' || d.action === 'mailIn') ? userByKey_(d.token) : userBySession_(d.token);
     if (!me) return out_({ ok: false, error: 'انتهت الجلسة، يرجى تسجيل الدخول.', auth: false });
 
-    if (d.action === 'poll') return out_({ ok: true, ch: chOf_(me[0]), mail: Number(PropertiesService.getScriptProperties().getProperty('ML_' + me[0]) || 0) });
+    if (d.action === 'poll') return out_({ ok: true, ch: chOf_(me[0]), rc: remChOf_(me[0]), mail: Number(PropertiesService.getScriptProperties().getProperty('ML_' + me[0]) || 0) });
     if (d.action === 'keys') return out_({ ok: true, key: me[6] });
     if (d.action === 'logout') { dropSession_(d.token); return out_({ ok: true }); }
 
@@ -305,6 +326,56 @@ function doPost(e) {
       msgs_().appendRow([Utilities.getUuid(), new Date(), enc_(String(d.name).slice(0, 200)), enc_(norm_(d.phone)), '', enc_(String(d.message || '').slice(0, 5000)), 'جديدة', '', 'واتساب', me[0], '']);
       touch_(me[0]);
       return out_({ ok: true });
+    }
+
+    // ---- جلب محادثة واحدة (لفتحها من التذكير) ----
+    if (d.action === 'msgOne') {
+      const f = findRow_(msgs_(), String(d.id || ''), me);
+      return f ? out_({ ok: true, row: rowOut_(f.vals) }) : out_({ ok: false, error: 'الرسالة غير موجودة.' });
+    }
+
+    // ---- التذكيرات والمتابعات ----
+    if (d.action === 'remList') {
+      // كل التذكيرات المعلّقة + آخر 100 مكتملة (ويُفكّ تشفير المعروض فقط)
+      const sh = rems_(), n = sh.getLastRow() - 1, pend = [], done = [];
+      if (n > 0) sh.getRange(2, 1, n, RCOLS).getValues().forEach(r => { if (r[2] === me[0]) (r[4] === 'مكتمل' ? done : pend).push(r); });
+      pend.sort((a, b) => (Number(a[3]) || 0) - (Number(b[3]) || 0));
+      done.sort((a, b) => (Number(b[12]) || 0) - (Number(a[12]) || 0));
+      return out_({ ok: true, rows: pend.slice(0, 500).concat(done.slice(0, 100)).map(remOut_), doneTotal: done.length, rc: remChOf_(me[0]) });
+    }
+    if (d.action === 'remAdd') {
+      const title = String(d.title || '').trim().slice(0, 200), due = Number(d.due);
+      if (!title) return out_({ ok: false, error: 'عنوان التذكير مطلوب.' });
+      if (!dueOk_(due)) return out_({ ok: false, error: 'موعد التذكير غير صحيح.' });
+      let name = String(d.name || '').trim().slice(0, 200), phone = norm_(d.phone), email = '', source = '', msgId = '';
+      if (d.msgId) {   // بيانات الشخص تُؤخذ من الرسالة نفسها في الخادم (ولا تُقبل إلا رسالة تخص هذه المستخدمة)
+        const f = findRow_(msgs_(), String(d.msgId), me);
+        if (!f) return out_({ ok: false, error: 'المحادثة غير موجودة.' });
+        msgId = String(f.vals[0]); name = dec_(f.vals[2]); phone = dec_(f.vals[3]); email = dec_(f.vals[4]); source = f.vals[8] || 'النموذج';
+      }
+      const row = [Utilities.getUuid(), new Date(), me[0], due, 'معلّق', enc_(title), enc_(String(d.note || '').slice(0, 2000)), msgId, enc_(name), enc_(phone), enc_(email), source, ''];
+      rems_().appendRow(row);
+      return out_({ ok: true, rem: remOut_(row), rc: rtouch_(me[0]) });
+    }
+    if (d.action === 'remUpdate') {
+      const sh = rems_(), f = findRem_(sh, String(d.id || ''), me);
+      if (!f) return out_({ ok: false, error: 'التذكير غير موجود.' });
+      const row = f.vals;
+      if (d.title !== undefined) { const t = String(d.title).trim().slice(0, 200); if (!t) return out_({ ok: false, error: 'عنوان التذكير مطلوب.' }); row[5] = enc_(t); }
+      if (d.note !== undefined) row[6] = enc_(String(d.note).slice(0, 2000));
+      if (d.due !== undefined) { if (!dueOk_(d.due)) return out_({ ok: false, error: 'موعد التذكير غير صحيح.' }); row[3] = Number(d.due); }
+      if (d.done !== undefined) { row[4] = d.done ? 'مكتمل' : 'معلّق'; row[12] = d.done ? Date.now() : ''; }
+      if (!row[7]) {   // التذكير اليدوي فقط يمكن تعديل بيانات الشخص فيه
+        if (d.name !== undefined) row[8] = enc_(String(d.name).trim().slice(0, 200));
+        if (d.phone !== undefined) row[9] = enc_(norm_(d.phone));
+      }
+      sh.getRange(f.row, 1, 1, RCOLS).setValues([row]);
+      return out_({ ok: true, rc: rtouch_(me[0]) });
+    }
+    if (d.action === 'remDelete') {
+      const sh = rems_(), f = findRem_(sh, String(d.id || ''), me);
+      if (f) sh.deleteRow(f.row);
+      return out_({ ok: true, rc: rtouch_(me[0]) });
     }
 
     if (d.action === 'list') {

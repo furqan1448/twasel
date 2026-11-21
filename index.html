@@ -114,6 +114,41 @@ dialog h3{margin:0 0 4px;font-size:20px}dialog p{margin:0;color:var(--mut)}.dact
 .top{overflow:hidden}.top .in{position:relative;z-index:1}
 .top:before{inset:auto auto -60px -60px;width:190px;height:190px;border:2px solid rgba(194,170,133,.3);box-shadow:0 0 0 26px rgba(194,170,133,.07),0 0 0 54px rgba(194,170,133,.035)}
 @media(max-width:760px){.top:before{display:none}.hero:before{width:150px;height:150px;inset:-60px auto auto -60px;box-shadow:0 0 0 20px rgba(194,170,133,.07)}}
+
+/* ===== التذكيرات والمتابعات ===== */
+select{width:100%;padding:12px 14px;font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:10px}
+select:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 22%,transparent)}
+a.btn{text-decoration:none}
+.ib{position:relative}
+.nb{display:none;min-width:20px;height:20px;padding:0 6px;border-radius:99px;background:var(--gold);color:#3a1018;font-size:12px;font-weight:800;line-height:1;place-items:center;margin-inline-start:auto;order:3}
+.top .ib.act{background:#ffffff26;color:#fff}
+.rhead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}.rhead .gr{margin:0}
+.rbar{display:grid;grid-template-columns:2fr 1.3fr 1fr 1fr auto;gap:10px;padding:14px;margin-bottom:14px;align-items:end}
+.rbar label{margin:0 0 4px;font-size:13px;color:var(--mut)}
+.rbar input,.rbar select{padding:10px 12px}
+.item.rem.late{border-right-color:var(--bad)}.item.rem.today{border-right-color:var(--warn)}.item.rem.up{border-right-color:var(--acc)}.item.rem.done{border-right-color:var(--ok)}
+.item.rem.done b{text-decoration:line-through;color:var(--mut)}
+.item.rem.late .av{background:color-mix(in srgb,var(--bad) 14%,transparent);color:var(--bad)}
+.item.rem.done .av{background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok)}
+.bd.bad{background:color-mix(in srgb,var(--bad) 14%,transparent);color:var(--bad)}
+.bd.warn{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn)}
+.bd.ok{background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok)}
+.bd .i{width:13px;height:13px}
+.item.flash{animation:fl 2.6s ease}
+@keyframes fl{0%,70%{box-shadow:0 0 0 3px var(--acc),0 0 26px color-mix(in srgb,var(--acc) 40%,transparent)}100%{box-shadow:0 0 0 0 transparent}}
+.r2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.qk{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}.qk:empty{display:none}.qk .chip{padding:3px 11px;font-size:13px}
+#rdErr{color:var(--bad);font-weight:500;margin-top:10px}
+#alerts{position:fixed;top:14px;left:14px;z-index:120;display:grid;gap:10px;width:min(390px,calc(100vw - 28px));pointer-events:none}
+.al{pointer-events:auto;background:var(--card);color:var(--ink);border:1px solid var(--line);border-right:5px solid var(--acc);border-radius:14px;padding:12px 14px;box-shadow:0 16px 44px rgba(40,10,18,.32);animation:alin .4s cubic-bezier(.2,.9,.3,1.15)}
+@keyframes alin{from{opacity:0;transform:translateY(-14px) scale(.97)}to{opacity:1;transform:none}}
+.alh{display:flex;align-items:center;gap:7px;color:var(--acc);font-size:14px}
+.alh .alt{color:var(--mut);font-size:13px;margin-inline-start:auto}
+.alx{border:0;background:transparent;color:var(--mut);font:inherit;font-size:22px;line-height:1;cursor:pointer;padding:0 4px}
+.alb{cursor:pointer;margin:6px 0 8px}.aT{font-weight:800;font-size:17px;line-height:1.5}.aW{color:var(--mut);font-size:14px}
+.alq{gap:6px;flex-wrap:wrap;margin:0 0 8px}
+.al .acts{margin-top:0}
+@media(max-width:760px){.top .nb{position:absolute;top:-6px;inset-inline-start:-6px;margin:0}.rbar{grid-template-columns:1fr 1fr}.rbar .rs{grid-column:1/-1}#alerts{top:8px;left:8px;right:8px;width:auto}}
 </style>
 </head>
 <body>
@@ -133,6 +168,9 @@ dialog h3{margin:0 0 4px;font-size:20px}dialog p{margin:0;color:var(--mut)}.dact
 <symbol id="ck" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
 <symbol id="sh" viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6Z"/><path d="m9 12 2 2 4-4"/></symbol>
 <symbol id="in" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2M5.5 5h13L22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6Z"/></symbol>
+<symbol id="bl" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></symbol>
+<symbol id="al" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M5 3 2 6M22 6l-3-3"/></symbol>
+<symbol id="pp" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
 </defs></svg>
 
 <!-- صفحة الزائر -->
@@ -177,10 +215,13 @@ dialog h3{margin:0 0 4px;font-size:20px}dialog p{margin:0;color:var(--mut)}.dact
 <!-- الصندوق -->
 <section id="inbox">
   <div class="top"><div class="in"><span class="bm"></span><div class="ttl"><b>صِلة</b><small>رسائلك في مكان واحد</small></div>
+    <button class="ib act" id="navMsg" title="الرسائل" aria-label="الرسائل"><svg class="i"><use href="#in"/></svg></button>
+    <button class="ib" id="navRem" title="التذكيرات" aria-label="التذكيرات"><svg class="i"><use href="#bl"/></svg><span class="nb" id="nb"></span></button>
+    
     <button class="ib" id="reload" title="تحديث" aria-label="تحديث"><svg class="i"><use href="#ref"/></svg></button>
     <button class="ib" id="pwBtn" title="تغيير كلمة المرور" aria-label="تغيير كلمة المرور"><svg class="i"><use href="#key"/></svg></button>
     <button class="ib" id="outBtn" title="تسجيل الخروج" aria-label="تسجيل الخروج"><svg class="i"><use href="#out"/></svg></button></div></div>
-  <div class="wrap">
+  <div class="wrap" id="vMsg">
     <h2 class="gr" id="hi"></h2>
     <div class="stats" id="stats"></div>
     <div class="card share"><div style="flex:1 1 100%;color:var(--mut);font-size:14px">رابط صفحتك الخاصة — شاركيه ليراسلك الناس عبره</div><code id="myLink"></code>
@@ -219,9 +260,31 @@ dialog h3{margin:0 0 4px;font-size:20px}dialog p{margin:0;color:var(--mut)}.dact
     <div id="list"></div>
     <p id="ver" style="text-align:center;font-size:12px;color:var(--mut);margin:18px 0 6px"></p>
   </div>
+  <div class="wrap" id="vRem" style="display:none">
+    <div class="rhead"><h2 class="gr">التذكيرات والمتابعات</h2>
+      <div class="tools" style="margin:0"><button class="btn sm" id="rNew"><svg class="i"><use href="#pp"/></svg>تذكير جديد</button><button class="btn ghost sm" id="rNotif" style="display:none"><svg class="i"><use href="#bl"/></svg>تفعيل إشعارات المتصفح</button></div></div>
+    <div class="chips" id="rTabs"></div>
+    <div class="card rbar">
+      <div class="rs"><label for="rQ">بحث</label><input id="rQ" type="search" placeholder="العنوان، الاسم، الجوال، الملاحظة…"></div>
+      <div class="rs"><label for="rSort">الترتيب</label><select id="rSort"><option value="asc">الأقرب موعدًا</option><option value="desc">الأبعد موعدًا</option><option value="new">الأحدث إنشاءً</option></select></div>
+      <div><label for="rFrom">من تاريخ</label><input id="rFrom" type="date"></div>
+      <div><label for="rTo">إلى تاريخ</label><input id="rTo" type="date"></div>
+      <button class="btn ghost sm" id="rClr" type="button" style="height:44px">مسح</button>
+    </div>
+    <div id="rList"></div>
+  </div>
 </section>
 
 <dialog id="dlg"><h3 id="dT"></h3><p id="dM"></p><div id="dF"></div><div class="dact"><button class="btn" id="dOk"></button><button class="btn ghost" id="dNo">إلغاء</button></div></dialog>
+<dialog id="rdlg"><h3 id="rdT"></h3><p id="rdWho"></p>
+  <div id="rdTitleBox"><label for="rdt">عنوان التذكير</label><input id="rdt" maxlength="200"></div>
+  <div class="qk" id="rdQuick"></div>
+  <div class="r2"><div><label for="rdd">التاريخ</label><input id="rdd" type="date"></div><div><label for="rdh">الوقت</label><input id="rdh" type="time"></div></div>
+  <div id="rdNoteBox"><label for="rdn">ملاحظة (اختياري)</label><textarea id="rdn" style="min-height:80px"></textarea></div>
+  <div id="rdContact"><div class="r2"><div><label for="rdName">اسم الشخص (اختياري)</label><input id="rdName"></div><div><label for="rdPhone">جواله (اختياري)</label><input id="rdPhone" type="tel" inputmode="tel"></div></div></div>
+  <div id="rdErr" role="alert"></div>
+  <div class="dact"><button class="btn" id="rdOk" type="button"></button><button class="btn ghost" id="rdNo" type="button">إلغاء</button></div></dialog>
+<div id="alerts" aria-live="polite"></div>
 <div id="toast" role="status"></div>
 
 <script>
@@ -333,7 +396,11 @@ $('pwBtn').onclick=async()=>{
 /* ---------- الصندوق ---------- */
 function openInbox(){
   show('inbox'); $('hi').textContent = 'أهلًا ' + ME.name;
-  $('myLink').textContent = location.origin + location.pathname + '?u=' + ME.id; load();
+  $('myLink').textContent = location.origin + location.pathname + '?u=' + ME.id;
+  setView('msg'); badge();
+  const hm=/^#msg=(.+)$/.exec(location.hash);
+  if(hm){ history.replaceState(null,'',location.pathname+location.search); openConvById(decodeURIComponent(hm[1])); } else load();
+  loadRem(true);
 }
 $('copy').onclick=()=>navigator.clipboard.writeText($('myLink').textContent).then(()=>toast('تم نسخ الرابط'));
 
@@ -390,7 +457,7 @@ function render(){
 
   rows.forEach(x=>{
     const cls = x.status==='تم الرد'?'replied':x.status==='لم يُرد عليها'?'left':x.status==='جديدة'?'new':'';
-    const d=document.createElement('div'); d.className='card item s'+srcIc(x.source)+' '+cls+(SEL.has(x.id)?' picked':'');
+    const d=document.createElement('div'); d.className='card item s'+srcIc(x.source)+' '+cls+(SEL.has(x.id)?' picked':''); d.dataset.mid=x.id;
     const date=new Date(x.date).toLocaleString('ar-SA',{dateStyle:'medium',timeStyle:'short'});
     d.innerHTML='<div class="av"></div><div><div class="hd"><label class="ck"'+(inArch?' style="pointer-events:none"':'')+'><input type="checkbox" class="pk"'+(inArch?' style="display:none"':'')+'><b></b><span class="star" style="display:none">'+ic('st')+'</span></label><span class="date">'+date+'</span></div><div class="meta"></div><div class="body"></div><div class="note" style="display:none"></div><div class="badges"><span class="bd">'+ic(srcIc(x.source))+(x.source||'النموذج')+'</span><span class="bd s">'+x.status+'</span></div><div class="acts"></div></div>';
     const pk=d.querySelector('.pk'); pk.checked=SEL.has(x.id); pk.onchange=()=>{pk.checked?SEL.add(x.id):SEL.delete(x.id); render();};
@@ -401,16 +468,20 @@ function render(){
     if(x.email){const a=document.createElement('a');a.href='mailto:'+x.email;a.textContent=x.email;meta.appendChild(a);}
     d.querySelector('.body').textContent=x.message;
     if(x.note){const n=d.querySelector('.note');n.style.display='block';n.textContent='ملاحظة: '+x.note;}
+    const pr=REMS.filter(q=>q.msgId===x.id&&!q.done).sort((a,b)=>a.due-b.due)[0];
+    if(pr){const bd=document.createElement('span');bd.className='bd '+(pr.due<=Date.now()?'bad':'warn');bd.innerHTML=ic('al');bd.appendChild(document.createTextNode('تذكير: '+fmtDue(pr.due)));d.querySelector('.badges').appendChild(bd);}
     const acts=d.querySelector('.acts');
     const mk=(cl,ico,t,fn)=>{const b=document.createElement('button');b.className='btn sm '+cl;b.innerHTML=ico?ic(ico)+t:t;b.onclick=fn;acts.appendChild(b);};
     if(x.source==='واتساب'&&x.phone) mk('ghost','wa','فتح واتساب',()=>window.open('https://wa.me/'+String(x.phone).replace(/\D/g,''),'_blank','noopener'));
     if(inArch){ mk('danger','tr','حذف',()=>delArch(x)); L.appendChild(d); return; }
     STATUSES.filter(s=>s!==x.status&&s!=='جديدة').forEach(s=>mk('',s==='تم الرد'?'ck':'',s,()=>upd(x,{status:s})));
     mk('ghost','nt','ملاحظة',async()=>{const a=await dlg('ملاحظة',{fields:[{k:'t',label:'اكتبي الملاحظة',area:1,value:x.note||''}],ok:'حفظ'}); if(a) upd(x,{note:a.t});});
+    mk('ghost','al','ذكّرني',()=>remindFor(x));
     mk('ghost'+(x.starred?' on':''),'st',x.starred?'إزالة النجمة':'تمييز بنجمة',()=>star(x,!x.starred));
     mk('danger','tr','حذف',()=>del(x));
     L.appendChild(d);
   });
+  if(FOCUS){ const el=L.querySelector('[data-mid="'+String(FOCUS).replace(/([\\"])/g,'\\$1')+'"]'); if(el){ el.scrollIntoView({block:'center',behavior:'smooth'}); el.classList.add('flash'); } FOCUS=null; }
   more();
 }
 async function upd(x,patch){
@@ -496,7 +567,7 @@ $('cCopy').onclick=e=>cp('cUrl',e.target);
 function logout(){
   const t=TOKEN;
   /* الخروج الفوري من الواجهة أولًا، دون انتظار الخادم */
-  KEY='';TOKEN='';ME=null;ALL=[];SEL=new Set();
+  KEY='';TOKEN='';ME=null;ALL=[];SEL=new Set();REMS=[];RC=0;RDONE=0;$('alerts').innerHTML='';document.title='صِلة للتواصل';
   try{localStorage.removeItem('tok');localStorage.removeItem('me');}catch(e){}
   show('auth');
   /* إنهاء الجلسة في الخادم في الخلفية */
@@ -507,22 +578,280 @@ function logout(){
     if(!sent){ try{ fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body,keepalive:true}).catch(()=>{}); }catch(e){} }
   }
 }
-$('reload').onclick=()=>load();
+$('reload').onclick=()=>{ load(); loadRem(); };
 /* تحديث تلقائي هادئ كل 30 ثانية ليظهر البريد الجديد دون الضغط على زر التحديث */
 /* ظهور فوري: طلب خفيف كل 6 ثوانٍ يسأل «هل تغيّر شيء؟»، وعند التغيّر فقط تُحمَّل الرسائل بصمت */
 async function poll(){
-  if(POLLING||!TOKEN||document.hidden||$('inbox').style.display!=='block'||$('dlg').open) return;
+  if(POLLING||!TOKEN||document.hidden||$('inbox').style.display!=='block'||$('dlg').open||$('rdlg').open) return;
   POLLING=true;
   try{
     const r=await post({action:'poll',token:TOKEN});
     if(r.auth===false){ logout(); }
-    else if(r.ok){ if(r.mail){MAILAT=r.mail;mailBtn();} if(r.ch!==CH) await load(true); }
+    else if(r.ok){ if(r.mail){MAILAT=r.mail;mailBtn();} if(r.ch!==CH) await load(true); if(r.rc!==undefined&&r.rc!==RC) await loadRem(true); }
   }catch(e){}
   POLLING=false;
 }
 setInterval(poll,6000);
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&TOKEN&&$('inbox').style.display==='block') poll(); });
  $('outBtn').onclick=logout;
+
+/* ================= التذكيرات والمتابعات ================= */
+let REMS=[], RC=0, RDONE=0, RTAB='اليوم', RQ='', RSORT='asc', RFROM='', RTO='', VIEW='msg', FOCUS=null;
+const RTABS=['اليوم','المتأخرة','القادمة','المكتملة','الكل'];
+const RK={'اليوم':'today','المتأخرة':'late','القادمة':'up','المكتملة':'done'};
+const RKT={today:'اليوم',late:'المتأخرة',up:'القادمة',done:'المكتملة'};
+const GL='ar-SA-u-ca-gregory', DAYMS=86400000;
+const p2=n=>String(n).padStart(2,'0');
+const sod=t=>{const d=new Date(t);d.setHours(0,0,0,0);return d.getTime();};
+const nextDay=(t,n=1)=>{const d=new Date(t);d.setHours(0,0,0,0);d.setDate(d.getDate()+n);return d.getTime();};
+const atDay=(n,h)=>{const d=new Date();d.setDate(d.getDate()+n);d.setHours(h,0,0,0);return d.getTime();};
+const dStr=t=>{const d=new Date(t);return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());};
+const tStr=t=>{const d=new Date(t);return p2(d.getHours())+':'+p2(d.getMinutes());};
+/* اليوم = موعده اليوم (حتى لو فات وقته) · المتأخرة = موعدها قبل اليوم · القادمة = بعد اليوم */
+function rcls(r){ if(r.done) return 'done'; const t0=sod(Date.now()); return r.due<t0?'late':r.due<nextDay(t0)?'today':'up'; }
+function fmtDue(ts){
+  const d=new Date(ts), t0=sod(Date.now()), s=sod(ts);
+  const tm=d.toLocaleTimeString(GL,{hour:'numeric',minute:'2-digit'});
+  const day=s===t0?'اليوم':s===nextDay(t0)?'غدًا':s===nextDay(t0,-1)?'أمس':d.toLocaleDateString(GL,Object.assign({weekday:'long',day:'numeric',month:'long'},d.getFullYear()!==new Date().getFullYear()?{year:'numeric'}:{}));
+  return day+' · '+tm;
+}
+function lateTxt(r){ const n=Math.max(1,Math.round((sod(Date.now())-sod(r.due))/DAYMS)); return 'متأخر منذ '+(n===1?'يوم':n===2?'يومين':n<=10?n+' أيام':n+' يومًا'); }
+
+/* ---------- التنقل بين الرسائل والتذكيرات ---------- */
+function setView(v){
+  VIEW=v; $('vMsg').style.display=v==='msg'?'block':'none'; $('vRem').style.display=v==='rem'?'block':'none';
+  $('navMsg').classList.toggle('act',v==='msg'); $('navRem').classList.toggle('act',v==='rem');
+  if(v==='rem'){ notifBtn(); renderRem(); }
+  window.scrollTo(0,0);
+}
+$('navMsg').onclick=()=>setView('msg');
+$('navRem').onclick=()=>{ setView('rem'); loadRem(true); };
+function gotoRem(r){ RTAB=RKT[rcls(r)]; RQ=''; $('rQ').value=''; setView('rem'); }
+
+/* ---------- التحميل ---------- */
+async function loadRem(silent){
+  const tk=TOKEN; if(!tk) return;
+  try{
+    const r=await post({action:'remList',token:tk});
+    if(!TOKEN) return;
+    if(r.auth===false){ logout(); return; }
+    if(!r.ok){ if(!silent) toast(r.error||'تعذّر تحميل التذكيرات.',1); return; }
+    REMS=r.rows||[]; RDONE=r.doneTotal||0; RC=r.rc||0; afterRem(); checkDue();
+  }catch(e){ if(!silent) toast('تعذّر تحميل التذكيرات.',1); }
+}
+function badge(){
+  const t1=nextDay(Date.now()), n=REMS.filter(r=>!r.done&&r.due<t1).length, dueNow=REMS.filter(r=>!r.done&&r.due<=Date.now()).length, b=$('nb');
+  b.textContent=n; b.style.display=n?'inline-grid':'none';
+  document.title=(dueNow?'('+dueNow+') ':'')+'صِلة للتواصل';
+}
+function afterRem(){
+  badge(); renderRem();
+  if(ME&&ALL.length&&VIEW==='msg') render();
+  document.querySelectorAll('.al[data-rid]').forEach(e=>{ const r=REMS.find(x=>x.id===e.dataset.rid); if(!r||r.done||r.due>Date.now()) e.remove(); });
+}
+
+/* ---------- عرض القسم ---------- */
+function renderRem(){
+  if(VIEW!=='rem') return;
+  const c={today:0,late:0,up:0,done:RDONE}; REMS.forEach(r=>{ const k=rcls(r); if(k!=='done') c[k]++; });
+  const tot=c.today+c.late+c.up+c.done, T=$('rTabs'); T.innerHTML='';
+  RTABS.forEach(t=>{ const b=document.createElement('button'); b.className='chip'+(t===RTAB?' on':''); b.textContent=t+' ('+(t==='الكل'?tot:c[RK[t]])+')'; b.onclick=()=>{RTAB=t;renderRem();}; T.appendChild(b); });
+  let rows=REMS.filter(r=>RTAB==='الكل'||rcls(r)===RK[RTAB]);
+  const q=RQ.trim().toLowerCase(), qd=q.replace(/\D/g,'').replace(/^0+/,'');
+  if(q) rows=rows.filter(r=>[r.title,r.note,r.name,r.email].join(' ').toLowerCase().includes(q)||(qd.length>2&&String(r.phone).replace(/\D/g,'').includes(qd)));
+  if(RFROM){ const a=new Date(RFROM+'T00:00').getTime(); rows=rows.filter(r=>r.due>=a); }
+  if(RTO){ const b=nextDay(new Date(RTO+'T00:00').getTime()); rows=rows.filter(r=>r.due<b); }
+  rows.sort(RSORT==='asc'?(a,b)=>a.due-b.due:RSORT==='desc'?(a,b)=>b.due-a.due:(a,b)=>b.created-a.created);
+  const L=$('rList'); L.innerHTML='';
+  if(!rows.length){
+    L.innerHTML='<div class="empty">'+ic('bl')+'<p></p></div>';
+    L.querySelector('p').textContent=REMS.length?'لا توجد تذكيرات مطابقة.':'لا توجد تذكيرات بعد. اضغطي «ذكّرني» داخل أي محادثة أو «تذكير جديد».';
+    return;
+  }
+  rows.forEach(r=>L.appendChild(remCard(r)));
+  if((RTAB==='المكتملة'||RTAB==='الكل')&&RDONE>REMS.filter(r=>r.done).length){ const p=document.createElement('p'); p.className='empty'; p.style.padding='10px'; p.textContent='تُعرض آخر 100 تذكير مكتمل فقط.'; L.appendChild(p); }
+}
+function remCard(r){
+  const k=rcls(r), d=document.createElement('div'); d.className='card item rem '+k;
+  d.innerHTML='<div class="av"></div><div><div class="hd"><b></b><span class="date"></span></div><div class="meta"></div><div class="body" style="display:none"></div><div class="badges"></div><div class="acts"></div></div>';
+  d.querySelector('b').textContent=r.title; d.querySelector('.date').textContent=fmtDue(r.due);
+  const av=d.querySelector('.av'); if(r.name) av.textContent=r.name.trim().charAt(0); else av.innerHTML=ic('bl');
+  const meta=d.querySelector('.meta');
+  if(r.name){ const s=document.createElement('span'); s.textContent=r.name; meta.appendChild(s); }
+  if(r.phone){ const a=document.createElement('a'); a.href='tel:'+r.phone; a.textContent=disp(r.phone); a.style.direction='ltr'; meta.appendChild(a); }
+  if(r.email){ const a=document.createElement('a'); a.href='mailto:'+r.email; a.textContent=r.email; meta.appendChild(a); }
+  if(r.note){ const b=d.querySelector('.body'); b.style.display='block'; b.textContent=r.note; }
+  const bg=d.querySelector('.badges'), add=(c,t,ico)=>{ const s=document.createElement('span'); s.className='bd '+c; if(ico) s.innerHTML=ic(ico); s.appendChild(document.createTextNode(t)); bg.appendChild(s); };
+  if(k==='late') add('bad',lateTxt(r),'al');
+  else if(k==='today') add('warn',r.due<Date.now()?'فات موعده اليوم':'مستحق اليوم','al');
+  else if(k==='up') add('s','قادم');
+  else add('ok','اكتمل '+fmtDue(r.doneAt||r.due),'ck');
+  if(r.source) add('s',r.source,srcIc(r.source));
+  const acts=d.querySelector('.acts'), mk=(cl,ico,t,fn)=>{ const b=document.createElement('button'); b.className='btn sm '+cl; b.innerHTML=ic(ico)+t; b.onclick=fn; acts.appendChild(b); };
+  if(r.msgId){ const a=document.createElement('a'); a.className='btn sm'; a.href='#msg='+encodeURIComponent(r.msgId); a.innerHTML=ic('in')+'فتح المحادثة'; a.onclick=e=>{ e.preventDefault(); openConv(r); }; acts.appendChild(a); }
+  if(!r.done){
+    mk('ghost','ck','تم',()=>remUpd(r,{done:true},'أُكمل التذكير ✓'));
+    mk('ghost','al','تأجيل',()=>snoozeCustom(r));
+  } else mk('ghost','ref','إعادة فتح',()=>remUpd(r,{done:false},'أُعيد فتح التذكير'));
+  mk('ghost','nt','تعديل',()=>editRem(r));
+  mk('danger','tr','حذف',()=>delRem(r));
+  return d;
+}
+$('rQ').oninput=e=>{ RQ=e.target.value; renderRem(); };
+$('rSort').onchange=e=>{ RSORT=e.target.value; renderRem(); };
+$('rFrom').onchange=e=>{ RFROM=e.target.value; renderRem(); };
+$('rTo').onchange=e=>{ RTO=e.target.value; renderRem(); };
+$('rClr').onclick=()=>{ RQ=RFROM=RTO=''; RSORT='asc'; $('rQ').value=$('rFrom').value=$('rTo').value=''; $('rSort').value='asc'; renderRem(); };
+
+/* ---------- نافذة إنشاء / تعديل / تأجيل ---------- */
+function remForm({mode,rem,msg}){
+  return new Promise(res=>{
+    const d=$('rdlg'), snz=mode==='snooze', edit=mode==='edit', manual=!snz&&!msg&&!(rem&&rem.msgId);
+    $('rdT').textContent=snz?'تأجيل التذكير':edit?'تعديل التذكير':'ذكّرني';
+    const who=msg?msg.name:(rem&&rem.msgId?rem.name:'');
+    $('rdWho').textContent=snz?(rem.title||''):who?'مرتبط بمحادثة: '+who:'';
+    $('rdTitleBox').style.display=snz?'none':'block'; $('rdNoteBox').style.display=snz?'none':'block'; $('rdContact').style.display=manual?'block':'none';
+    $('rdt').value=edit?rem.title:msg?'الرد على '+msg.name:'';
+    $('rdn').value=edit?(rem.note||''):'';
+    $('rdName').value=edit&&manual?(rem.name||''):''; $('rdPhone').value=edit&&manual&&rem.phone?disp(rem.phone):'';
+    const setT=t=>{ $('rdd').value=dStr(t); $('rdh').value=tStr(t); };
+    setT(edit?rem.due:snz?Date.now()+36e5:atDay(1,10));
+    const Q=$('rdQuick'); Q.innerHTML='';
+    [['بعد ساعة',()=>Date.now()+36e5],['بعد ٣ ساعات',()=>Date.now()+108e5],['اليوم ٥ م',()=>atDay(0,17)],['غدًا ١٠ ص',()=>atDay(1,10)],['بعد أسبوع',()=>atDay(7,10)]].forEach(([t,f])=>{
+      if(f()<=Date.now()+6e4) return;
+      const b=document.createElement('button'); b.type='button'; b.className='chip'; b.textContent=t; b.onclick=()=>setT(f()); Q.appendChild(b);
+    });
+    $('rdErr').textContent=''; const ok=$('rdOk'); ok.textContent=snz?'تأجيل':edit?'حفظ التعديل':'حفظ التذكير';
+    let done=false; const fin=v=>{ if(done) return; done=true; d.close(); res(v); };
+    ok.onclick=()=>{
+      const title=$('rdt').value.trim(), ds=$('rdd').value, hs=$('rdh').value, due=new Date(ds+'T'+hs).getTime();
+      if(!snz&&!title){ $('rdErr').textContent='اكتبي عنوان التذكير.'; return; }
+      if(!ds||!hs||isNaN(due)){ $('rdErr').textContent='اختاري التاريخ والوقت.'; return; }
+      if(!edit&&due<=Date.now()+3e4){ $('rdErr').textContent='اختاري موعدًا قادمًا.'; return; }
+      fin({title,due,note:$('rdn').value.trim(),name:$('rdName').value.trim(),phone:$('rdPhone').value.trim()});
+    };
+    $('rdNo').onclick=()=>fin(null); d.oncancel=e=>{ e.preventDefault(); fin(null); };
+    d.showModal(); (snz?$('rdh'):$('rdt')).focus();
+  });
+}
+
+/* ---------- إنشاء وتعديل وحذف ---------- */
+async function addRem(p){
+  try{
+    const r=await post(Object.assign({action:'remAdd',token:TOKEN},p));
+    if(r.auth===false){ logout(); return; }
+    if(!r.ok){ toast(/غير معروف/.test(r.error||'')?'يلزم نشر إصدار جديد من Apps Script أولًا.':(r.error||'تعذّر حفظ التذكير.'),1); return; }
+    REMS.push(r.rem); if(r.rc) RC=r.rc; afterRem(); toast('تم حفظ التذكير · '+fmtDue(r.rem.due));
+  }catch(e){ toast('تعذّر الاتصال.',1); }
+}
+async function remindFor(x){ const f=await remForm({mode:'new',msg:x}); if(f) addRem({title:f.title,due:f.due,note:f.note,msgId:x.id}); }
+$('rNew').onclick=async()=>{ const f=await remForm({mode:'new'}); if(f) addRem({title:f.title,due:f.due,note:f.note,name:f.name,phone:f.phone}); };
+async function remUpd(r,patch,msg){
+  if(patch.done!==undefined&&patch.done!==r.done) RDONE=Math.max(0,RDONE+(patch.done?1:-1));
+  Object.assign(r,patch); if(patch.done!==undefined) r.doneAt=patch.done?Date.now():0;
+  afterRem();
+  try{
+    const res=await post(Object.assign({action:'remUpdate',token:TOKEN,id:r.id},patch));
+    if(res.auth===false){ logout(); return; }
+    if(!res.ok){ toast(res.error||'تعذّر الحفظ.',1); loadRem(true); return; }
+    if(res.rc) RC=res.rc; if(msg) toast(msg);
+  }catch(e){ toast('تعذّر الاتصال.',1); loadRem(true); }
+}
+async function editRem(r){
+  const f=await remForm({mode:'edit',rem:r}); if(!f) return;
+  const p={title:f.title,due:f.due,note:f.note}; if(!r.msgId){ p.name=f.name; p.phone=f.phone; }
+  remUpd(r,p,'تم حفظ التعديل');
+}
+async function snoozeCustom(r){ const f=await remForm({mode:'snooze',rem:r}); if(f) snooze(r,f.due); }
+function snooze(r,ts){ remUpd(r,{due:ts},'تم التأجيل إلى '+fmtDue(ts)); }
+async function delRem(r){
+  if(!await dlg('حذف التذكير',{text:'سيتم حذف هذا التذكير نهائيًا.',ok:'حذف',danger:true})) return;
+  REMS=REMS.filter(y=>y!==r); if(r.done) RDONE=Math.max(0,RDONE-1); afterRem();
+  const res=await postSafe({action:'remDelete',token:TOKEN,id:r.id});
+  if(res.auth===false){ logout(); return; }
+  if(res.ok){ if(res.rc) RC=res.rc; toast('تم حذف التذكير'); } else { toast(res.error||'تعذّر الحذف.',1); loadRem(true); }
+}
+
+/* ---------- فتح المحادثة المرتبطة ---------- */
+function openConv(r){ return openConvById(r.msgId); }
+async function openConvById(id){
+  if(!id) return;
+  setView('msg');
+  let x=ALL.find(y=>y.id===id);
+  if(!x){
+    try{
+      const r=await post({action:'msgOne',token:TOKEN,id});
+      if(r.auth===false){ logout(); return; }
+      if(!r.ok){ toast(r.error==='الرسالة غير موجودة.'?'هذه المحادثة لم تعد موجودة (حُذفت أو أُرشفت).':(r.error||'تعذّر فتح المحادثة.'),1); return; }
+      x=r.row;
+    }catch(e){ toast('تعذّر الاتصال.',1); return; }
+  }
+  const sw=FILTER===STAR||FILTER===ARCH; FILTER=x.status; SEL.clear();
+  if(sw||!ALL.length){ LIMIT=50; await load(); }
+  if(!ALL.some(y=>y.id===id)) ALL.push(x);
+  FOCUS=id; render();
+}
+
+/* ---------- التنبيه المنبثق عند حلول الموعد ---------- */
+const SHOWN=(()=>{ try{ return JSON.parse(localStorage.getItem('rshown')||'{}'); }catch(e){ return {}; } })();
+const saveShown=()=>{ try{ localStorage.setItem('rshown',JSON.stringify(SHOWN)); }catch(e){} };
+const rkey=r=>r.id+'|'+r.due, NOTIF=new Set();
+const SNZ=[['١٠ دقائق',()=>Date.now()+6e5],['ساعة',()=>Date.now()+36e5],['٣ ساعات',()=>Date.now()+108e5],['غدًا ٩ ص',()=>atDay(1,9)]];
+function beep(){
+  try{
+    const c=new (window.AudioContext||window.webkitAudioContext)(), o=c.createOscillator(), g=c.createGain();
+    o.type='sine'; o.frequency.value=880; g.gain.setValueAtTime(.0001,c.currentTime);
+    g.gain.exponentialRampToValueAtTime(.18,c.currentTime+.02); g.gain.exponentialRampToValueAtTime(.0001,c.currentTime+.5);
+    o.connect(g); g.connect(c.destination); o.start(); o.stop(c.currentTime+.5); setTimeout(()=>c.close(),800);
+  }catch(e){}
+}
+function showAlert(r){
+  const a=document.createElement('div'); a.className='al'; a.dataset.rid=r.id;
+  a.innerHTML='<div class="alh">'+ic('al')+'<b>تذكير</b><span class="alt"></span><button class="alx" type="button" aria-label="إغلاق">×</button></div><div class="alb"><div class="aT"></div><div class="aW"></div></div><div class="alq" style="display:none"></div><div class="acts"></div>';
+  a.querySelector('.alt').textContent=fmtDue(r.due); a.querySelector('.aT').textContent=r.title;
+  a.querySelector('.aW').textContent=(r.name||'')+(r.name&&r.source?' · ':'')+(r.source||'');
+  const go=()=>{ a.remove(); if(r.msgId) openConv(r); else gotoRem(r); };
+  a.querySelector('.alb').onclick=go; a.querySelector('.alx').onclick=()=>a.remove();
+  const q=a.querySelector('.alq'), acts=a.querySelector('.acts'), mk=(cl,ico,t,fn)=>{ const b=document.createElement('button'); b.type='button'; b.className='btn sm '+cl; b.innerHTML=ic(ico)+t; b.onclick=fn; acts.appendChild(b); };
+  SNZ.forEach(([t,f])=>{ const b=document.createElement('button'); b.type='button'; b.className='chip'; b.textContent=t; b.onclick=()=>{ a.remove(); snooze(r,f()); }; q.appendChild(b); });
+  const o=document.createElement('button'); o.type='button'; o.className='chip'; o.textContent='موعد آخر…'; o.onclick=()=>{ a.remove(); snoozeCustom(r); }; q.appendChild(o);
+  mk('',r.msgId?'in':'bl',r.msgId?'فتح المحادثة':'عرض',go);
+  mk('ghost','ck','تم',()=>{ a.remove(); remUpd(r,{done:true},'أُكمل التذكير ✓'); });
+  mk('ghost','al','تأجيل',()=>{ q.style.display=q.style.display==='none'?'flex':'none'; });
+  $('alerts').appendChild(a);
+}
+function showSummary(list){
+  const a=document.createElement('div'); a.className='al';
+  a.innerHTML='<div class="alh">'+ic('bl')+'<b>تذكيرات مستحقة</b><button class="alx" type="button" aria-label="إغلاق">×</button></div><div class="alb"><div class="aT"></div></div><div class="acts"></div>';
+  a.querySelector('.aT').textContent='لديك '+list.length+' تذكيرات مستحقة';
+  const go=()=>{ a.remove(); RTAB=list.some(r=>rcls(r)==='late')?'المتأخرة':'اليوم'; RQ=''; $('rQ').value=''; setView('rem'); };
+  a.querySelector('.alb').onclick=go; a.querySelector('.alx').onclick=()=>a.remove();
+  const b=document.createElement('button'); b.type='button'; b.className='btn sm'; b.innerHTML=ic('bl')+'عرض التذكيرات'; b.onclick=go; a.querySelector('.acts').appendChild(b);
+  $('alerts').appendChild(a);
+}
+function sysNotify(r){
+  try{
+    if(!('Notification' in window)||Notification.permission!=='granted') return;
+    const n=new Notification('تذكير: '+r.title,{body:(r.name?r.name+' · ':'')+fmtDue(r.due),tag:'rem-'+r.id,icon:'logo.png'});
+    n.onclick=()=>{ window.focus(); n.close(); if(r.msgId) openConv(r); else gotoRem(r); };
+  }catch(e){}
+}
+function checkDue(){
+  if(!TOKEN||!REMS.length||$('inbox').style.display!=='block') return;
+  badge();
+  const live=new Set(REMS.map(rkey)); let ch=false;
+  Object.keys(SHOWN).forEach(k=>{ if(!live.has(k)){ delete SHOWN[k]; ch=true; } });
+  const due=REMS.filter(r=>!r.done&&r.due<=Date.now()&&!SHOWN[rkey(r)]).sort((a,b)=>a.due-b.due);
+  if(!due.length){ if(ch) saveShown(); return; }
+  if(document.hidden){ due.forEach(r=>{ if(!NOTIF.has(rkey(r))){ NOTIF.add(rkey(r)); sysNotify(r); } }); return; }
+  if($('dlg').open||$('rdlg').open) return;
+  if(due.length>3) showSummary(due); else due.forEach(showAlert);
+  due.forEach(r=>{ SHOWN[rkey(r)]=1; }); saveShown(); beep();
+}
+setInterval(checkDue,15000);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) checkDue(); });
+function notifBtn(){ $('rNotif').style.display=('Notification' in window&&Notification.permission==='default')?'inline-flex':'none'; }
+$('rNotif').onclick=async()=>{ try{ await Notification.requestPermission(); }catch(e){} notifBtn(); if(window.Notification&&Notification.permission==='granted') toast('تم تفعيل إشعارات المتصفح.'); };
 
 /* ---------- البداية ---------- */
 if(U) initPublic();
