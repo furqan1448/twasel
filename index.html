@@ -3,6 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#8C1A2C">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="صِلة">
 <link rel="preconnect" href="https://script.google.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <title>صِلة للتواصل</title>
@@ -262,7 +268,7 @@ a.btn{text-decoration:none}
   </div>
   <div class="wrap" id="vRem" style="display:none">
     <div class="rhead"><h2 class="gr">التذكيرات والمتابعات</h2>
-      <div class="tools" style="margin:0"><button class="btn sm" id="rNew"><svg class="i"><use href="#pp"/></svg>تذكير جديد</button><button class="btn ghost sm" id="rNotif" style="display:none"><svg class="i"><use href="#bl"/></svg>تفعيل إشعارات المتصفح</button></div></div>
+      <div class="tools" style="margin:0"><button class="btn sm" id="rNew"><svg class="i"><use href="#pp"/></svg>تذكير جديد</button><button class="btn sm" id="rPush"><svg class="i"><use href="#bl"/></svg>تفعيل تنبيهات الجوال</button><button class="btn ghost sm" id="rPushTest" style="display:none">تجربة تنبيه</button></div></div>
     <div class="chips" id="rTabs"></div>
     <div class="card rbar">
       <div class="rs"><label for="rQ">بحث</label><input id="rQ" type="search" placeholder="العنوان، الاسم، الجوال، الملاحظة…"></div>
@@ -389,7 +395,7 @@ $('pwBtn').onclick=async()=>{
   const a=await dlg('تغيير كلمة المرور',{fields:[{k:'c',label:'كلمة المرور الحالية',type:'password',ac:'current-password'},{k:'n',label:'كلمة المرور الجديدة (8 أحرف فأكثر)',type:'password',ac:'new-password'},{k:'n2',label:'تأكيد كلمة المرور الجديدة',type:'password',ac:'new-password'}],ok:'حفظ'});
   if(!a) return;
   if(a.n!==a.n2){ toast('تأكيد كلمة المرور غير مطابق.',1); return; }
-  try{ const r=await post({action:'changePassword',token:TOKEN,current:a.c,password:a.n}); if(r.ok){ TOKEN=r.token; try{localStorage.setItem('tok',TOKEN);}catch(e){} toast('تم تغيير كلمة المرور.'); } else toast(r.error||'تعذّر التغيير.',1); }
+  try{ const r=await post({action:'changePassword',token:TOKEN,current:a.c,password:a.n}); if(r.ok){ TOKEN=r.token; try{localStorage.setItem('tok',TOKEN);}catch(e){} swSync(); toast('تم تغيير كلمة المرور.'); } else toast(r.error||'تعذّر التغيير.',1); }
   catch(e){ toast('تعذّر الاتصال.',1); }
 };
 
@@ -399,8 +405,8 @@ function openInbox(){
   $('myLink').textContent = location.origin + location.pathname + '?u=' + ME.id;
   setView('msg'); badge();
   const hm=/^#msg=(.+)$/.exec(location.hash);
-  if(hm){ history.replaceState(null,'',location.pathname+location.search); openConvById(decodeURIComponent(hm[1])); } else load();
-  loadRem(true);
+  if(hm){ history.replaceState(null,'',location.pathname+location.search); openConvById(decodeURIComponent(hm[1])); } else { load(); if(location.hash==='#rem'){ history.replaceState(null,'',location.pathname+location.search); setView('rem'); } }
+  loadRem(true); pushResync();
 }
 $('copy').onclick=()=>navigator.clipboard.writeText($('myLink').textContent).then(()=>toast('تم نسخ الرابط'));
 
@@ -571,8 +577,11 @@ function logout(){
   try{localStorage.removeItem('tok');localStorage.removeItem('me');}catch(e){}
   show('auth');
   /* إنهاء الجلسة في الخادم في الخلفية */
+  idbPut('tok',null); let ep=''; try{ ep=localStorage.getItem('pushEp')||''; localStorage.removeItem('pushEp'); }catch(e){}
+  try{ if(SWREG) SWREG.pushManager.getSubscription().then(s=>s&&s.unsubscribe()).catch(()=>{}); }catch(e){}
+  PUSHON=false;
   if(t){
-    const body=JSON.stringify({action:'logout',token:t});
+    const body=JSON.stringify({action:'logout',token:t,endpoint:ep});
     let sent=false;
     try{ sent=navigator.sendBeacon(API,new Blob([body],{type:'text/plain;charset=utf-8'})); }catch(e){}
     if(!sent){ try{ fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body,keepalive:true}).catch(()=>{}); }catch(e){} }
@@ -833,7 +842,7 @@ function showSummary(list){
 }
 function sysNotify(r){
   try{
-    if(!('Notification' in window)||Notification.permission!=='granted') return;
+    if(PUSHON||!('Notification' in window)||Notification.permission!=='granted') return;
     const n=new Notification('تذكير: '+r.title,{body:(r.name?r.name+' · ':'')+fmtDue(r.due),tag:'rem-'+r.id,icon:'logo.png'});
     n.onclick=()=>{ window.focus(); n.close(); if(r.msgId) openConv(r); else gotoRem(r); };
   }catch(e){}
@@ -852,8 +861,70 @@ function checkDue(){
 }
 setInterval(checkDue,5000);
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) checkDue(); });
-function notifBtn(){ $('rNotif').style.display=('Notification' in window&&Notification.permission==='default')?'inline-flex':'none'; }
-$('rNotif').onclick=async()=>{ try{ await Notification.requestPermission(); }catch(e){} notifBtn(); if(window.Notification&&Notification.permission==='granted') toast('تم تفعيل إشعارات المتصفح.'); };
+function notifBtn(){}
+
+/* ================= تنبيهات الجوال (Web Push) ================= */
+let SWREG=null, PUSHON=false;
+const b64ToU8=s=>{ const b=atob((s+'='.repeat((4-s.length%4)%4)).replace(/-/g,'+').replace(/_/g,'/')); return Uint8Array.from(b,c=>c.charCodeAt(0)); };
+function idbPut(k,v){
+  return new Promise(res=>{ try{
+    const r=indexedDB.open('twasel-sw',1); r.onupgradeneeded=()=>r.result.createObjectStore('kv'); r.onerror=()=>res();
+    r.onsuccess=()=>{ const tx=r.result.transaction('kv','readwrite'), st=tx.objectStore('kv'); if(v===null) st.delete(k); else st.put(v,k); tx.oncomplete=()=>res(); tx.onerror=()=>res(); };
+  }catch(e){ res(); } });
+}
+const swSync=async()=>{ await idbPut('api',TOKEN?API:null); await idbPut('tok',TOKEN||null); };
+const pushOk=()=>('serviceWorker' in navigator)&&('PushManager' in window)&&('Notification' in window);
+async function curSub(){ try{ return SWREG?await SWREG.pushManager.getSubscription():null; }catch(e){ return null; } }
+async function pushBtn(){
+  const sub=pushOk()?await curSub():null; PUSHON=!!sub&&Notification.permission==='granted';
+  const b=$('rPush'); b.innerHTML=ic('bl')+(PUSHON?'تنبيهات الجوال مفعّلة ✓':'تفعيل تنبيهات الجوال'); b.classList.toggle('ghost',PUSHON);
+  $('rPushTest').style.display=PUSHON?'inline-flex':'none';
+}
+async function enablePush(){
+  if(!pushOk()){
+    await dlg('تفعيل تنبيهات الجوال',{text:'هذه الميزة تعمل عند فتح الموقع من أيقونته على الشاشة الرئيسية (وليس من Safari). في الآيفون: احذفي الاختصار القديم، ثم افتحي الموقع في Safari ← مشاركة ← «إضافة إلى الشاشة الرئيسية»، ثم افتحيه من الأيقونة واضغطي هذا الزر. (يتطلب iOS 16.4 أو أحدث).',ok:'حسنًا'});
+    return;
+  }
+  try{
+    const perm=await Notification.requestPermission();
+    if(perm!=='granted'){ toast('لم يُسمح بالإشعارات. فعّليها من إعدادات الجوال ← الإشعارات ← صِلة.',1); return; }
+    const reg=SWREG||await navigator.serviceWorker.ready;
+    const v=await fetch(API+'?action=vapid').then(r=>r.json()); if(!v.ok) throw new Error('vapid');
+    const old=await reg.pushManager.getSubscription(); if(old) await old.unsubscribe();
+    const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ToU8(v.pub)});
+    await swSync();
+    const r=await post({action:'pushSub',token:TOKEN,sub:sub.toJSON()}); if(!r.ok) throw new Error('sub');
+    try{ localStorage.setItem('pushEp',sub.endpoint); }catch(e){}
+    toast('تم تفعيل تنبيهات الجوال ✓'); pushBtn();
+  }catch(e){ toast('تعذّر التفعيل. تأكدي من نشر آخر إصدار من Apps Script ثم أعيدي المحاولة.',1); }
+}
+async function disablePush(){
+  if(!await dlg('إيقاف تنبيهات الجوال',{text:'لن تصلك تنبيهات التذكيرات على هذا الجهاز.',ok:'إيقاف',danger:true})) return;
+  const sub=await curSub(); let ep='';
+  if(sub){ ep=sub.endpoint; try{ await sub.unsubscribe(); }catch(e){} }
+  try{ localStorage.removeItem('pushEp'); }catch(e){}
+  if(ep) postSafe({action:'pushUnsub',token:TOKEN,endpoint:ep});
+  toast('تم إيقاف تنبيهات الجوال.'); pushBtn();
+}
+$('rPush').onclick=()=>PUSHON?disablePush():enablePush();
+$('rPushTest').onclick=async()=>{
+  const r=await postSafe({action:'pushTest',token:TOKEN});
+  if(r.auth===false){ logout(); return; }
+  toast(r.ok?'أُرسل تنبيه تجريبي، سيصل خلال ثوانٍ.':(r.error||'تعذّر الإرسال.'),!r.ok);
+};
+async function pushResync(){   // عند كل دخول: تأكيد أن الخادم يعرف هذا الجهاز
+  await swSync(); const sub=await curSub();
+  if(sub&&Notification.permission==='granted') postSafe({action:'pushSub',token:TOKEN,sub:sub.toJSON()});
+  pushBtn();
+}
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').then(r=>{ SWREG=r; pushBtn(); }).catch(()=>{});
+  navigator.serviceWorker.addEventListener('message',e=>{
+    const u=e.data&&e.data.type==='open'&&e.data.url; if(!u||!TOKEN) return;
+    const h=u.split('#')[1]||'';
+    if(h.indexOf('msg=')===0) openConvById(decodeURIComponent(h.slice(4))); else { setView('rem'); loadRem(true); }
+  });
+}
 
 /* ---------- البداية ---------- */
 if(U) initPublic();

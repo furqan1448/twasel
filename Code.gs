@@ -3,7 +3,7 @@
 // مهم: عند أي تحديث لا تنشئي «عملية نشر جديدة». استخدمي: نشر ← إدارة عمليات النشر ← ✏️ تعديل ← الإصدار: «إصدار جديد» ← نشر.
 // بهذه الطريقة يبقى رابط /exec نفسه، فلا يحتاج أي مستخدم لتغيير رابط Meta أو أي ربط آخر.
 const WA_VERIFY_TOKEN = 'furqan-wa-2026';   // أي كلمة تختارينها، وتكتبينها نفسها في Meta
-const VERSION = '2026-11-21-a';               // رقم الإصدار: يظهر عند فتح رابط النشر في المتصفح، ليُعرف هل النشر يعمل بآخر كود
+const VERSION = '2026-11-21-b';               // رقم الإصدار: يظهر عند فتح رابط النشر في المتصفح، ليُعرف هل النشر يعمل بآخر كود
 const MSG = 'الرسائل', USR = 'المستخدمون';
 const COLS = 11;                              // عدد أعمدة جدول الرسائل
 const DEL = 'محذوفة';                         // قديم: صفوف قديمة تُحذف تلقائيًا من الشيت ولا يُكتب هذا النص بعد الآن
@@ -66,9 +66,12 @@ function msgs_() {
 }
 // ===== التذكيرات والمتابعات =====
 // تُحفظ في ورقة مستقلة «التذكيرات»، والعنوان والملاحظة وبيانات الشخص مشفّرة بنفس طريقة الرسائل. الموعد (رقم) والحالة فقط ظاهران.
-const REM = 'التذكيرات', RCOLS = 13;
+const REM = 'التذكيرات', RCOLS = 15;
 function rems_() {
-  return sheet_(REM, ['المعرف', 'الإنشاء', 'المالكة', 'الموعد', 'الحالة', 'العنوان', 'ملاحظة', 'معرّف الرسالة', 'الاسم', 'الجوال', 'البريد', 'المصدر', 'تاريخ الإكمال']);
+  const sh = sheet_(REM, ['المعرف', 'الإنشاء', 'المالكة', 'الموعد', 'الحالة', 'العنوان', 'ملاحظة', 'معرّف الرسالة', 'الاسم', 'الجوال', 'البريد', 'المصدر', 'تاريخ الإكمال', 'موعد آخر تنبيه جوال', 'وقت إرسال التنبيه']);
+  const P = PropertiesService.getScriptProperties();
+  if (!P.getProperty('REMH2')) { sh.getRange(1, 14, 1, 2).setValues([['موعد آخر تنبيه جوال', 'وقت إرسال التنبيه']]); P.setProperty('REMH2', '1'); }
+  return sh;
 }
 function remOut_(r) {
   return {
@@ -83,6 +86,109 @@ function findRem_(sh, id, me) {
   const vals = sh.getRange(2, 1, n, RCOLS).getValues(), i = vals.findIndex(r => r[0] === id && r[2] === me[0]);
   return i < 0 ? null : { row: i + 2, vals: vals[i] };
 }
+// ===== تنبيهات الجوال (Web Push) =====
+// تُرسل من الخادم عند حلول موعد التذكير حتى والموقع مغلق. بلا مكتبات: توقيع VAPID (ES256) مكتوب هنا بـ BigInt.
+// المشغّل الزمني pushTick يعمل كل دقيقة (يُنشأ مرة واحدة بتشغيل installPushTrigger من المحرر).
+const P256 = {
+  p: BigInt('0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff'),
+  n: BigInt('0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551'),
+  g: [BigInt('0x6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296'), BigInt('0x4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5')]
+};
+function pmod_(a, m) { const r = a % m; return r >= 0n ? r : r + m; }
+function pinv_(a, m) {
+  let r0 = pmod_(a, m), r1 = m, s0 = 1n, s1 = 0n;
+  while (r1) { const q = r0 / r1; [r0, r1] = [r1, r0 - q * r1]; [s0, s1] = [s1, s0 - q * s1]; }
+  return pmod_(s0, m);
+}
+function padd_(A, B) {
+  if (!A) return B; if (!B) return A;
+  const p = P256.p; let l;
+  if (A[0] === B[0]) { if (pmod_(A[1] + B[1], p) === 0n) return null; l = pmod_((3n * A[0] * A[0] - 3n) * pinv_(2n * A[1], p), p); }
+  else l = pmod_((B[1] - A[1]) * pinv_(B[0] - A[0], p), p);
+  const x = pmod_(l * l - A[0] - B[0], p);
+  return [x, pmod_(l * (A[0] - x) - A[1], p)];
+}
+function pmul_(k, A) { let R = null; while (k > 0n) { if (k & 1n) R = padd_(R, A); A = padd_(A, A); k >>= 1n; } return R; }
+function big_(bytes) { let h = '0x'; bytes.forEach(b => { h += ('0' + (b & 255).toString(16)).slice(-2); }); return BigInt(h); }
+function bytes_(x, len) { let h = x.toString(16); while (h.length < len * 2) h = '0' + h; return h.match(/../g).map(s => parseInt(s, 16)); }
+function sgn_(a) { return a.map(v => v > 127 ? v - 256 : v); }
+function b64u_(bytes) { return Utilities.base64EncodeWebSafe(sgn_(bytes)).replace(/=+$/, ''); }
+function b64us_(str) { return b64u_(Utilities.newBlob(str).getBytes()); }
+function vapid_() {   // المفتاح يُولَّد مرة واحدة داخل الخادم ويبقى في خصائص السكربت (لا يظهر في الموقع)
+  const P = PropertiesService.getScriptProperties();
+  let hex = P.getProperty('VAPID_D');
+  if (!hex) {
+    const seed = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, Utilities.getUuid() + Utilities.getUuid() + Date.now());
+    hex = bytes_(pmod_(big_(seed), P256.n - 1n) + 1n, 32).map(b => ('0' + b.toString(16)).slice(-2)).join('');
+    P.setProperty('VAPID_D', hex);
+  }
+  const d = BigInt('0x' + hex), Q = pmul_(d, P256.g);
+  return { d: d, pub: b64u_([4].concat(bytes_(Q[0], 32), bytes_(Q[1], 32))) };
+}
+function es256_(d, msg) {
+  const z = big_(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, msg)), zb = bytes_(z, 32), db = sgn_(bytes_(d, 32));
+  for (let c = 0; c < 20; c++) {   // k حتمي (RFC 6979 مبسّط)
+    const k = pmod_(big_(Utilities.computeHmacSha256Signature(sgn_(zb.concat([c])), db)), P256.n);
+    if (k === 0n) continue;
+    const r = pmod_(pmul_(k, P256.g)[0], P256.n); if (r === 0n) continue;
+    const s = pmod_(pinv_(k, P256.n) * (z + r * d), P256.n); if (s === 0n) continue;
+    return bytes_(r, 32).concat(bytes_(s, 32));
+  }
+  throw new Error('sign');
+}
+function vapidAuth_(endpoint, cache) {
+  const aud = (/^(https:\/\/[^\/]+)/.exec(endpoint) || [])[1]; if (!aud) return null;
+  const v = vapid_();
+  if (!cache[aud]) {
+    let sub = 'mailto:admin@example.com'; try { const m = Session.getEffectiveUser().getEmail(); if (m) sub = 'mailto:' + m; } catch (e) {}
+    const input = b64us_(JSON.stringify({ typ: 'JWT', alg: 'ES256' })) + '.' + b64us_(JSON.stringify({ aud: aud, exp: Math.floor(Date.now() / 1000) + 12 * 3600, sub: sub }));
+    cache[aud] = input + '.' + b64u_(es256_(v.d, input));
+  }
+  return 'vapid t=' + cache[aud] + ', k=' + v.pub;
+}
+function sendPush_(endpoint, cache) {   // إشعار بلا حمولة: الـ Service Worker يجلب التفاصيل من الخادم
+  const auth = vapidAuth_(endpoint, cache); if (!auth) return 0;
+  try { return UrlFetchApp.fetch(endpoint, { method: 'post', headers: { Authorization: auth, TTL: '86400', Urgency: 'high' }, muteHttpExceptions: true }).getResponseCode(); }
+  catch (e) { return 0; }
+}
+function subs_(uid) { try { return JSON.parse(PropertiesService.getScriptProperties().getProperty('PS_' + uid) || '[]'); } catch (e) { return []; } }
+function setSubs_(uid, a) { const P = PropertiesService.getScriptProperties(); if (a.length) P.setProperty('PS_' + uid, JSON.stringify(a)); else P.deleteProperty('PS_' + uid); }
+function pushAll_(uid, cache) {   // يرسل لكل أجهزتها، ويحذف الأجهزة المنتهية. يعيد عدد ما وصل
+  const keep = []; let okN = 0;
+  subs_(uid).forEach(s => {
+    const c = sendPush_(s.e, cache);
+    if (c === 404 || c === 410) return;
+    keep.push(s); if (c >= 200 && c < 300) okN++;
+  });
+  setSubs_(uid, keep); return okN;
+}
+function pushTick() {
+  const now = Date.now(), cand = {}, lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const sh = rems_(), n = sh.getLastRow() - 1; if (n < 1) return;
+    sh.getRange(2, 1, n, RCOLS).getValues().forEach(r => {
+      const due = Number(r[3]) || 0;
+      if (r[4] === 'مكتمل' || !due || due > now || now - due > 86400000 || Number(r[13]) === due) return;
+      (cand[r[2]] = cand[r[2]] || []).push({ id: r[0], due: due });
+    });
+  } finally { lock.releaseLock(); }
+  const cache = {}, done = [];
+  Object.keys(cand).forEach(uid => { if (subs_(uid).length && pushAll_(uid, cache) > 0) cand[uid].forEach(c => done.push(c)); });
+  if (!done.length) return;
+  lock.waitLock(20000);
+  try {
+    const sh = rems_(), n = sh.getLastRow() - 1, ids = sh.getRange(2, 1, n, 1).getValues();
+    done.forEach(c => { const i = ids.findIndex(x => x[0] === c.id); if (i >= 0) sh.getRange(i + 2, 14, 1, 2).setValues([[c.due, now]]); });
+  } finally { lock.releaseLock(); }
+}
+function installPushTrigger() {
+  ScriptApp.getProjectTriggers().forEach(t => { if (t.getHandlerFunction() === 'pushTick') ScriptApp.deleteTrigger(t); });
+  ScriptApp.newTrigger('pushTick').timeBased().everyMinutes(1).create();
+  vapid_();
+  Logger.log('تم تفعيل مشغّل تنبيهات الجوال (كل دقيقة).');
+}
+
 function dueOk_(v) { v = Number(v); return isFinite(v) && v > 946684800000 && v < 4102444800000; }
 
 function users_() {
@@ -170,6 +276,7 @@ function doGet(e) {
   if (p['hub.mode'] === 'subscribe') {
     return ContentService.createTextOutput(p['hub.verify_token'] === WA_VERIFY_TOKEN ? p['hub.challenge'] : 'forbidden');
   }
+  if (p.action === 'vapid') return out_({ ok: true, pub: vapid_().pub });
   if (p.action === 'profile') {
     const u = userById_(p.u);
     return u ? out_({ ok: true, user: { name: u[1], phone: u[2], email: u[3] } }) : out_({ ok: false, error: 'الصفحة غير موجودة' });
@@ -205,7 +312,7 @@ function doPost(e) {
     d = { action: 'waNotify', token: p[1], title: p[2], text: p.slice(3).join('§§') };
   } else d = JSON.parse(raw);
   const lock = LockService.getScriptLock();
-  const needLock = d.action !== 'list' && d.action !== 'keys' && d.action !== 'poll' && d.action !== 'remList' && d.action !== 'msgOne';   // القراءة لا تنتظر بعضها، فيسرع الموقع
+  const needLock = d.action !== 'list' && d.action !== 'keys' && d.action !== 'poll' && d.action !== 'remList' && d.action !== 'msgOne' && d.action !== 'remDue' && d.action !== 'pushTest';   // القراءة لا تنتظر بعضها، فيسرع الموقع
   if (needLock) lock.waitLock(20000);
   try {
     if (e.parameter && e.parameter.wh) { handleWhapi_(e.parameter.wh, d); return out_({ ok: true }); }   // Whapi.Cloud
@@ -285,7 +392,7 @@ function doPost(e) {
 
     if (d.action === 'poll') return out_({ ok: true, ch: chOf_(me[0]), rc: remChOf_(me[0]), mail: Number(PropertiesService.getScriptProperties().getProperty('ML_' + me[0]) || 0) });
     if (d.action === 'keys') return out_({ ok: true, key: me[6] });
-    if (d.action === 'logout') { dropSession_(d.token); return out_({ ok: true }); }
+    if (d.action === 'logout') { if (d.endpoint) setSubs_(me[0], subs_(me[0]).filter(s => s.e !== String(d.endpoint))); dropSession_(d.token); return out_({ ok: true }); }
 
     if (d.action === 'changePassword') {
       const np = String(d.password || '');
@@ -332,6 +439,28 @@ function doPost(e) {
     if (d.action === 'msgOne') {
       const f = findRow_(msgs_(), String(d.id || ''), me);
       return f ? out_({ ok: true, row: rowOut_(f.vals) }) : out_({ ok: false, error: 'الرسالة غير موجودة.' });
+    }
+
+    // ---- تنبيهات الجوال ----
+    if (d.action === 'pushSub') {
+      const e = String((d.sub && d.sub.endpoint) || d.endpoint || '');
+      if (!/^https:\/\//.test(e) || e.length > 700) return out_({ ok: false, error: 'اشتراك غير صالح.' });
+      const a = subs_(me[0]).filter(s => s.e !== e); a.push({ e: e, t: Date.now() });
+      setSubs_(me[0], a.slice(-5));
+      return out_({ ok: true });
+    }
+    if (d.action === 'pushUnsub') { setSubs_(me[0], subs_(me[0]).filter(s => s.e !== String(d.endpoint || ''))); return out_({ ok: true }); }
+    if (d.action === 'pushTest') {
+      PropertiesService.getScriptProperties().setProperty('PT_' + me[0], String(Date.now()));
+      const n = subs_(me[0]).length; if (!n) return out_({ ok: false, error: 'لا يوجد جهاز مفعّل.' });
+      const okN = pushAll_(me[0], {});
+      return out_(okN ? { ok: true, sent: okN } : { ok: false, error: 'تعذّر الإرسال. تأكدي من تشغيل installPushTrigger ومنح الصلاحيات ثم نشر إصدار جديد.' });
+    }
+    if (d.action === 'remDue') {   // يستدعيها الـ Service Worker عند وصول إشعار
+      const sh = rems_(), n = sh.getLastRow() - 1, now = Date.now(), rows = [];
+      if (n > 0) sh.getRange(2, 1, n, RCOLS).getValues().forEach(r => { if (r[2] === me[0] && r[4] !== 'مكتمل' && Number(r[14]) > now - 180000) rows.push(r); });
+      const pt = Number(PropertiesService.getScriptProperties().getProperty('PT_' + me[0]) || 0);
+      return out_({ ok: true, rows: rows.slice(0, 5).map(remOut_), test: now - pt < 180000 });
     }
 
     // ---- التذكيرات والمتابعات ----
