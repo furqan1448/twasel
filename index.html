@@ -717,17 +717,19 @@ function remForm({mode,rem,msg}){
     const setT=t=>{ $('rdd').value=dStr(t); $('rdh').value=tStr(t); };
     setT(edit?rem.due:snz?Date.now()+36e5:atDay(1,10));
     const Q=$('rdQuick'); Q.innerHTML='';
-    [['بعد ساعة',()=>Date.now()+36e5],['بعد ٣ ساعات',()=>Date.now()+108e5],['اليوم ٥ م',()=>atDay(0,17)],['غدًا ١٠ ص',()=>atDay(1,10)],['بعد أسبوع',()=>atDay(7,10)]].forEach(([t,f])=>{
+    [['بعد ساعة',()=>Date.now()+36e5],['بعد ٣ ساعات',()=>Date.now()+108e5],['اليوم ٥ م',()=>atDay(0,17)],['بعد أسبوع',()=>atDay(7,10)]].forEach(([t,f])=>{
       if(f()<=Date.now()+6e4) return;
       const b=document.createElement('button'); b.type='button'; b.className='chip'; b.textContent=t; b.onclick=()=>setT(f()); Q.appendChild(b);
     });
+    const cu=document.createElement('button'); cu.type='button'; cu.className='chip'; cu.textContent='تحديد وقت آخر'; cu.onclick=()=>{ $('rdh').focus(); try{ $('rdh').showPicker&&$('rdh').showPicker(); }catch(e){} };
+    Q.appendChild(cu);
     $('rdErr').textContent=''; const ok=$('rdOk'); ok.textContent=snz?'تأجيل':edit?'حفظ التعديل':'حفظ التذكير';
     let done=false; const fin=v=>{ if(done) return; done=true; d.close(); res(v); };
     ok.onclick=()=>{
       const title=$('rdt').value.trim(), ds=$('rdd').value, hs=$('rdh').value, due=new Date(ds+'T'+hs).getTime();
       if(!snz&&!title){ $('rdErr').textContent='اكتبي عنوان التذكير.'; return; }
       if(!ds||!hs||isNaN(due)){ $('rdErr').textContent='اختاري التاريخ والوقت.'; return; }
-      if(!edit&&due<=Date.now()+3e4){ $('rdErr').textContent='اختاري موعدًا قادمًا.'; return; }
+      if(!edit&&due<=Date.now()){ $('rdErr').textContent='اختاري موعدًا قادمًا.'; return; }
       fin({title,due,note:$('rdn').value.trim(),name:$('rdName').value.trim(),phone:$('rdPhone').value.trim()});
     };
     $('rdNo').onclick=()=>fin(null); d.oncancel=e=>{ e.preventDefault(); fin(null); };
@@ -848,7 +850,7 @@ function checkDue(){
   if(due.length>3) showSummary(due); else due.forEach(showAlert);
   due.forEach(r=>{ SHOWN[rkey(r)]=1; }); saveShown(); beep();
 }
-setInterval(checkDue,15000);
+setInterval(checkDue,5000);
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) checkDue(); });
 function notifBtn(){ $('rNotif').style.display=('Notification' in window&&Notification.permission==='default')?'inline-flex':'none'; }
 $('rNotif').onclick=async()=>{ try{ await Notification.requestPermission(); }catch(e){} notifBtn(); if(window.Notification&&Notification.permission==='granted') toast('تم تفعيل إشعارات المتصفح.'); };
