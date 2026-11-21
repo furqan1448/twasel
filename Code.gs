@@ -89,26 +89,27 @@ function findRem_(sh, id, me) {
 // ===== تنبيهات الجوال (Web Push) =====
 // تُرسل من الخادم عند حلول موعد التذكير حتى والموقع مغلق. بلا مكتبات: توقيع VAPID (ES256) مكتوب هنا بـ BigInt.
 // المشغّل الزمني pushTick يعمل كل دقيقة (يُنشأ مرة واحدة بتشغيل installPushTrigger من المحرر).
+const B0 = BigInt(0), B1 = BigInt(1), B2 = BigInt(2), B3 = BigInt(3);   // بلا حروف BigInt الحرفية (0n) لأن محرر Apps Script لا يدعمها
 const P256 = {
   p: BigInt('0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff'),
   n: BigInt('0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551'),
   g: [BigInt('0x6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296'), BigInt('0x4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5')]
 };
-function pmod_(a, m) { const r = a % m; return r >= 0n ? r : r + m; }
+function pmod_(a, m) { const r = a % m; return r >= B0 ? r : r + m; }
 function pinv_(a, m) {
-  let r0 = pmod_(a, m), r1 = m, s0 = 1n, s1 = 0n;
+  let r0 = pmod_(a, m), r1 = m, s0 = B1, s1 = B0;
   while (r1) { const q = r0 / r1; [r0, r1] = [r1, r0 - q * r1]; [s0, s1] = [s1, s0 - q * s1]; }
   return pmod_(s0, m);
 }
 function padd_(A, B) {
   if (!A) return B; if (!B) return A;
   const p = P256.p; let l;
-  if (A[0] === B[0]) { if (pmod_(A[1] + B[1], p) === 0n) return null; l = pmod_((3n * A[0] * A[0] - 3n) * pinv_(2n * A[1], p), p); }
+  if (A[0] === B[0]) { if (pmod_(A[1] + B[1], p) === B0) return null; l = pmod_((B3 * A[0] * A[0] - B3) * pinv_(B2 * A[1], p), p); }
   else l = pmod_((B[1] - A[1]) * pinv_(B[0] - A[0], p), p);
   const x = pmod_(l * l - A[0] - B[0], p);
   return [x, pmod_(l * (A[0] - x) - A[1], p)];
 }
-function pmul_(k, A) { let R = null; while (k > 0n) { if (k & 1n) R = padd_(R, A); A = padd_(A, A); k >>= 1n; } return R; }
+function pmul_(k, A) { let R = null; while (k > B0) { if (k & B1) R = padd_(R, A); A = padd_(A, A); k >>= B1; } return R; }
 function big_(bytes) { let h = '0x'; bytes.forEach(b => { h += ('0' + (b & 255).toString(16)).slice(-2); }); return BigInt(h); }
 function bytes_(x, len) { let h = x.toString(16); while (h.length < len * 2) h = '0' + h; return h.match(/../g).map(s => parseInt(s, 16)); }
 function sgn_(a) { return a.map(v => v > 127 ? v - 256 : v); }
@@ -119,7 +120,7 @@ function vapid_() {   // المفتاح يُولَّد مرة واحدة داخ�
   let hex = P.getProperty('VAPID_D');
   if (!hex) {
     const seed = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, Utilities.getUuid() + Utilities.getUuid() + Date.now());
-    hex = bytes_(pmod_(big_(seed), P256.n - 1n) + 1n, 32).map(b => ('0' + b.toString(16)).slice(-2)).join('');
+    hex = bytes_(pmod_(big_(seed), P256.n - B1) + B1, 32).map(b => ('0' + b.toString(16)).slice(-2)).join('');
     P.setProperty('VAPID_D', hex);
   }
   const d = BigInt('0x' + hex), Q = pmul_(d, P256.g);
@@ -129,9 +130,9 @@ function es256_(d, msg) {
   const z = big_(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, msg)), zb = bytes_(z, 32), db = sgn_(bytes_(d, 32));
   for (let c = 0; c < 20; c++) {   // k حتمي (RFC 6979 مبسّط)
     const k = pmod_(big_(Utilities.computeHmacSha256Signature(sgn_(zb.concat([c])), db)), P256.n);
-    if (k === 0n) continue;
-    const r = pmod_(pmul_(k, P256.g)[0], P256.n); if (r === 0n) continue;
-    const s = pmod_(pinv_(k, P256.n) * (z + r * d), P256.n); if (s === 0n) continue;
+    if (k === B0) continue;
+    const r = pmod_(pmul_(k, P256.g)[0], P256.n); if (r === B0) continue;
+    const s = pmod_(pinv_(k, P256.n) * (z + r * d), P256.n); if (s === B0) continue;
     return bytes_(r, 32).concat(bytes_(s, 32));
   }
   throw new Error('sign');
