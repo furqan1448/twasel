@@ -3,7 +3,7 @@
 // مهم: عند أي تحديث لا تنشئي «عملية نشر جديدة». استخدمي: نشر ← إدارة عمليات النشر ← ✏️ تعديل ← الإصدار: «إصدار جديد» ← نشر.
 // بهذه الطريقة يبقى رابط /exec نفسه، فلا يحتاج أي مستخدم لتغيير رابط Meta أو أي ربط آخر.
 const WA_VERIFY_TOKEN = 'furqan-wa-2026';   // أي كلمة تختارينها، وتكتبينها نفسها في Meta
-const VERSION = '2026-11-22-a';               // رقم الإصدار: يظهر عند فتح رابط النشر في المتصفح، ليُعرف هل النشر يعمل بآخر كود
+const VERSION = '2026-11-22-b';               // رقم الإصدار: يظهر عند فتح رابط النشر في المتصفح، ليُعرف هل النشر يعمل بآخر كود
 const MSG = 'الرسائل', USR = 'المستخدمون';
 const COLS = 11;                              // عدد أعمدة جدول الرسائل
 const DEL = 'محذوفة';                         // قديم: صفوف قديمة تُحذف تلقائيًا من الشيت ولا يُكتب هذا النص بعد الآن
@@ -404,6 +404,49 @@ function doPost(e) {
       return out_({ ok: true, token: newSession_(me[0]) });
     }
 
+    // ---- تغيير رقم الجوال ----
+    if (d.action === 'changePhone') {
+      const bad = pwCheck_(me, d.current); if (bad) return out_({ ok: false, error: bad });
+      const phone = norm_(d.phone);
+      if (phone.length < 11) return out_({ ok: false, error: 'يرجى إدخال رقم جوال صحيح.' });
+      if (phone === norm_(me[2])) return out_({ ok: false, error: 'هذا هو رقم جوالك الحالي.' });
+      if (allUsers_().some(r => r[0] !== me[0] && norm_(r[2]) === phone)) return out_({ ok: false, error: 'رقم الجوال مسجّل لحساب آخر.' });
+      if (!setContact_(me, 3, phone)) return out_({ ok: false, error: 'تعذّر الحفظ.' });
+      sendMail_(me[3], 'تم تغيير رقم الجوال', 'تم تغيير رقم الجوال المسجّل في حسابك بصندوق الرسائل إلى: ' + phone + '\nإن لم تكوني أنتِ، فاستعيدي كلمة المرور فورًا من خيار «نسيت كلمة المرور».');
+      return out_({ ok: true, user: { name: me[1], phone: phone, email: me[3] } });
+    }
+
+    // ---- تغيير البريد: خطوة 1 (إرسال رمز تحقق إلى البريد الجديد) ----
+    if (d.action === 'emailCode') {
+      const bad = pwCheck_(me, d.current); if (bad) return out_({ ok: false, error: bad });
+      const em = String(d.email || '').trim().toLowerCase(), cache = CacheService.getScriptCache();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) return out_({ ok: false, error: 'يرجى إدخال بريد إلكتروني صحيح.' });
+      if (em === String(me[3]).toLowerCase()) return out_({ ok: false, error: 'هذا هو بريدك الحالي.' });
+      if (allUsers_().some(r => r[0] !== me[0] && String(r[3]).toLowerCase() === em)) return out_({ ok: false, error: 'البريد مسجّل لحساب آخر.' });
+      if (cache.get('eq_' + me[0])) return out_({ ok: false, error: 'تم إرسال رمز قبل قليل، انتظري دقيقة ثم أعيدي المحاولة.' });
+      const code = String(100000 + Math.floor(Math.random() * 900000));
+      cache.put('eq_' + me[0], '1', 60);
+      cache.put('ec_' + me[0], JSON.stringify({ h: hash_(code, me[5]), e: em, t: 0 }), 900);
+      sendMail_(em, 'رمز تأكيد البريد الجديد', 'رمز التحقق: ' + code + '\n\nالرمز صالح لمدة 15 دقيقة. إن لم تطلبي تغيير البريد فتجاهلي هذه الرسالة.');
+      return out_({ ok: true });
+    }
+    // ---- تغيير البريد: خطوة 2 (التحقق من الرمز ثم الحفظ) ----
+    if (d.action === 'changeEmail') {
+      const cache = CacheService.getScriptCache(), raw = cache.get('ec_' + me[0]);
+      if (!raw) return out_({ ok: false, error: 'الرمز غير صحيح أو منتهي.' });
+      const st = JSON.parse(raw);
+      if (hash_(String(d.code || '').trim(), me[5]) !== st.h) {
+        st.t++; if (st.t >= 5) cache.remove('ec_' + me[0]); else cache.put('ec_' + me[0], JSON.stringify(st), 900);
+        return out_({ ok: false, error: 'الرمز غير صحيح أو منتهي.' });
+      }
+      if (allUsers_().some(r => r[0] !== me[0] && String(r[3]).toLowerCase() === st.e)) { cache.remove('ec_' + me[0]); return out_({ ok: false, error: 'البريد مسجّل لحساب آخر.' }); }
+      const old = me[3];
+      if (!setContact_(me, 4, st.e)) return out_({ ok: false, error: 'تعذّر الحفظ.' });
+      cache.remove('ec_' + me[0]);
+      sendMail_(old, 'تم تغيير البريد الإلكتروني', 'تم تغيير البريد المسجّل في حسابك بصندوق الرسائل إلى: ' + st.e + '\nإن لم تكوني أنتِ، فتواصلي مع المسؤول فورًا.');
+      return out_({ ok: true, user: { name: me[1], phone: me[2], email: st.e } });
+    }
+
     if (d.action === 'waNotify') {
       const title = String(d.title || '').trim(), text = String(d.text || '').trim();
       if (!title || !text) return out_({ ok: true });
@@ -446,7 +489,11 @@ function doPost(e) {
     if (d.action === 'pushSub') {
       const e = String((d.sub && d.sub.endpoint) || d.endpoint || '');
       if (!/^https:\/\//.test(e) || e.length > 700) return out_({ ok: false, error: 'اشتراك غير صالح.' });
-      const a = subs_(me[0]).filter(s => s.e !== e); a.push({ e: e, t: Date.now() });
+      const mine = subs_(me[0]);
+      if (!mine.some(s => s.e === e)) {   // جهاز جديد لهذا الحساب: يُفصل عن أي حساب آخر سُجّل به سابقًا (دخلت منه مستخدمة أخرى)
+        allUsers_().forEach(u => { if (u[0] !== me[0]) { const o = subs_(u[0]); if (o.some(s => s.e === e)) setSubs_(u[0], o.filter(s => s.e !== e)); } });
+      }
+      const a = mine.filter(s => s.e !== e); a.push({ e: e, t: Date.now() });
       setSubs_(me[0], a.slice(-5));
       return out_({ ok: true });
     }
@@ -740,6 +787,18 @@ function cleanDeleted_(sh) {
 // ===== كلمة المرور =====
 function sendMail_(to, subject, body) {
   try { MailApp.sendEmail(to, subject, body, { name: 'صندوق الرسائل', noReply: true }); } catch (err) { Logger.log('تعذّر إرسال البريد: ' + err); }
+}
+// تغيير بيانات التواصل (الجوال/البريد): الرسائل والتذكيرات مرتبطة بمعرّف الحساب (العمود الأول) لا بالجوال ولا بالبريد، فلا يضيع منها شيء.
+function setContact_(u, col, val) {
+  const i = allUsers_().findIndex(r => r[0] === u[0]); if (i < 0) return false;
+  users_().getRange(i + 2, col).setValue(val); dropUsers_(); return true;
+}
+// فحص كلمة المرور الحالية مع حدّ للمحاولات (5 كل 15 دقيقة). يعيد نص الخطأ أو '' عند النجاح
+function pwCheck_(me, pw) {
+  const c = CacheService.getScriptCache(), k = 'pf_' + me[0], t = Number(c.get(k) || 0);
+  if (t >= 5) return 'محاولات كثيرة، يرجى المحاولة بعد 15 دقيقة.';
+  if (hash_(String(pw || ''), me[5]) !== me[4]) { c.put(k, String(t + 1), 900); return 'كلمة المرور الحالية غير صحيحة.'; }
+  c.remove(k); return '';
 }
 function setPw_(u, pw) {
   const i = allUsers_().findIndex(r => r[0] === u[0]); if (i < 0) return;

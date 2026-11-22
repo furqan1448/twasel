@@ -84,6 +84,8 @@ textarea{min-height:120px;resize:vertical}
 .ph{text-align:center;padding:26px 16px 20px}.ph .logo,.ph .lf{margin:0 auto 10px;width:72px;height:72px}.ph h1{margin:6px 0 4px;font-size:26px;color:var(--acc)}.ph p{margin:0;color:var(--mut)}
 .cts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}.cts a{padding:12px 14px;background:var(--card);border:1px solid var(--line);border-radius:12px;color:var(--ink);text-decoration:none}.cts small{display:block;color:var(--mut);font-size:13px}.cts b{direction:ltr;unicode-bidi:plaintext;font-size:15px;word-break:break-all}
 dialog{border:0;border-radius:18px;padding:22px;width:min(420px,92vw);background:var(--card);color:var(--ink);box-shadow:0 20px 60px rgba(0,0,0,.35)}dialog::backdrop{background:rgba(30,10,14,.5);backdrop-filter:blur(2px)}
+.arow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}.arow small{display:block;color:var(--mut);font-size:13px;margin:0}.arow b{display:block;direction:ltr;unicode-bidi:plaintext;text-align:right;word-break:break-all;font-weight:500}
+.ib.spin svg{animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(-360deg)}}
 dialog h3{margin:0 0 4px;font-size:20px}dialog p{margin:0;color:var(--mut)}.dact{display:flex;gap:8px;margin-top:18px;justify-content:flex-start}
 #toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(30px);background:#2b1a1d;color:#fff;padding:11px 20px;border-radius:12px;opacity:0;pointer-events:none;transition:.25s;z-index:99;max-width:90vw}#toast.on{opacity:1;transform:translateX(-50%)}#toast.bad{background:var(--bad)}
 @media(max-width:760px){.split{grid-template-columns:1fr}.hero{padding:30px 22px}.hero ul,.hero:after{display:none}.hero h1{font-size:28px}.stats{gap:8px}.stat{padding:10px}.stat b{font-size:21px}.item{grid-template-columns:1fr}.av{display:none}.cts{grid-template-columns:1fr}}
@@ -178,6 +180,7 @@ a.btn{text-decoration:none}
 <symbol id="al" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M5 3 2 6M22 6l-3-3"/></symbol>
 <symbol id="dn" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></symbol>
 <symbol id="pp" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="us" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
 </defs></svg>
 
 <!-- صفحة الزائر -->
@@ -226,7 +229,7 @@ a.btn{text-decoration:none}
     <button class="ib" id="navRem" title="التذكيرات" aria-label="التذكيرات"><svg class="i"><use href="#bl"/></svg><span class="nb" id="nb"></span></button>
     
     <button class="ib" id="reload" title="تحديث" aria-label="تحديث"><svg class="i"><use href="#ref"/></svg></button>
-    <button class="ib" id="pwBtn" title="تغيير كلمة المرور" aria-label="تغيير كلمة المرور"><svg class="i"><use href="#key"/></svg></button>
+    <button class="ib" id="pwBtn" title="حسابي" aria-label="حسابي"><svg class="i"><use href="#us"/></svg></button>
     <button class="ib" id="outBtn" title="تسجيل الخروج" aria-label="تسجيل الخروج"><svg class="i"><use href="#out"/></svg></button></div></div>
   <div class="wrap" id="vMsg">
     <h2 class="gr" id="hi"></h2>
@@ -236,7 +239,6 @@ a.btn{text-decoration:none}
     <div class="tools">
       <button class="btn ghost sm" id="mToggle"><svg class="i"><use href="#ml"/></svg><span id="mLbl">ربط البريد</span></button>
       <button class="btn ghost sm" id="cToggle"><svg class="i"><use href="#pl"/></svg>ربط Chakra</button>
-      <button class="btn ghost sm" id="wToggle"><svg class="i"><use href="#nt"/></svg>إضافة محادثة</button>
     </div>
     <div class="card panel" id="mBox">
       <div id="mAuto">
@@ -256,12 +258,6 @@ a.btn{text-decoration:none}
       <small>في Chakra Chat: «WhatsApp Setup» ← «More» ← «Pass-through webhook url»، والصقي الرابط ثم احفظي:</small>
       <code id="cUrl"></code><button class="btn ghost sm" id="cCopy">نسخ الرابط</button>
     </div>
-    <div class="card panel" id="wForm">
-      <label for="wn" style="margin-top:0">اسم صاحبة المحادثة</label><input id="wn">
-      <label for="wp">رقم جوالها (اختياري)</label><input id="wp" type="tel" inputmode="tel">
-      <label for="wm">ملخص الرسالة (اختياري)</label><textarea id="wm" style="min-height:70px"></textarea>
-      <p style="margin:14px 0 0"><button class="btn" id="wAdd">حفظ</button></p>
-    </div>
     <div class="chips" id="filters"></div>
     <p id="archNote" style="margin:2px 2px 12px;font-size:13px;color:var(--mut);line-height:1.8"></p>
     <div id="list"></div>
@@ -269,7 +265,7 @@ a.btn{text-decoration:none}
   </div>
   <div class="wrap" id="vRem" style="display:none">
     <div class="rhead"><h2 class="gr">التذكيرات والمتابعات</h2>
-      <div class="tools" style="margin:0"><button class="btn sm" id="rNew"><svg class="i"><use href="#pp"/></svg>تذكير جديد</button><button class="btn sm" id="rPush"><svg class="i"><use href="#bl"/></svg>تفعيل تنبيهات الجوال</button><button class="btn ghost sm" id="rPushTest" style="display:none">تجربة تنبيه</button></div></div>
+      <div class="tools" style="margin:0"><button class="btn sm" id="rNew"><svg class="i"><use href="#pp"/></svg>تذكير جديد</button><button class="btn sm" id="rPush"><svg class="i"><use href="#bl"/></svg>تفعيل تنبيهات التذكيرات</button><button class="btn ghost sm" id="rPushTest" style="display:none">تجربة تنبيه</button></div></div>
     <div class="chips" id="rTabs"></div>
     <div class="card rbar">
       <div class="rs"><label for="rQ">بحث</label><input id="rQ" type="search" placeholder="العنوان، الاسم، الجوال، الملاحظة…"></div>
@@ -281,6 +277,12 @@ a.btn{text-decoration:none}
     <div id="rList"></div>
   </div>
 </section>
+
+<dialog id="adlg"><h3>حسابي</h3><p>بيانات الدخول والتواصل. تغييرها لا يؤثر على رسائلك ولا تذكيراتك.</p>
+  <div class="arow"><div><small>رقم الجوال</small><b id="aPh"></b></div><button class="btn ghost sm" id="aPhB" type="button">تغيير</button></div>
+  <div class="arow"><div><small>البريد الإلكتروني</small><b id="aEm"></b></div><button class="btn ghost sm" id="aEmB" type="button">تغيير</button></div>
+  <div class="arow"><div><small>كلمة المرور</small><b>••••••••</b></div><button class="btn ghost sm" id="aPwB" type="button">تغيير</button></div>
+  <div class="dact"><button class="btn ghost" id="aClose" type="button">إغلاق</button></div></dialog>
 
 <dialog id="dlg"><h3 id="dT"></h3><p id="dM"></p><div id="dF"></div><div class="dact"><button class="btn" id="dOk"></button><button class="btn ghost" id="dNo">إلغاء</button></div></dialog>
 <dialog id="rdlg"><h3 id="rdT"></h3><p id="rdWho"></p>
@@ -303,12 +305,12 @@ let CH = 0, POLLING = false, MAILAT = 0, TOKEN = '', KEY = '', ME = null, ALL = 
 const show = id => ['pub','auth','inbox'].forEach(s => $(s).style.display = s===id ? 'block' : 'none');
 const disp = p => { p = String(p||''); return p.startsWith('966') ? '0' + p.slice(3) : p; };
 const ic = n => '<svg class="i"><use href="#'+n+'"/></svg>';
-function tg(id){ const b=$(id), on=b.style.display!=='block'; ['mBox','cBox','wForm'].forEach(x=>$(x).style.display='none'); if(on) b.style.display='block'; }
+function tg(id){ const b=$(id), on=b.style.display!=='block'; ['mBox','cBox'].forEach(x=>$(x).style.display='none'); if(on) b.style.display='block'; }
 
 /* الشعار: ضعي ملف الشعار باسم logo.png بجانب index.html — وإن لم يوجد يظهر الحرف «ف» */
 document.querySelectorAll('.bm').forEach(e => e.innerHTML = '<img class="logo" src="logo.png" alt="شعار جمعية فرقان" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'grid\'"><span class="lf">ف</span>');
 
-let tt; function toast(m,bad){ const t=$('toast'); t.textContent=m; t.className='on'+(bad?' bad':''); clearTimeout(tt); tt=setTimeout(()=>t.className='',3200); }
+let tt; function toast(m,bad,ms){ const t=$('toast'); t.textContent=m; t.className='on'+(bad?' bad':''); clearTimeout(tt); tt=setTimeout(()=>t.className='',ms||3200); }
 function dlg(title,{text='',fields=[],ok='تأكيد',danger=false}={}){
   return new Promise(res=>{
     const d=$('dlg'); $('dT').textContent=title; $('dM').textContent=text;
@@ -391,14 +393,47 @@ $('forgot').onclick=async()=>{
     if(r.ok){ $('li').value=a.id; $('lp').value=''; toast('تم تغيير كلمة المرور، سجّلي الدخول.'); } else toast(r.error||'تعذّر التغيير.',1);
   }catch(e){ toast('تعذّر الاتصال.',1); }
 };
-/* تغيير كلمة المرور بعد الدخول */
-$('pwBtn').onclick=async()=>{
+/* ---------- حسابي: كلمة المرور + رقم الجوال + البريد ---------- */
+const saveMe=()=>{ try{localStorage.setItem('me',JSON.stringify(ME));}catch(e){} };
+function openAcct(){ if(!ME) return; $('aPh').textContent=disp(ME.phone); $('aEm').textContent=ME.email; $('adlg').showModal(); }
+$('pwBtn').onclick=openAcct;
+$('aClose').onclick=()=>$('adlg').close();
+$('aPwB').onclick=()=>{ $('adlg').close(); changePw(); };
+$('aPhB').onclick=()=>{ $('adlg').close(); changePhone(); };
+$('aEmB').onclick=()=>{ $('adlg').close(); changeEmail(); };
+async function changePw(){
   const a=await dlg('تغيير كلمة المرور',{fields:[{k:'c',label:'كلمة المرور الحالية',type:'password',ac:'current-password'},{k:'n',label:'كلمة المرور الجديدة (8 أحرف فأكثر)',type:'password',ac:'new-password'},{k:'n2',label:'تأكيد كلمة المرور الجديدة',type:'password',ac:'new-password'}],ok:'حفظ'});
   if(!a) return;
   if(a.n!==a.n2){ toast('تأكيد كلمة المرور غير مطابق.',1); return; }
   try{ const r=await post({action:'changePassword',token:TOKEN,current:a.c,password:a.n}); if(r.ok){ TOKEN=r.token; try{localStorage.setItem('tok',TOKEN);}catch(e){} swSync(); toast('تم تغيير كلمة المرور.'); } else toast(r.error||'تعذّر التغيير.',1); }
   catch(e){ toast('تعذّر الاتصال.',1); }
-};
+}
+async function changePhone(){
+  const a=await dlg('تغيير رقم الجوال',{text:'الرقم الحالي: '+disp(ME.phone),fields:[{k:'p',label:'رقم الجوال الجديد',type:'tel',m:'tel',ac:'tel'},{k:'c',label:'كلمة المرور الحالية',type:'password',ac:'current-password'}],ok:'حفظ'});
+  if(!a) return;
+  try{
+    const r=await post({action:'changePhone',token:TOKEN,phone:a.p,current:a.c});
+    if(r.auth===false){ logout(); return; }
+    if(!r.ok){ toast(r.error||'تعذّر التغيير.',1); return; }
+    ME=Object.assign(ME,r.user); saveMe(); toast('تم تغيير رقم الجوال.');
+  }catch(e){ toast('تعذّر الاتصال.',1); }
+}
+async function changeEmail(){
+  const a=await dlg('تغيير البريد الإلكتروني',{text:'البريد الحالي: '+ME.email+'. سيصل رمز تحقق إلى البريد الجديد للتأكد من صحته.',fields:[{k:'e',label:'البريد الجديد',type:'email',ac:'email'},{k:'c',label:'كلمة المرور الحالية',type:'password',ac:'current-password'}],ok:'إرسال الرمز'});
+  if(!a) return;
+  try{
+    const r=await post({action:'emailCode',token:TOKEN,email:a.e,current:a.c});
+    if(r.auth===false){ logout(); return; }
+    if(!r.ok){ toast(r.error||'تعذّر إرسال الرمز.',1); return; }
+    const b=await dlg('رمز التحقق',{text:'أُرسل رمز من 6 أرقام إلى '+a.e.trim()+' (صالح 15 دقيقة). افحصي مجلد الرسائل غير المرغوبة إن لم يصل.',fields:[{k:'code',label:'رمز التحقق',m:'numeric'}],ok:'تأكيد التغيير'});
+    if(!b) return;
+    const r2=await post({action:'changeEmail',token:TOKEN,code:b.code});
+    if(r2.auth===false){ logout(); return; }
+    if(!r2.ok){ toast(r2.error||'تعذّر التغيير.',1); return; }
+    ME=Object.assign(ME,r2.user); saveMe();
+    toast(MAILAT?'تم تغيير البريد. لأن بريدك كان مرتبطًا، أعيدي الربط بالبريد الجديد من «ربط البريد».':'تم تغيير البريد الإلكتروني.',0,MAILAT?7000:0);
+  }catch(e){ toast('تعذّر الاتصال.',1); }
+}
 
 /* ---------- الصندوق ---------- */
 function openInbox(){
@@ -420,13 +455,13 @@ async function load(silent){
     const r = await post(inArch?{action:'list',token:tk,archive:true,limit:LIMIT}:{action:'list',token:tk,starred:inStar,limit:LIMIT});
     if(!TOKEN) return; /* خرجت المستخدمة أثناء التحميل */
     if(r.auth===false){logout();return;}
-    if(!r.ok){if(!silent)$('list').textContent=r.error||'تعذّر التحميل.';return;}
+    if(!r.ok){if(!silent)$('list').textContent=r.error||'تعذّر التحميل.';return false;}
     $('ver').textContent = r.v ? ('إصدار الخادم: '+r.v) : 'تنبيه: الخادم يعمل بكود قديم، يرجى نشر إصدار جديد من Apps Script.';
     if(r.archDays) ARCHD=r.archDays;
     if(r.archKeep) ARCHK=r.archKeep; ARCHW=r.archWarn||null; setTimeout(archAlert,700);
-    if(inArch){ ALL=r.rows; ARCHN=r.total||0; render(); return; }
-    ALL=r.rows; STARN=r.starredCount||0; COUNTS=r.counts||{}; MAILAT=r.mail||0; CH=r.ch||0; mailBtn(); render();
-  }catch(e){if(!silent)$('list').textContent='تعذّر تحميل الرسائل.';}
+    if(inArch){ ALL=r.rows; ARCHN=r.total||0; render(); return true; }
+    ALL=r.rows; STARN=r.starredCount||0; COUNTS=r.counts||{}; MAILAT=r.mail||0; CH=r.ch||0; mailBtn(); render(); return true;
+  }catch(e){if(!silent)$('list').textContent='تعذّر تحميل الرسائل.'; return false;}
 }
 const srcIc = s => s==='واتساب'?'wa':s==='البريد'?'ml':'fm';
 function render(){
@@ -545,13 +580,6 @@ async function bulk(op,picked,value){
   load(true);
 }
 
-$('wToggle').onclick=()=>tg('wForm');
-$('wAdd').onclick=async()=>{
-  const name=$('wn').value.trim(); if(!name){toast('يرجى كتابة الاسم.',1);return;}
-  const r=await post({action:'addManual',token:TOKEN,name,phone:$('wp').value.trim(),message:$('wm').value.trim()});
-  if(!r.ok){toast(r.error||'تعذّر الحفظ',1);return;}
-  ['wn','wp','wm'].forEach(i=>$(i).value='');$('wForm').style.display='none';load();
-};
 async function getKey(){ if(!KEY){ const r=await post({action:'keys',token:TOKEN}); if(r.auth===false){logout();return '';} KEY=r.key||''; } return KEY; }
 const cp=(id,btn)=>navigator.clipboard.writeText($(id).textContent).then(()=>toast('تم النسخ'));
 function mailBtn(){ const ok=MAILAT&&Date.now()-MAILAT<7200000; $('mLbl').textContent=ok?'البريد مرتبط ✓':'ربط البريد'; }
@@ -585,18 +613,24 @@ function logout(){
   KEY='';TOKEN='';ME=null;ALL=[];SEL=new Set();REMS=[];RC=0;RDONE=0;$('alerts').innerHTML='';document.title='صِلة للتواصل';
   try{localStorage.removeItem('tok');localStorage.removeItem('me');}catch(e){}
   show('auth');
-  /* إنهاء الجلسة في الخادم في الخلفية */
-  idbPut('tok',null); let ep=''; try{ ep=localStorage.getItem('pushEp')||''; localStorage.removeItem('pushEp'); }catch(e){}
-  try{ if(SWREG) SWREG.pushManager.getSubscription().then(s=>s&&s.unsubscribe()).catch(()=>{}); }catch(e){}
-  PUSHON=false;
-  if(t){
+  /* اشتراك التنبيهات يبقى في المتصفح (لا نلغيه) فلا تُطلب إعادة التفعيل عند الدخول؛ نفصل الجهاز عن الحساب في الخادم فقط */
+  idbPut('tok',null); PUSHON=false;
+  if(!t) return;
+  (async()=>{
+    let ep=''; try{ const s=await curSub(); ep=s?s.endpoint:(localStorage.getItem('pushEp')||''); }catch(e){}
     const body=JSON.stringify({action:'logout',token:t,endpoint:ep});
     let sent=false;
     try{ sent=navigator.sendBeacon(API,new Blob([body],{type:'text/plain;charset=utf-8'})); }catch(e){}
     if(!sent){ try{ fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body,keepalive:true}).catch(()=>{}); }catch(e){} }
-  }
+  })();
 }
-$('reload').onclick=()=>{ load(); loadRem(); };
+let RELOADING=false;
+$('reload').onclick=async()=>{   /* يعمل من أي صفحة (الرسائل أو التذكيرات) ويُظهر دوران الأيقونة ثم رسالة النتيجة */
+  if(RELOADING||!TOKEN) return; RELOADING=true; const b=$('reload'); b.classList.add('spin');
+  let a,c; try{ [a,c]=await Promise.all([load(VIEW==='rem'),loadRem(false)]); }catch(e){ a=c=false; }
+  b.classList.remove('spin'); RELOADING=false;
+  if(TOKEN&&a!==false&&c!==false) toast('تم التحديث ✓');
+};
 /* تحديث تلقائي هادئ كل 30 ثانية ليظهر البريد الجديد دون الضغط على زر التحديث */
 /* ظهور فوري: طلب خفيف كل 6 ثوانٍ يسأل «هل تغيّر شيء؟»، وعند التغيّر فقط تُحمَّل الرسائل بصمت */
 async function poll(){
@@ -653,9 +687,9 @@ async function loadRem(silent){
     const r=await post({action:'remList',token:tk});
     if(!TOKEN) return;
     if(r.auth===false){ logout(); return; }
-    if(!r.ok){ if(!silent) toast(r.error||'تعذّر تحميل التذكيرات.',1); return; }
-    REMS=r.rows||[]; RDONE=r.doneTotal||0; RC=r.rc||0; afterRem(); checkDue();
-  }catch(e){ if(!silent) toast('تعذّر تحميل التذكيرات.',1); }
+    if(!r.ok){ if(!silent) toast(r.error||'تعذّر تحميل التذكيرات.',1); return false; }
+    REMS=r.rows||[]; RDONE=r.doneTotal||0; RC=r.rc||0; afterRem(); checkDue(); return true;
+  }catch(e){ if(!silent) toast('تعذّر تحميل التذكيرات.',1); return false; }
 }
 function badge(){
   const t1=nextDay(Date.now()), n=REMS.filter(r=>!r.done&&r.due<t1).length, dueNow=REMS.filter(r=>!r.done&&r.due<=Date.now()).length, b=$('nb');
@@ -884,37 +918,55 @@ function idbPut(k,v){
 }
 const swSync=async()=>{ await idbPut('api',TOKEN?API:null); await idbPut('tok',TOKEN||null); };
 const pushOk=()=>('serviceWorker' in navigator)&&('PushManager' in window)&&('Notification' in window);
-async function curSub(){ try{ return SWREG?await SWREG.pushManager.getSubscription():null; }catch(e){ return null; } }
+const getReg=async()=>{
+  if(SWREG&&SWREG.active) return SWREG;
+  if(!('serviceWorker' in navigator)) return null;
+  try{ SWREG=await Promise.race([navigator.serviceWorker.ready,new Promise(r=>setTimeout(()=>r(null),8000))]); }catch(e){}
+  return SWREG;
+};
+async function curSub(){ try{ const r=await getReg(); return r?await r.pushManager.getSubscription():null; }catch(e){ return null; } }
 async function pushBtn(){
   const sub=pushOk()?await curSub():null; PUSHON=!!sub&&Notification.permission==='granted';
-  const b=$('rPush'); b.innerHTML=ic('bl')+(PUSHON?'تنبيهات الجوال مفعّلة ✓':'تفعيل تنبيهات الجوال'); b.classList.toggle('ghost',PUSHON);
+  const b=$('rPush'); b.innerHTML=ic('bl')+(PUSHON?'تنبيهات التذكيرات مفعّلة ✓':'تفعيل تنبيهات التذكيرات'); b.classList.toggle('ghost',PUSHON);
   $('rPushTest').style.display=PUSHON?'inline-flex':'none';
+}
+/* يضمن وجود اشتراك للجهاز ويسجّله في الخادم. ask: يطلب الإذن إن لم يُمنح · force: يعيد إنشاء الاشتراك */
+async function ensurePush({ask=false,force=false}={}){
+  if(!TOKEN||!pushOk()) return false;
+  let perm=Notification.permission;
+  if(perm==='default'){ if(!ask) return false; perm=await Notification.requestPermission(); }
+  if(perm!=='granted') return false;
+  const reg=await getReg(); if(!reg) return false;
+  let sub=await reg.pushManager.getSubscription();
+  if(sub&&force){ try{ await sub.unsubscribe(); }catch(e){} sub=null; }
+  if(!sub){
+    const v=await fetch(API+'?action=vapid').then(r=>r.json()); if(!v.ok) throw new Error('vapid');
+    sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ToU8(v.pub)});
+  }
+  await swSync();
+  const r=await postSafe({action:'pushSub',token:TOKEN,sub:sub.toJSON()}); if(!r.ok) throw new Error('sub');
+  try{ localStorage.setItem('pushEp',sub.endpoint); }catch(e){}
+  return true;
 }
 async function enablePush(){
   if(!pushOk()){
-    await dlg('تفعيل تنبيهات الجوال',{text:'هذه الميزة تعمل عند فتح الموقع من أيقونته على الشاشة الرئيسية (وليس من Safari). في الآيفون: احذفي الاختصار القديم، ثم افتحي الموقع في Safari ← مشاركة ← «إضافة إلى الشاشة الرئيسية»، ثم افتحيه من الأيقونة واضغطي هذا الزر. (يتطلب iOS 16.4 أو أحدث).',ok:'حسنًا'});
+    await dlg('تفعيل تنبيهات التذكيرات',{text:'على الجوال تعمل هذه الميزة عند فتح الموقع من أيقونته على الشاشة الرئيسية (وليس من Safari). في الآيفون: احذفي الاختصار القديم، ثم افتحي الموقع في Safari ← مشاركة ← «إضافة إلى الشاشة الرئيسية»، ثم افتحيه من الأيقونة واضغطي هذا الزر. (يتطلب iOS 16.4 أو أحدث).',ok:'حسنًا'});
     return;
   }
+  if(Notification.permission==='denied'){ toast('الإشعارات محظورة لهذا الموقع. فعّليها من إعدادات المتصفح أو الجوال ثم أعيدي المحاولة.',1); return; }
   try{
-    const perm=await Notification.requestPermission();
-    if(perm!=='granted'){ toast('لم يُسمح بالإشعارات. فعّليها من إعدادات الجوال ← الإشعارات ← صِلة.',1); return; }
-    const reg=SWREG||await navigator.serviceWorker.ready;
-    const v=await fetch(API+'?action=vapid').then(r=>r.json()); if(!v.ok) throw new Error('vapid');
-    const old=await reg.pushManager.getSubscription(); if(old) await old.unsubscribe();
-    const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ToU8(v.pub)});
-    await swSync();
-    const r=await post({action:'pushSub',token:TOKEN,sub:sub.toJSON()}); if(!r.ok) throw new Error('sub');
-    try{ localStorage.setItem('pushEp',sub.endpoint); }catch(e){}
-    toast('تم تفعيل تنبيهات الجوال ✓'); pushBtn();
+    const ok=await ensurePush({ask:true,force:true});
+    if(!ok){ toast('لم يُسمح بالإشعارات. فعّليها من إعدادات المتصفح أو الجوال.',1); return; }
+    toast('تم تفعيل تنبيهات التذكيرات ✓'); pushBtn();
   }catch(e){ toast('تعذّر التفعيل. تأكدي من نشر آخر إصدار من Apps Script ثم أعيدي المحاولة.',1); }
 }
 async function disablePush(){
-  if(!await dlg('إيقاف تنبيهات الجوال',{text:'لن تصلك تنبيهات التذكيرات على هذا الجهاز.',ok:'إيقاف',danger:true})) return;
+  if(!await dlg('إيقاف تنبيهات التذكيرات',{text:'لن تصلك تنبيهات التذكيرات على هذا الجهاز.',ok:'إيقاف',danger:true})) return;
   const sub=await curSub(); let ep='';
   if(sub){ ep=sub.endpoint; try{ await sub.unsubscribe(); }catch(e){} }
-  try{ localStorage.removeItem('pushEp'); }catch(e){}
+  try{ localStorage.removeItem('pushEp'); localStorage.setItem('pushAsked','1'); }catch(e){}
   if(ep) postSafe({action:'pushUnsub',token:TOKEN,endpoint:ep});
-  toast('تم إيقاف تنبيهات الجوال.'); pushBtn();
+  toast('تم إيقاف تنبيهات التذكيرات.'); pushBtn();
 }
 $('rPush').onclick=()=>PUSHON?disablePush():enablePush();
 $('rPushTest').onclick=async()=>{
@@ -922,10 +974,24 @@ $('rPushTest').onclick=async()=>{
   if(r.auth===false){ logout(); return; }
   toast(r.ok?'أُرسل تنبيه تجريبي، سيصل خلال ثوانٍ.':(r.error||'تعذّر الإرسال.'),!r.ok);
 };
-async function pushResync(){   // عند كل دخول: تأكيد أن الخادم يعرف هذا الجهاز
-  await swSync(); const sub=await curSub();
-  if(sub&&Notification.permission==='granted') postSafe({action:'pushSub',token:TOKEN,sub:sub.toJSON()});
-  pushBtn();
+/* عند كل دخول: إن كان الإذن ممنوحًا يُعاد ربط الجهاز بالحساب تلقائيًا (دون ضغط أي زر). وإن لم يُطلب الإذن بعد
+   (حاسوب أو جوال) يُطلب مرة واحدة عند أول نقرة، لأن المتصفحات تشترط تفاعل المستخدمة. */
+let PUSHARM=false;
+function armPushAsk(){
+  if(PUSHARM||!pushOk()||Notification.permission!=='default') return;
+  try{ if(localStorage.getItem('pushAsked')) return; }catch(e){}
+  PUSHARM=true;
+  const go=()=>{
+    document.removeEventListener('click',go,true); PUSHARM=false;
+    try{ localStorage.setItem('pushAsked','1'); }catch(e){}
+    if(TOKEN) ensurePush({ask:true}).then(ok=>{ if(ok){ toast('تم تفعيل تنبيهات التذكيرات ✓'); pushBtn(); } }).catch(()=>{});
+  };
+  document.addEventListener('click',go,true);
+}
+async function pushResync(){
+  await swSync();
+  try{ if(pushOk()&&Notification.permission==='granted') await ensurePush(); }catch(e){}
+  pushBtn(); armPushAsk();
 }
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('sw.js').then(r=>{ SWREG=r; pushBtn(); }).catch(()=>{});
