@@ -32,7 +32,7 @@ self.addEventListener('push', e => e.waitUntil((async () => {
     return self.registration.showNotification('تنبيه تجريبي ✓', { body: 'تنبيهات التذكير تعمل على هذا الجهاز.', icon, tag: 'rem-test', data: { url: base } });
   }
   if (!items.length) {   // يجب إظهار إشعار دائمًا (شرط آبل)، حتى لو تعذّر جلب التفاصيل
-    return self.registration.showNotification('لديك تذكير مستحق', { body: 'افتحي صِلة لعرض التذكيرات.', icon, tag: 'rem-generic', data: { url: base + '#rem' } });
+    return self.registration.showNotification('لديك تذكير مستحق', { body: 'افتحي رَوافد لعرض التذكيرات.', icon, tag: 'rem-generic', data: { url: base + '#rem' } });
   }
   await Promise.all(items.slice(0, 5).map(r => self.registration.showNotification('تذكير: ' + r.title, {
     body: (r.name ? r.name + ' · ' : '') + 'حان موعد المتابعة',

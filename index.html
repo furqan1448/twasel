@@ -8,10 +8,10 @@
 <meta name="theme-color" content="#8C1A2C">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="صِلة">
+<meta name="apple-mobile-web-app-title" content="رَوافد">
 <link rel="preconnect" href="https://script.google.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<title>صِلة للتواصل</title>
+<title>رَوافد للتواصل</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#f7f4f1;--card:#fff;--ink:#2b1a1d;--mut:#7b6c6f;--line:#ebe1e2;--acc:#8C1A2C;--acc2:#6f1423;--gold:#C2AA85;--gray:#B0AEAE;--soft:#f6ecee;--ok:#1f6b45;--warn:#9a5b00;--bad:#b3261e;--sh:0 4px 20px rgba(60,20,28,.07)}
@@ -209,7 +209,7 @@ a.btn{text-decoration:none}
 
 <!-- الدخول -->
 <section id="auth"><div class="split">
-  <div class="hero"><span class="bm"></span><h1>صلة للتواصل</h1><p class="gold">منصة موحدة لإدارة التواصل</p>
+  <div class="hero"><span class="bm"></span><h1>رَوافد للتواصل</h1><p class="gold">منصة موحدة لإدارة التواصل</p>
     <p style="margin-top:10px"></p>
     <ul><li><svg class="i"><use href="#sh"/></svg>سهولة إداراة المحادثات ومتابعتها</li><li><svg class="i"><use href="#in"/></svg>الواتساب والبريد في مكان واحد</li></ul></div>
   <div class="formside"><div class="fbox">
@@ -234,7 +234,7 @@ a.btn{text-decoration:none}
 
 <!-- الصندوق -->
 <section id="inbox">
-  <div class="top"><div class="in"><span class="bm"></span><div class="ttl"><b>صِلة</b><small>رسائلك في مكان واحد</small></div>
+  <div class="top"><div class="in"><span class="bm"></span><div class="ttl"><b>رَوافد</b><small>رسائلك في مكان واحد</small></div>
     <button class="ib act" id="navMsg" title="الرسائل" aria-label="الرسائل"><svg class="i"><use href="#in"/></svg></button>
     <button class="ib" id="navRem" title="التذكيرات" aria-label="التذكيرات"><svg class="i"><use href="#bl"/></svg><span class="nb" id="nb"></span></button>
     
@@ -651,7 +651,7 @@ $('cCopy').onclick=e=>cp('cUrl',e.target);
 function logout(){
   const t=TOKEN;
   /* الخروج الفوري من الواجهة أولًا، دون انتظار الخادم */
-  KEY='';TOKEN='';ME=null;ALL=[];SEL=new Set();REMS=[];RC=0;RDONE=0;$('alerts').innerHTML='';document.title='صِلة للتواصل';
+  KEY='';TOKEN='';ME=null;ALL=[];SEL=new Set();REMS=[];RC=0;RDONE=0;$('alerts').innerHTML='';document.title='رَوافد للتواصل';
   try{localStorage.removeItem('tok');localStorage.removeItem('me');}catch(e){}
   show('auth'); pwReset(); admUi();
   /* اشتراك التنبيهات يبقى في المتصفح (لا نلغيه) فلا تُطلب إعادة التفعيل عند الدخول؛ نفصل الجهاز عن الحساب في الخادم فقط */
@@ -802,7 +802,7 @@ async function loadRem(silent){
 function badge(){
   const t1=nextDay(Date.now()), n=REMS.filter(r=>!r.done&&r.due<t1).length, dueNow=REMS.filter(r=>!r.done&&r.due<=Date.now()).length, b=$('nb');
   b.textContent=n; b.style.display=n?'inline-grid':'none';
-  document.title=(dueNow?'('+dueNow+') ':'')+'صِلة للتواصل';
+  document.title=(dueNow?'('+dueNow+') ':'')+'رَوافد للتواصل';
 }
 function afterRem(){
   badge(); renderRem();
