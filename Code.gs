@@ -3,7 +3,7 @@
 // مهم: عند أي تحديث لا تنشئي «عملية نشر جديدة». استخدمي: نشر ← إدارة عمليات النشر ← ✏️ تعديل ← الإصدار: «إصدار جديد» ← نشر.
 // بهذه الطريقة يبقى رابط /exec نفسه، فلا يحتاج أي مستخدم لتغيير رابط Meta أو أي ربط آخر.
 const WA_VERIFY_TOKEN = 'furqan-wa-2026';   // أي كلمة تختارينها، وتكتبينها نفسها في Meta
-const VERSION = '2026-11-22-c';               // رقم الإصدار: يظهر عند فتح رابط النشر في المتصفح، ليُعرف هل النشر يعمل بآخر كود
+const VERSION = '2026-11-22-d';               // رقم الإصدار: يظهر عند فتح رابط النشر في المتصفح، ليُعرف هل النشر يعمل بآخر كود
 const MSG = 'الرسائل', USR = 'المستخدمون';
 const COLS = 11;                              // عدد أعمدة جدول الرسائل
 const DEL = 'محذوفة';                         // قديم: صفوف قديمة تُحذف تلقائيًا من الشيت ولا يُكتب هذا النص بعد الآن
@@ -64,6 +64,17 @@ function msgs_() {
   }
   return sh;
 }
+// ===== الإعلانات =====
+// ورقة «الإعلانات»: المعرف (وقت النشر) | التاريخ | العنوان | النص | الرابط | الناشرة. نصوص عامة موجّهة للجميع فلا تُشفَّر.
+// تنشرها المسؤولة من الموقع (زر الإعلان) فتظهر لكل مستخدمة كنافذة منبثقة مرة واحدة على كل جهاز.
+const ANN = 'الإعلانات', ANN_MAX = 40;
+function ann_() { return sheet_(ANN, ['المعرف', 'التاريخ', 'العنوان', 'النص', 'الرابط', 'الناشرة']); }
+function annRows_() {
+  const sh = ann_(), n = sh.getLastRow() - 1; if (n < 1) return [];
+  return sh.getRange(2, 1, n, 6).getValues().map(r => ({ id: String(r[0]), ts: Number(r[0]) || 0, title: String(r[2] || ''), text: String(r[3] || ''), link: String(r[4] || ''), by: String(r[5] || '') })).filter(a => a.ts);
+}
+function annLast_(rows) { const v = rows.reduce((m, a) => Math.max(m, a.ts), 0); PropertiesService.getScriptProperties().setProperty('ANN_LAST', String(v)); return v; }
+
 // ===== التذكيرات والمتابعات =====
 // تُحفظ في ورقة مستقلة «التذكيرات»، والعنوان والملاحظة وبيانات الشخص مشفّرة بنفس طريقة الرسائل. الموعد (رقم) والحالة فقط ظاهران.
 const REM = 'التذكيرات', RCOLS = 15;
@@ -193,9 +204,14 @@ function installPushTrigger() {
 function dueOk_(v) { v = Number(v); return isFinite(v) && v > 946684800000 && v < 4102444800000; }
 
 function users_() {
-  const sh = sheet_(USR, ['المعرف', 'الاسم', 'الجوال', 'البريد', 'التجزئة', 'الملح', 'الرمز', 'التاريخ']);
+  const sh = sheet_(USR, ['المعرف', 'الاسم', 'الجوال', 'البريد', 'التجزئة', 'الملح', 'الرمز', 'التاريخ', 'الدور']);
   const P = PropertiesService.getScriptProperties();
   if (!P.getProperty('PH_FMT')) { sh.getRange('C:C').setNumberFormat('@'); P.setProperty('PH_FMT', '1'); }   // مرة واحدة فقط (كانت تُنفَّذ مع كل طلب فتبطّئ الموقع)
+  if (!P.getProperty('ROLEH')) {   // عمود «الدور» (I): اكتبي فيه كلمة «مسؤول» أمام حساب المسؤولة فقط. يُنشأ العنوان مرة واحدة
+    if (sh.getMaxColumns() < 9) sh.insertColumnsAfter(sh.getMaxColumns(), 9 - sh.getMaxColumns());
+    if (!sh.getRange(1, 9).getValue()) sh.getRange(1, 9).setValue('الدور');
+    P.setProperty('ROLEH', '1');
+  }
   return sh;
 }
 
@@ -217,7 +233,11 @@ function norm_(p) {
 function hash_(pw, salt) {
   return Utilities.base64Encode(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, salt + pw));
 }
-function pub_(r) { return { id: r[0], name: r[1], phone: r[2], email: r[3] }; }
+// المسؤولة: من كُتب أمام حسابها في ورقة «المستخدمون» (العمود I «الدور») كلمة «مسؤول». لا تُعطى الصلاحية من الموقع أبدًا، بل من الشيت فقط.
+function isAdm_(r) { return !!r && /^(مس[ؤئ]ول[ةه]?|مدير[ةه]?|admin)$/i.test(String(r[8] || '').trim()); }
+function pub_(r) { return { id: r[0], name: r[1], phone: r[2], email: r[3], admin: isAdm_(r) }; }
+// عند أي تعديل يدوي في الشيت تُمسح ذاكرة المستخدمين المؤقتة، فتظهر صلاحية «مسؤول» فور كتابتها دون انتظار
+function onEdit(e) { try { CacheService.getScriptCache().remove('USERS'); } catch (err) {} }
 
 let UC_ = null;   // المستخدمون: تُقرأ من ذاكرة مؤقتة (10 دقائق) بدل قراءة الشيت مع كل طلب
 function allUsers_() {
@@ -225,7 +245,7 @@ function allUsers_() {
   const cache = CacheService.getScriptCache(), c = cache.get('USERS');
   if (c) { try { return (UC_ = JSON.parse(c)); } catch (e) {} }
   const sh = users_();
-  UC_ = sh.getLastRow() < 2 ? [] : sh.getRange(2, 1, sh.getLastRow() - 1, 8).getValues();
+  UC_ = sh.getLastRow() < 2 ? [] : sh.getRange(2, 1, sh.getLastRow() - 1, 9).getValues();
   try { cache.put('USERS', JSON.stringify(UC_), 600); } catch (e) {}
   return UC_;
 }
@@ -313,7 +333,7 @@ function doPost(e) {
     d = { action: 'waNotify', token: p[1], title: p[2], text: p.slice(3).join('§§') };
   } else d = JSON.parse(raw);
   const lock = LockService.getScriptLock();
-  const needLock = d.action !== 'list' && d.action !== 'keys' && d.action !== 'poll' && d.action !== 'remList' && d.action !== 'msgOne' && d.action !== 'remDue' && d.action !== 'pushTest' && d.action !== 'archPage';   // القراءة لا تنتظر بعضها، فيسرع الموقع
+  const needLock = d.action !== 'list' && d.action !== 'keys' && d.action !== 'poll' && d.action !== 'remList' && d.action !== 'msgOne' && d.action !== 'remDue' && d.action !== 'pushTest' && d.action !== 'archPage' && d.action !== 'annList' && d.action !== 'annAll';   // القراءة لا تنتظر بعضها، فيسرع الموقع
   if (needLock) lock.waitLock(20000);
   try {
     if (e.parameter && e.parameter.wh) { handleWhapi_(e.parameter.wh, d); return out_({ ok: true }); }   // Whapi.Cloud
@@ -391,7 +411,35 @@ function doPost(e) {
     const me = (d.action === 'waNotify' || d.action === 'mailIn') ? userByKey_(d.token) : userBySession_(d.token);
     if (!me) return out_({ ok: false, error: 'انتهت الجلسة، يرجى تسجيل الدخول.', auth: false });
 
-    if (d.action === 'poll') return out_({ ok: true, ch: chOf_(me[0]), rc: remChOf_(me[0]), mail: Number(PropertiesService.getScriptProperties().getProperty('ML_' + me[0]) || 0) });
+    if (d.action === 'poll') { const PP = PropertiesService.getScriptProperties(); return out_({ ok: true, ch: chOf_(me[0]), rc: remChOf_(me[0]), mail: Number(PP.getProperty('ML_' + me[0]) || 0), adm: isAdm_(me), an: Number(PP.getProperty('ANN_LAST') || 0) }); }
+
+    // ---- الإعلانات: القراءة لكل مستخدمة، والنشر والحذف للمسؤولة فقط (يُتحقق منها هنا في الخادم) ----
+    if (d.action === 'annList') {
+      const since = Number(d.since) || 0, min = Date.now() - 30 * 86400000;
+      const items = annRows_().filter(a => a.ts > since && a.ts > min).sort((a, b) => a.ts - b.ts).slice(-5).map(a => ({ id: a.id, ts: a.ts, title: a.title, text: a.text, link: a.link }));
+      return out_({ ok: true, items: items });
+    }
+    if (d.action === 'annAll' || d.action === 'annPost' || d.action === 'annDelete') {
+      if (!isAdm_(me)) return out_({ ok: false, error: 'هذه الصلاحية للمسؤولة فقط.' });
+      const sh = ann_();
+      if (d.action === 'annPost') {
+        const title = String(d.title || '').trim().slice(0, 100), text = String(d.text || '').trim().slice(0, 3000), link = String(d.link || '').trim().slice(0, 500);
+        if (!text) return out_({ ok: false, error: 'اكتبي نص الإعلان.' });
+        if (link && !/^https:\/\/[^\s]+$/i.test(link)) return out_({ ok: false, error: 'الرابط يجب أن يبدأ بـ https://' });
+        const id = Date.now(), row = sh.getLastRow() + 1;
+        sh.getRange(row, 3, 1, 3).setNumberFormat('@');   // نص صريح: حتى لو بدأ الإعلان بعلامة = لا يُعامل كمعادلة
+        sh.getRange(row, 1, 1, 6).setValues([[id, new Date(), title, text, link, me[1]]]);
+        const n = sh.getLastRow() - 1; if (n > ANN_MAX) sh.deleteRows(2, n - ANN_MAX);
+        PropertiesService.getScriptProperties().setProperty('ANN_LAST', String(id));
+        return out_({ ok: true, ts: id, items: annRows_().sort((a, b) => b.ts - a.ts).slice(0, 20) });
+      }
+      if (d.action === 'annDelete') {
+        const n = sh.getLastRow() - 1, ids = n > 0 ? sh.getRange(2, 1, n, 1).getValues() : [], i = ids.findIndex(x => String(x[0]) === String(d.id));
+        if (i >= 0) sh.deleteRow(i + 2);
+        annLast_(annRows_());
+      }
+      return out_({ ok: true, items: annRows_().sort((a, b) => b.ts - a.ts).slice(0, 20) });
+    }
     if (d.action === 'keys') return out_({ ok: true, key: me[6] });
     if (d.action === 'logout') { if (d.endpoint) setSubs_(me[0], subs_(me[0]).filter(s => s.e !== String(d.endpoint))); dropSession_(d.token); return out_({ ok: true }); }
 

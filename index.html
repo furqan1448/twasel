@@ -87,6 +87,13 @@ dialog{border:0;border-radius:18px;padding:22px;width:min(420px,92vw);background
 .arow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}.arow small{display:block;color:var(--mut);font-size:13px;margin:0}.arow b{display:block;direction:ltr;unicode-bidi:plaintext;text-align:right;word-break:break-all;font-weight:500}
 .ib.spin svg{animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(-360deg)}}
 dialog h3{margin:0 0 4px;font-size:20px}dialog p{margin:0;color:var(--mut)}.dact{display:flex;gap:8px;margin-top:18px;justify-content:flex-start}
+.pw{position:relative}.pw input{display:block;padding-inline-end:48px}
+.pwt{position:absolute;inset-block:0;inset-inline-end:0;width:46px;border:0;background:transparent;color:var(--mut);cursor:pointer;display:grid;place-items:center;border-radius:10px;padding:0}.pwt:hover,.pwt.on{color:var(--acc)}.pwt:focus-visible{outline:2px solid var(--acc)}
+#cdlg,#andlg{width:min(460px,94vw);max-height:90vh;overflow:auto}
+#cdlg h4{margin:20px 0 6px;font-size:15px}#cdlg textarea{min-height:130px}
+.cit{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line)}.cit>div{min-width:0}.cit b{display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cit small{color:var(--mut);font-size:12px}
+#anBody{white-space:pre-wrap;line-height:1.9;color:var(--ink);margin:12px 0 0;max-height:52vh;overflow:auto;word-break:break-word}
+#anHead{display:flex;align-items:center;gap:8px;color:var(--acc)}#anHead h3{margin:0;color:var(--ink)}#anHead small{margin-inline-start:auto;color:var(--mut);font-size:12px}
 #toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(30px);background:#2b1a1d;color:#fff;padding:11px 20px;border-radius:12px;opacity:0;pointer-events:none;transition:.25s;z-index:99;max-width:90vw}#toast.on{opacity:1;transform:translateX(-50%)}#toast.bad{background:var(--bad)}
 @media(max-width:760px){.split{grid-template-columns:1fr}.hero{padding:30px 22px}.hero ul,.hero:after{display:none}.hero h1{font-size:28px}.stats{gap:8px}.stat{padding:10px}.stat b{font-size:21px}.item{grid-template-columns:1fr}.av{display:none}.cts{grid-template-columns:1fr}}
 /* ===== الاتجاه الأول: شريط جانبي عنابي ملكي ===== */
@@ -180,6 +187,9 @@ a.btn{text-decoration:none}
 <symbol id="al" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M5 3 2 6M22 6l-3-3"/></symbol>
 <symbol id="dn" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></symbol>
 <symbol id="pp" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="ey" viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></symbol>
+<symbol id="ex" viewBox="0 0 24 24"><path d="M17.9 17.9A10.5 10.5 0 0 1 12 19c-6.4 0-10-7-10-7a18 18 0 0 1 4.1-4.9M9.9 5.2A9.7 9.7 0 0 1 12 5c6.4 0 10 7 10 7a18 18 0 0 1-2.2 3.2M1 1l22 22"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></symbol>
+<symbol id="mg" viewBox="0 0 24 24"><path d="M3 11v2a1 1 0 0 0 1 1h3l6 4.5V5.5L7 10H4a1 1 0 0 0-1 1Z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19.5 6a9 9 0 0 1 0 12"/></symbol>
 <symbol id="us" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
 </defs></svg>
 
@@ -228,6 +238,7 @@ a.btn{text-decoration:none}
     <button class="ib act" id="navMsg" title="الرسائل" aria-label="الرسائل"><svg class="i"><use href="#in"/></svg></button>
     <button class="ib" id="navRem" title="التذكيرات" aria-label="التذكيرات"><svg class="i"><use href="#bl"/></svg><span class="nb" id="nb"></span></button>
     
+    <button class="ib" id="annBtn" title="إعلان" aria-label="إعلان للمستخدمات" style="display:none"><svg class="i"><use href="#mg"/></svg></button>
     <button class="ib" id="reload" title="تحديث" aria-label="تحديث"><svg class="i"><use href="#ref"/></svg></button>
     <button class="ib" id="pwBtn" title="حسابي" aria-label="حسابي"><svg class="i"><use href="#us"/></svg></button>
     <button class="ib" id="outBtn" title="تسجيل الخروج" aria-label="تسجيل الخروج"><svg class="i"><use href="#out"/></svg></button></div></div>
@@ -293,6 +304,16 @@ a.btn{text-decoration:none}
   <div id="rdContact"><div class="r2"><div><label for="rdName">اسم الشخص (اختياري)</label><input id="rdName"></div><div><label for="rdPhone">جواله (اختياري)</label><input id="rdPhone" type="tel" inputmode="tel"></div></div></div>
   <div id="rdErr" role="alert"></div>
   <div class="dact"><button class="btn" id="rdOk" type="button"></button><button class="btn ghost" id="rdNo" type="button">إلغاء</button></div></dialog>
+<dialog id="cdlg"><h3>إعلان للمستخدمات</h3><p>يظهر كنافذة منبثقة لكل مستخدمة مرة واحدة عند فتحها للموقع.</p>
+  <label for="cT">العنوان (اختياري)</label><input id="cT" maxlength="100" placeholder="مثال: تحديث جديد على ربط البريد">
+  <label for="cB">نص الإعلان</label><textarea id="cB" maxlength="3000" placeholder="اكتبي التفاصيل أو خطوات الطريقة الجديدة، وكل سطر يظهر كما كتبتِه"></textarea>
+  <label for="cL">رابط (اختياري)</label><input id="cL" type="url" inputmode="url" dir="ltr" placeholder="https://" style="text-align:left">
+  <div id="cErr" role="alert" style="color:var(--bad);font-weight:500;margin-top:10px"></div>
+  <div class="dact"><button class="btn" id="cSend" type="button">نشر الإعلان</button><button class="btn ghost" id="cClose" type="button">إغلاق</button></div>
+  <h4>الإعلانات السابقة</h4><div id="cList"></div></dialog>
+<dialog id="andlg"><div id="anHead"><svg class="i"><use href="#mg"/></svg><h3 id="anT"></h3><small id="anN"></small></div>
+  <div id="anBody"></div>
+  <div class="dact"><button class="btn" id="anOk" type="button">حسنًا، فهمت</button><a class="btn ghost" id="anLink" target="_blank" rel="noopener noreferrer" style="display:none;text-decoration:none">فتح الرابط</a></div></dialog>
 <div id="alerts" aria-live="polite"></div>
 <div id="toast" role="status"></div>
 
@@ -359,12 +380,26 @@ $('send').onclick = async () => {
   $('send').disabled=false;
 };
 
+/* ---------- إظهار/إخفاء كلمة المرور: يشمل كل حقل كلمة مرور، حتى ما يُنشأ لاحقًا داخل النوافذ ---------- */
+function pwWrap(i){
+  if(i.dataset.pw||i.type!=='password') return; i.dataset.pw='1';
+  const w=document.createElement('div'); w.className='pw'; i.parentNode.insertBefore(w,i); w.appendChild(i);
+  const b=document.createElement('button'); b.type='button'; b.className='pwt'; b.innerHTML=ic('ey'); b.setAttribute('aria-label','إظهار كلمة المرور'); b.setAttribute('aria-pressed','false');
+  b.onpointerdown=e=>e.preventDefault();   /* لا تفقد الخانة التركيز فلا يُغلق لوح المفاتيح في الجوال */
+  b.onclick=()=>{ const on=i.type==='password'; i.type=on?'text':'password'; pwSet(b,on); i.focus(); };
+  w.appendChild(b);
+}
+function pwSet(b,on){ b.classList.toggle('on',on); b.innerHTML=ic(on?'ex':'ey'); b.setAttribute('aria-label',on?'إخفاء كلمة المرور':'إظهار كلمة المرور'); b.setAttribute('aria-pressed',on?'true':'false'); }
+function pwReset(){ document.querySelectorAll('.pw').forEach(w=>{ const i=w.querySelector('input'),b=w.querySelector('.pwt'); if(i&&i.type==='text'){ i.type='password'; if(b) pwSet(b,false); } }); }
+new MutationObserver(ms=>ms.forEach(m=>m.addedNodes.forEach(n=>{ if(n.nodeType!==1) return; if(n.matches('input[type=password]')) pwWrap(n); n.querySelectorAll('input[type=password]').forEach(pwWrap); }))).observe(document.body,{childList:true,subtree:true});
+document.querySelectorAll('input[type=password]').forEach(pwWrap);
+
 /* ---------- الدخول والتسجيل ---------- */
 const tab=l=>{$('fLogin').style.display=l?'block':'none';$('fReg').style.display=l?'none':'block';$('tLogin').className=l?'on':'';$('tReg').className=l?'':'on';$('aRes').textContent='';};
 $('tLogin').onclick=()=>tab(true); $('tReg').onclick=()=>tab(false);
 async function authDone(r){
   if(!r.ok){$('aRes').textContent=r.error||'تعذّر تنفيذ الطلب.';return;}
-  TOKEN=r.token; ME=r.user;
+  TOKEN=r.token; ME=r.user; pwReset();
   try{localStorage.setItem('tok',TOKEN);localStorage.setItem('me',JSON.stringify(ME));}catch(e){}
   openInbox();
 }
@@ -437,7 +472,7 @@ async function changeEmail(){
 
 /* ---------- الصندوق ---------- */
 function openInbox(){
-  show('inbox'); $('hi').textContent = 'أهلًا ' + ME.name;
+  show('inbox'); admUi(); $('hi').textContent = 'أهلًا ' + ME.name;
   $('myLink').textContent = location.origin + location.pathname + '?u=' + ME.id;
   setView('msg'); badge();
   const hm=/^#msg=(.+)$/.exec(location.hash);
@@ -614,7 +649,7 @@ function logout(){
   /* الخروج الفوري من الواجهة أولًا، دون انتظار الخادم */
   KEY='';TOKEN='';ME=null;ALL=[];SEL=new Set();REMS=[];RC=0;RDONE=0;$('alerts').innerHTML='';document.title='صِلة للتواصل';
   try{localStorage.removeItem('tok');localStorage.removeItem('me');}catch(e){}
-  show('auth');
+  show('auth'); pwReset(); admUi();
   /* اشتراك التنبيهات يبقى في المتصفح (لا نلغيه) فلا تُطلب إعادة التفعيل عند الدخول؛ نفصل الجهاز عن الحساب في الخادم فقط */
   idbPut('tok',null); PUSHON=false;
   if(!t) return;
@@ -641,13 +676,80 @@ async function poll(){
   try{
     const r=await post({action:'poll',token:TOKEN});
     if(r.auth===false){ logout(); }
-    else if(r.ok){ if(r.mail){MAILAT=r.mail;mailBtn();} if(r.ch!==CH) await load(true); if(r.rc!==undefined&&r.rc!==RC) await loadRem(true); }
+    else if(r.ok){ if(r.adm!==undefined&&!!r.adm!==!!(ME&&ME.admin)&&ME){ ME.admin=!!r.adm; saveMe(); admUi(); } if(r.an!==undefined) annCheck(r.an); if(r.mail){MAILAT=r.mail;mailBtn();} if(r.ch!==CH) await load(true); if(r.rc!==undefined&&r.rc!==RC) await loadRem(true); }
   }catch(e){}
   POLLING=false;
 }
 setInterval(poll,6000);
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&TOKEN&&$('inbox').style.display==='block') poll(); });
  $('outBtn').onclick=logout;
+
+/* ================= الإعلانات ================= */
+/* المسؤولة (من كُتب أمام حسابها «مسؤول» في ورقة المستخدمون) ترى زر الإعلان؛ والخادم يتحقق من الصلاحية في كل طلب */
+const admUi=()=>{ $('annBtn').style.display=(TOKEN&&ME&&ME.admin)?'':'none'; };
+const annKey=()=>'annSeen_'+(ME?ME.id:'');
+const annGet=()=>{ try{ const v=localStorage.getItem(annKey()); return v===null?null:Number(v); }catch(e){ return 0; } };
+const annSet=t=>{ try{ localStorage.setItem(annKey(),String(t)); }catch(e){} };
+let ANNQ=[], ANNBUSY=false;
+async function annCheck(an){
+  if(!TOKEN||!ME||ANNBUSY||ANNQ.length||document.querySelector('dialog[open]')) return;
+  let seen=annGet();
+  if(seen===null) seen=Math.min(an,Date.now()-3*DAYMS);   /* جهاز جديد: تُعرض إعلانات آخر 3 أيام فقط */
+  if(an<=seen) { if(annGet()===null) annSet(an); return; }
+  ANNBUSY=true;
+  try{
+    const r=await post({action:'annList',token:TOKEN,since:seen});
+    if(r.auth===false){ logout(); }
+    else if(r.ok){ if(r.items.length){ ANNQ=r.items; annNext(); } else annSet(an); }
+  }catch(e){}
+  ANNBUSY=false;
+}
+function annNext(){
+  const a=ANNQ[0]; if(!a) return;
+  $('anT').textContent=a.title||'إعلان';
+  $('anN').textContent=ANNQ.length>1?'متبقٍ '+ANNQ.length+' إعلانات':fmtAnn(a.ts);
+  $('anBody').textContent=a.text;
+  const L=$('anLink'); if(a.link&&/^https:\/\//i.test(a.link)){ L.href=a.link; L.style.display=''; } else L.style.display='none';
+  if(!$('andlg').open) $('andlg').showModal();
+}
+function annDone(){ const a=ANNQ.shift(); if(a) annSet(a.ts); if(ANNQ.length) annNext(); else if($('andlg').open) $('andlg').close(); }
+const fmtAnn=t=>new Date(t).toLocaleDateString('ar-SA-u-ca-gregory',{day:'numeric',month:'long',year:'numeric'});
+$('anOk').onclick=annDone;
+$('andlg').addEventListener('cancel',e=>{ e.preventDefault(); annDone(); });
+
+function annList(items){
+  const L=$('cList'); L.innerHTML='';
+  if(!items.length){ L.innerHTML='<p style="padding:8px 0">لا توجد إعلانات سابقة.</p>'; return; }
+  items.forEach(a=>{
+    const row=document.createElement('div'); row.className='cit';
+    const d=document.createElement('div'), b=document.createElement('b'), sm=document.createElement('small');
+    b.textContent=a.title||a.text.slice(0,60); sm.textContent=fmtAnn(a.ts); d.append(b,sm);
+    const x=document.createElement('button'); x.type='button'; x.className='btn ghost sm'; x.textContent='حذف';
+    x.onclick=async()=>{
+      if(!await dlg('حذف الإعلان',{text:'لن يظهر بعد الآن لمن لم يصلها بعد.',ok:'حذف',danger:true})) return;
+      try{ const r=await post({action:'annDelete',token:TOKEN,id:a.id}); if(r.ok){ annList(r.items); toast('تم حذف الإعلان'); } else toast(r.error||'تعذّر الحذف.',1); }catch(e){ toast('تعذّر الاتصال.',1); }
+    };
+    row.append(d,x); L.appendChild(row);
+  });
+}
+$('annBtn').onclick=async()=>{
+  $('cErr').textContent=''; $('cList').innerHTML='<p style="padding:8px 0">جارٍ التحميل…</p>'; $('cdlg').showModal();
+  try{ const r=await post({action:'annAll',token:TOKEN}); if(r.auth===false){ $('cdlg').close(); logout(); return; } if(r.ok) annList(r.items); else $('cList').textContent=r.error||'تعذّر التحميل.'; }
+  catch(e){ $('cList').textContent='تعذّر الاتصال.'; }
+};
+$('cClose').onclick=()=>$('cdlg').close();
+$('cSend').onclick=async()=>{
+  const text=$('cB').value.trim(); $('cErr').textContent='';
+  if(!text){ $('cErr').textContent='اكتبي نص الإعلان أولًا.'; return; }
+  const b=$('cSend'); b.disabled=true;
+  try{
+    const r=await post({action:'annPost',token:TOKEN,title:$('cT').value,text:text,link:$('cL').value});
+    if(r.auth===false){ $('cdlg').close(); logout(); return; }
+    if(!r.ok){ $('cErr').textContent=r.error||'تعذّر النشر.'; }
+    else{ annSet(r.ts); ['cT','cB','cL'].forEach(i=>$(i).value=''); annList(r.items); toast('تم نشر الإعلان ✓ سيظهر للمستخدمات خلال ثوانٍ.'); }
+  }catch(e){ $('cErr').textContent='تعذّر الاتصال، أعيدي المحاولة.'; }
+  b.disabled=false;
+};
 
 /* ================= التذكيرات والمتابعات ================= */
 let REMS=[], RC=0, RDONE=0, RTAB='اليوم', RQ='', RSORT='asc', RFROM='', RTO='', VIEW='msg', FOCUS=null;
