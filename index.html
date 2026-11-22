@@ -297,7 +297,7 @@ a.btn{text-decoration:none}
 <div id="toast" role="status"></div>
 
 <script>
-const API = 'https://script.google.com/macros/s/AKfycbxrQvkt6t93Zs5St3qrPc2jf4ezggcttcqH9l008fCMZPBhTq-Mm9bZAOFRtLafT0bQGg/exec';
+const API = 'https://script.google.com/macros/s/AKfycbzVkrCEDhotC93AMMHRFX9O8FCfj30-tozXPob7EP4scXWFFZWS6KNPbj_Dwzj2L-z_gg/exec';
 const $ = id => document.getElementById(id);
 const STATUSES = ['جديدة', 'تم الرد', 'لم يُرد عليها'], STAR = 'المميز بنجمة', ARCH = 'الأرشيف';
 const U = new URLSearchParams(location.search).get('u');
@@ -478,7 +478,7 @@ function render(){
     : 'تنبيه: الرسائل الأقدم من '+ARCHD+' يومًا تُنقل تلقائيًا إلى «الأرشيف» وتبقى فيه '+ARCHK+' يومًا ثم تُحذف، وتبقى الرسائل المميّزة بنجمة ظاهرة دائمًا.';
   if(inArch){
     const box=document.createElement('div'); box.style.cssText='display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px';
-    if(ARCHW&&ARCHW.n){ const w=document.createElement('span'); w.style.cssText='flex:1 1 240px;padding:10px 12px;border-radius:10px;border-right:4px solid var(--warn);background:color-mix(in srgb,var(--warn) 14%,transparent);color:var(--ink)'; w.textContent='⚠️ '+ARCHW.n+' رسالة ستُحذف نهائيًا '+archLeftTxt(ARCHW.at)+'. حمّلي نسخة منها قبل ذلك.'; box.appendChild(w); }
+    if(ARCHW&&ARCHW.n&&ARCHN){ const w=document.createElement('span'); w.style.cssText='flex:1 1 240px;padding:10px 12px;border-radius:10px;border-right:4px solid var(--warn);background:color-mix(in srgb,var(--warn) 14%,transparent);color:var(--ink)'; w.textContent='⚠️ '+ARCHW.n+' رسالة ستُحذف نهائيًا '+archLeftTxt(ARCHW.at)+'. حمّلي نسخة منها قبل ذلك.'; box.appendChild(w); }
     if(ARCHN){ const b=document.createElement('button'); b.className='btn sm'; b.innerHTML=ic('dn')+'تحميل رسائل الأرشيف'; b.onclick=downloadArchive; box.appendChild(b); }
     an.appendChild(box);
   }
@@ -549,7 +549,9 @@ async function star(x,on){
 }
 async function delArch(x){
   if(!await dlg('حذف الرسالة',{text:'سيتم حذف هذه الرسالة المؤرشفة نهائيًا ولا يمكن استرجاعها.',ok:'حذف نهائي',danger:true})) return;
-  ALL=ALL.filter(y=>y!==x); ARCHN=Math.max(0,(ARCHN||0)-1); render();
+  ALL=ALL.filter(y=>y!==x); ARCHN=Math.max(0,(ARCHN||0)-1);
+  if(ARCHW){ if(!ARCHN) ARCHW=null; else if(x.exp&&x.exp-Date.now()<=7*DAYMS) ARCHW.n=Math.max(0,ARCHW.n-1); }
+  render();
   const r=await postSafe({action:'archDelete',token:TOKEN,id:x.id});
   if(r.auth===false){logout();return;}
   (r.ok||r.error==='الرسالة غير موجودة.')?toast('تم الحذف نهائيًا'):(toast(r.error||'تعذّر الحذف',1),load());

@@ -3,7 +3,7 @@
 // مهم: عند أي تحديث لا تنشئي «عملية نشر جديدة». استخدمي: نشر ← إدارة عمليات النشر ← ✏️ تعديل ← الإصدار: «إصدار جديد» ← نشر.
 // بهذه الطريقة يبقى رابط /exec نفسه، فلا يحتاج أي مستخدم لتغيير رابط Meta أو أي ربط آخر.
 const WA_VERIFY_TOKEN = 'furqan-wa-2026';   // أي كلمة تختارينها، وتكتبينها نفسها في Meta
-const VERSION = '2026-11-22-b';               // رقم الإصدار: يظهر عند فتح رابط النشر في المتصفح، ليُعرف هل النشر يعمل بآخر كود
+const VERSION = '2026-11-22-c';               // رقم الإصدار: يظهر عند فتح رابط النشر في المتصفح، ليُعرف هل النشر يعمل بآخر كود
 const MSG = 'الرسائل', USR = 'المستخدمون';
 const COLS = 11;                              // عدد أعمدة جدول الرسائل
 const DEL = 'محذوفة';                         // قديم: صفوف قديمة تُحذف تلقائيًا من الشيت ولا يُكتب هذا النص بعد الآن
@@ -592,7 +592,7 @@ function doPost(e) {
           if (!ash || ash.getLastRow() < 2) continue;
           const vals = ash.getRange(2, 1, ash.getLastRow() - 1, COLS).getValues();
           const i = vals.findIndex(r => r[0] === d.id && (r[9] || first) === me[0]);
-          if (i >= 0) { ash.deleteRow(i + 2); return out_({ ok: true }); }
+          if (i >= 0) { ash.deleteRow(i + 2); setArchWarn_(me[0], archWarnCalc_(archMine_(me))); return out_({ ok: true }); }
         } catch (e) {}
       }
       return out_({ ok: false, error: 'الرسالة غير موجودة.' });
@@ -974,6 +974,13 @@ function archMine_(me) {
   mine.sort((a, b) => (new Date(b[1]).getTime() || 0) - (new Date(a[1]).getTime() || 0));
   return mine;
 }
+// تنبيه «ستُحذف قريبًا» يُحسب من الرسائل الموجودة فعلًا في الأرشيف (فيزول فور حذفها أو تحميلها وحذفها)
+function archWarnCalc_(rows) {
+  const now = Date.now(), life = ARCHIVE_KEEP_DAYS * 86400000, warnMs = ARCHIVE_WARN_DAYS * 86400000; let n = 0, at = 0;
+  rows.forEach(r => { const t = Number(r[COLS]); if (!t) return; const exp = t + life; if (exp - now <= warnMs) { n++; if (!at || exp < at) at = exp; } });
+  return n ? { n: n, at: at } : null;
+}
+function setArchWarn_(uid, w) { const P = PropertiesService.getScriptProperties(); if (w) P.setProperty('AW_' + uid, JSON.stringify(w)); else P.deleteProperty('AW_' + uid); }
 function archOut_(r) { const o = rowOut_(r), t = Number(r[COLS]); o.exp = t ? t + ARCHIVE_KEEP_DAYS * 86400000 : 0; return o; }
 
 function installArchiveTrigger() {
@@ -986,5 +993,5 @@ function installArchiveTrigger() {
 function archIds_() { return (PropertiesService.getScriptProperties().getProperty('ARCH_ALL') || '').split(',').filter(Boolean); }
 function listArchive_(me, d) {
   const limit = Math.min(Math.max(Number(d.limit) || 100, 1), 1000), mine = archMine_(me);
-  return out_({ ok: true, v: VERSION, archive: true, archDays: ARCHIVE_DAYS, archKeep: ARCHIVE_KEEP_DAYS, archWarn: archWarn_(me[0]), rows: mine.slice(0, limit).map(archOut_), total: mine.length });
+  return out_({ ok: true, v: VERSION, archive: true, archDays: ARCHIVE_DAYS, archKeep: ARCHIVE_KEEP_DAYS, archWarn: (function () { const w = archWarnCalc_(mine); setArchWarn_(me[0], w); return w; })(), rows: mine.slice(0, limit).map(archOut_), total: mine.length });
 }
