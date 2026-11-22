@@ -557,6 +557,8 @@ function render(){
     if(inArch&&x.exp){const dl=Math.max(0,Math.ceil((x.exp-Date.now())/DAYMS)),bd=document.createElement('span');bd.className='bd '+(dl<=7?'bad':'s');bd.textContent='تُحذف من الأرشيف '+archLeftTxt(x.exp);d.querySelector('.badges').appendChild(bd);}
     const acts=d.querySelector('.acts');
     const mk=(cl,ico,t,fn)=>{const b=document.createElement('button');b.className='btn sm '+cl;b.innerHTML=ico?ic(ico)+t:t;b.onclick=fn;acts.appendChild(b);};
+    const gm=x.source==='البريد'?gmailUrl(x):'';
+    if(gm){ const bd=d.querySelector('.body'); bd.style.cursor='pointer'; bd.title='افتح الرسالة في Gmail'; bd.onclick=()=>window.open(gm,'_blank','noopener'); mk('ghost','in','فتح في Gmail',()=>window.open(gm,'_blank','noopener')); }
     if(x.source==='واتساب'&&x.phone) mk('ghost','wa','فتح واتساب',()=>window.open('https://wa.me/'+String(x.phone).replace(/\D/g,''),'_blank','noopener'));
     if(inArch){ mk('danger','tr','حذف',()=>delArch(x)); L.appendChild(d); return; }
     STATUSES.filter(s=>s!==x.status&&s!=='جديدة').forEach(s=>mk('',s==='تم الرد'?'ck':'',s,()=>upd(x,{status:s})));
@@ -569,6 +571,8 @@ function render(){
   if(FOCUS){ const el=L.querySelector('[data-mid="'+String(FOCUS).replace(/([\\"])/g,'\\$1')+'"]'); if(el){ el.scrollIntoView({block:'center',behavior:'smooth'}); el.classList.add('flash'); } FOCUS=null; }
   more();
 }
+/* رابط محادثة Gmail: معرّف الرسالة في الموقع يحمل معرّف محادثة Gmail في آخره، والحساب يُحدَّد ببريدها المسجّل حتى لا يُفتح حساب آخر مسجّل في المتصفح */
+const gmailUrl=x=>{ const t=String(x&&x.id||'').split('_').slice(2).join('_'); return t?'https://mail.google.com/mail/?authuser='+encodeURIComponent((ME&&ME.email)||'0')+'#all/'+encodeURIComponent(t):''; };
 async function upd(x,patch){
   if(patch.status&&patch.status!==x.status){COUNTS[x.status]=Math.max(0,(COUNTS[x.status]||0)-1);COUNTS[patch.status]=(COUNTS[patch.status]||0)+1;}
   Object.assign(x,patch); render();
