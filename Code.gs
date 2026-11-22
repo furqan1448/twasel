@@ -3,7 +3,7 @@
 // مهم: عند أي تحديث لا تنشئي «عملية نشر جديدة». استخدمي: نشر ← إدارة عمليات النشر ← ✏️ تعديل ← الإصدار: «إصدار جديد» ← نشر.
 // بهذه الطريقة يبقى رابط /exec نفسه، فلا يحتاج أي مستخدم لتغيير رابط Meta أو أي ربط آخر.
 const WA_VERIFY_TOKEN = 'furqan-wa-2026';   // أي كلمة تختارينها، وتكتبينها نفسها في Meta
-const VERSION = '2026-11-21-b';               // رقم الإصدار: يظهر عند فتح رابط النشر في المتصفح، ليُعرف هل النشر يعمل بآخر كود
+const VERSION = '2026-11-22-a';               // رقم الإصدار: يظهر عند فتح رابط النشر في المتصفح، ليُعرف هل النشر يعمل بآخر كود
 const MSG = 'الرسائل', USR = 'المستخدمون';
 const COLS = 11;                              // عدد أعمدة جدول الرسائل
 const DEL = 'محذوفة';                         // قديم: صفوف قديمة تُحذف تلقائيًا من الشيت ولا يُكتب هذا النص بعد الآن
@@ -313,7 +313,7 @@ function doPost(e) {
     d = { action: 'waNotify', token: p[1], title: p[2], text: p.slice(3).join('§§') };
   } else d = JSON.parse(raw);
   const lock = LockService.getScriptLock();
-  const needLock = d.action !== 'list' && d.action !== 'keys' && d.action !== 'poll' && d.action !== 'remList' && d.action !== 'msgOne' && d.action !== 'remDue' && d.action !== 'pushTest';   // القراءة لا تنتظر بعضها، فيسرع الموقع
+  const needLock = d.action !== 'list' && d.action !== 'keys' && d.action !== 'poll' && d.action !== 'remList' && d.action !== 'msgOne' && d.action !== 'remDue' && d.action !== 'pushTest' && d.action !== 'archPage';   // القراءة لا تنتظر بعضها، فيسرع الموقع
   if (needLock) lock.waitLock(20000);
   try {
     if (e.parameter && e.parameter.wh) { handleWhapi_(e.parameter.wh, d); return out_({ ok: true }); }   // Whapi.Cloud
@@ -527,7 +527,13 @@ function doPost(e) {
       }
       const ord = new Map(mine.map((r, i) => [r, i]));
       mine.sort((a, b) => (new Date(b[1]).getTime() || 0) - (new Date(a[1]).getTime() || 0) || ord.get(b) - ord.get(a));   // الأحدث أولًا
-      return out_({ ok: true, v: VERSION, rows: mine.slice(0, limit).map(rowOut_), starredCount, counts, total: mine.length, archDays: ARCHIVE_DAYS, ch: chOf_(me[0]), mail: Number(PropertiesService.getScriptProperties().getProperty('ML_' + me[0]) || 0) });
+      return out_({ ok: true, v: VERSION, rows: mine.slice(0, limit).map(rowOut_), starredCount, counts, total: mine.length, archDays: ARCHIVE_DAYS, archKeep: ARCHIVE_KEEP_DAYS, archWarn: archWarn_(me[0]), ch: chOf_(me[0]), mail: Number(PropertiesService.getScriptProperties().getProperty('ML_' + me[0]) || 0) });
+    }
+
+    // ---- تحميل الرسائل المؤرشفة (صفحات) ----
+    if (d.action === 'archPage') {
+      const all = archMine_(me), off = Math.max(0, Number(d.offset) || 0), lim = Math.min(Math.max(Number(d.limit) || 200, 1), 300);
+      return out_({ ok: true, total: all.length, rows: all.slice(off, off + lim).map(archOut_) });
     }
 
     // ---- حذف رسالة مؤرشفة نهائيًا ----
@@ -811,6 +817,7 @@ function diag() {
 // لا تظهر الرسائل المؤرشفة في الموقع. المميّزة بنجمة تبقى دائمًا.
 // تشغيل مرة واحدة فقط من المحرر: installArchiveTrigger  (ثم امنحي الصلاحيات)
 const ARCHIVE_DAYS = 90, ARCHIVE_MAX_ROWS = 800000;
+const ARCHIVE_KEEP_DAYS = 30, ARCHIVE_WARN_DAYS = 7, REM_KEEP_DAYS = 30, ARCH_COLS = COLS + 1;   // بقاء الأرشيف / مدة التنبيه قبل الحذف / بقاء التذكيرات المكتملة
 
 function archSheet_(need) {
   const P = PropertiesService.getScriptProperties();
@@ -821,7 +828,7 @@ function archSheet_(need) {
   if (!sh) {
     ss = SpreadsheetApp.create('أرشيف صندوق الرسائل - ' + Utilities.formatDate(new Date(), 'Asia/Riyadh', 'yyyy-MM-dd'));
     sh = ss.getSheets()[0]; sh.setName('الأرشيف');
-    sh.appendRow(msgs_().getRange(1, 1, 1, COLS).getValues()[0]); sh.setFrozenRows(1);
+    sh.appendRow(msgs_().getRange(1, 1, 1, COLS).getValues()[0].concat(['تاريخ الأرشفة'])); sh.setFrozenRows(1);
     P.setProperty('ARCH_ID', ss.getId());
     P.setProperty('ARCH_ALL', (P.getProperty('ARCH_ALL') ? P.getProperty('ARCH_ALL') + ',' : '') + ss.getId());   // سجل بكل ملفات الأرشيف
   }
@@ -832,6 +839,11 @@ function archiveOld() {
   const lock = LockService.getScriptLock();
   lock.waitLock(30000);
   try {
+    [moveOld_, purgeArchive_, purgeReminders_].forEach(f => { try { f(); } catch (e) { Logger.log(f.name + ': ' + e); } });
+  } finally { lock.releaseLock(); }
+}
+function moveOld_() {
+  {
     const sh = msgs_(), n = sh.getLastRow() - 1;
     if (n < 1) return;
     const vals = sh.getRange(2, 1, n, COLS).getValues(), cutoff = Date.now() - ARCHIVE_DAYS * 86400000;
@@ -842,13 +854,68 @@ function archiveOld() {
     });
     if (!move.length) { Logger.log('لا توجد رسائل للأرشفة.'); return; }
     const ar = archSheet_(move.length);
-    ar.getRange(ar.getLastRow() + 1, 1, move.length, COLS).setValues(move);   // أولًا نكتب في الأرشيف، وبعدها فقط نحذف من الأصل
+    const stamp = Date.now();
+    ar.getRange(ar.getLastRow() + 1, 1, move.length, ARCH_COLS).setValues(move.map(r => r.concat([stamp])));   // أولًا نكتب في الأرشيف، وبعدها فقط نحذف من الأصل
     sh.getRange(2, 1, n, COLS).clearContent();
     if (keep.length) sh.getRange(2, 1, keep.length, COLS).setValues(keep);
     if (n > keep.length && sh.getMaxRows() - (keep.length + 1) > 1) sh.deleteRows(keep.length + 2, Math.min(n - keep.length, sh.getMaxRows() - (keep.length + 1)));
     Logger.log('تمت أرشفة ' + move.length + ' رسالة، وبقي ' + keep.length + ' في الصندوق.');
-  } finally { lock.releaseLock(); }
+  }
 }
+
+// ===== مدة بقاء الأرشيف والتذكيرات المكتملة =====
+// الرسائل تبقى في الأرشيف ARCHIVE_KEEP_DAYS يومًا من تاريخ نقلها إليه ثم تُحذف نهائيًا، وقبل ذلك بـ ARCHIVE_WARN_DAYS أيام
+// يظهر للمستخدمة تنبيه مع خيار تحميل رسائلها. والتذكيرات المكتملة تُحذف بعد REM_KEEP_DAYS يومًا من إكمالها.
+// يعمل كل ذلك ضمن الأرشفة اليومية archiveOld (الساعة 3 فجرًا) دون مشغّل إضافي.
+function purgeArchive_() {
+  const now = Date.now(), life = ARCHIVE_KEEP_DAYS * 86400000, warnMs = ARCHIVE_WARN_DAYS * 86400000, users = allUsers_(), first = users[0][0], warn = {};
+  archIds_().forEach(id => {
+    try {
+      const sh = SpreadsheetApp.openById(id).getSheetByName('الأرشيف'); if (!sh) return;
+      if (!sh.getRange(1, ARCH_COLS).getValue()) sh.getRange(1, ARCH_COLS).setValue('تاريخ الأرشفة');
+      const n = sh.getLastRow() - 1; if (n < 1) return;
+      const vals = sh.getRange(2, 1, n, ARCH_COLS).getValues(), keep = []; let stamped = false;
+      vals.forEach(r => {
+        let t = Number(r[COLS]);
+        if (!t) { t = now; r[COLS] = t; stamped = true; }   // رسائل أُرشفت قبل هذه الميزة: تبدأ مدتها من الآن
+        if (now - t >= life) return;                       // انتهت مدتها → تُحذف
+        keep.push(r);
+        const exp = t + life;
+        if (exp - now <= warnMs) { const o = r[9] || first, w = warn[o] || (warn[o] = { n: 0, at: exp }); w.n++; if (exp < w.at) w.at = exp; }
+      });
+      if (keep.length === n && !stamped) return;
+      sh.getRange(2, 1, n, ARCH_COLS).clearContent();
+      if (keep.length) sh.getRange(2, 1, keep.length, ARCH_COLS).setValues(keep);
+      if (n > keep.length && sh.getMaxRows() - (keep.length + 1) > 1) sh.deleteRows(keep.length + 2, Math.min(n - keep.length, sh.getMaxRows() - (keep.length + 1)));
+      Logger.log('حُذفت ' + (n - keep.length) + ' رسالة منتهية من الأرشيف.');
+    } catch (e) { Logger.log('purgeArchive_ ' + id + ': ' + e); }
+  });
+  const P = PropertiesService.getScriptProperties();
+  users.forEach(u => { const w = warn[u[0]]; if (w) P.setProperty('AW_' + u[0], JSON.stringify(w)); else P.deleteProperty('AW_' + u[0]); });
+}
+function purgeReminders_() {
+  const sh = rems_(), n = sh.getLastRow() - 1; if (n < 1) return;
+  const vals = sh.getRange(2, 1, n, 5).getValues(), cut = Date.now() - REM_KEEP_DAYS * 86400000, extra = sh.getRange(2, 13, n, 1).getValues(), del = [];
+  vals.forEach((r, i) => { if (r[4] === 'مكتمل') { const t = Number(extra[i][0]) || Number(r[3]) || 0; if (t && t < cut) del.push(i + 2); } });
+  del.reverse().forEach(row => sh.deleteRow(row));   // من الأسفل حتى لا تتغير أرقام الصفوف
+  if (del.length) Logger.log('حُذف ' + del.length + ' تذكير مكتمل قديم.');
+}
+function archWarn_(uid) {
+  try { const w = JSON.parse(PropertiesService.getScriptProperties().getProperty('AW_' + uid) || 'null'); return w && w.at > Date.now() ? w : null; } catch (e) { return null; }
+}
+// رسائل هذه المستخدمة فقط من كل ملفات الأرشيف (خام)، الأحدث أولًا
+function archMine_(me) {
+  const first = allUsers_()[0][0], mine = [];
+  archIds_().forEach(id => {
+    try {
+      const ash = SpreadsheetApp.openById(id).getSheetByName('الأرشيف');
+      if (ash && ash.getLastRow() >= 2) ash.getRange(2, 1, ash.getLastRow() - 1, ARCH_COLS).getValues().forEach(r => { if ((r[9] || first) === me[0]) mine.push(r); });
+    } catch (e) {}
+  });
+  mine.sort((a, b) => (new Date(b[1]).getTime() || 0) - (new Date(a[1]).getTime() || 0));
+  return mine;
+}
+function archOut_(r) { const o = rowOut_(r), t = Number(r[COLS]); o.exp = t ? t + ARCHIVE_KEEP_DAYS * 86400000 : 0; return o; }
 
 function installArchiveTrigger() {
   ScriptApp.getProjectTriggers().forEach(t => { if (t.getHandlerFunction() === 'archiveOld') ScriptApp.deleteTrigger(t); });
@@ -858,15 +925,7 @@ function installArchiveTrigger() {
 
 
 function archIds_() { return (PropertiesService.getScriptProperties().getProperty('ARCH_ALL') || '').split(',').filter(Boolean); }
-// يقرأ رسائل هذه المستخدمة فقط من كل ملفات الأرشيف، الأحدث أولًا
 function listArchive_(me, d) {
-  const first = allUsers_()[0][0], limit = Math.min(Math.max(Number(d.limit) || 100, 1), 1000), mine = [];
-  archIds_().forEach(id => {
-    try {
-      const ash = SpreadsheetApp.openById(id).getSheetByName('الأرشيف');
-      if (ash && ash.getLastRow() >= 2) ash.getRange(2, 1, ash.getLastRow() - 1, COLS).getValues().forEach(r => { if ((r[9] || first) === me[0]) mine.push(r); });
-    } catch (e) {}
-  });
-  mine.sort((a, b) => (new Date(b[1]).getTime() || 0) - (new Date(a[1]).getTime() || 0));
-  return out_({ ok: true, v: VERSION, archive: true, archDays: ARCHIVE_DAYS, rows: mine.slice(0, limit).map(rowOut_), total: mine.length });
+  const limit = Math.min(Math.max(Number(d.limit) || 100, 1), 1000), mine = archMine_(me);
+  return out_({ ok: true, v: VERSION, archive: true, archDays: ARCHIVE_DAYS, archKeep: ARCHIVE_KEEP_DAYS, archWarn: archWarn_(me[0]), rows: mine.slice(0, limit).map(archOut_), total: mine.length });
 }

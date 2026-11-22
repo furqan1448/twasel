@@ -176,6 +176,7 @@ a.btn{text-decoration:none}
 <symbol id="in" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2M5.5 5h13L22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6Z"/></symbol>
 <symbol id="bl" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></symbol>
 <symbol id="al" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M5 3 2 6M22 6l-3-3"/></symbol>
+<symbol id="dn" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></symbol>
 <symbol id="pp" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
 </defs></svg>
 
@@ -298,7 +299,7 @@ const API = 'https://script.google.com/macros/s/AKfycbw8WPNkB7LMWXZPB8IHlR-2RUH3
 const $ = id => document.getElementById(id);
 const STATUSES = ['جديدة', 'تم الرد', 'لم يُرد عليها'], STAR = 'المميز بنجمة', ARCH = 'الأرشيف';
 const U = new URLSearchParams(location.search).get('u');
-let CH = 0, POLLING = false, MAILAT = 0, TOKEN = '', KEY = '', ME = null, ALL = [], STARN = 0, COUNTS = {}, ARCHN = null, ARCHD = 90, LIMIT = 50, FILTER = 'جديدة', SEL = new Set();
+let CH = 0, POLLING = false, MAILAT = 0, TOKEN = '', KEY = '', ME = null, ALL = [], STARN = 0, COUNTS = {}, ARCHN = null, ARCHD = 90, ARCHK = 30, ARCHW = null, LIMIT = 50, FILTER = 'جديدة', SEL = new Set();
 const show = id => ['pub','auth','inbox'].forEach(s => $(s).style.display = s===id ? 'block' : 'none');
 const disp = p => { p = String(p||''); return p.startsWith('966') ? '0' + p.slice(3) : p; };
 const ic = n => '<svg class="i"><use href="#'+n+'"/></svg>';
@@ -422,6 +423,7 @@ async function load(silent){
     if(!r.ok){if(!silent)$('list').textContent=r.error||'تعذّر التحميل.';return;}
     $('ver').textContent = r.v ? ('إصدار الخادم: '+r.v) : 'تنبيه: الخادم يعمل بكود قديم، يرجى نشر إصدار جديد من Apps Script.';
     if(r.archDays) ARCHD=r.archDays;
+    if(r.archKeep) ARCHK=r.archKeep; ARCHW=r.archWarn||null; setTimeout(archAlert,700);
     if(inArch){ ALL=r.rows; ARCHN=r.total||0; render(); return; }
     ALL=r.rows; STARN=r.starredCount||0; COUNTS=r.counts||{}; MAILAT=r.mail||0; CH=r.ch||0; mailBtn(); render();
   }catch(e){if(!silent)$('list').textContent='تعذّر تحميل الرسائل.';}
@@ -436,9 +438,15 @@ function render(){
     const b=document.createElement('button'); b.className='chip'+(s===FILTER?' on':''); b.innerHTML=(s===STAR?ic('st')+' ':'')+s+(c==null?'':' ('+c+')');
     b.onclick=()=>{const sw=FILTER===STAR||s===STAR||FILTER===ARCH||s===ARCH; FILTER=s; SEL.clear(); if(sw)LIMIT=50; sw?load():render();}; f.appendChild(b);
   });
-  $('archNote').textContent = inStar ? '' : inArch
-    ? 'هنا الرسائل الأقدم من '+ARCHD+' يومًا. تُعرض للاطّلاع والحذف فقط.'
-    : 'تنبيه: الرسائل الأقدم من '+ARCHD+' يومًا تُنقل تلقائيًا إلى «الأرشيف»، وتبقى الرسائل المميّزة بنجمة ظاهرة دائمًا.';
+  const an=$('archNote'); an.textContent = inStar ? '' : inArch
+    ? 'الرسائل المؤرشفة تبقى '+ARCHK+' يومًا من تاريخ نقلها إلى الأرشيف ثم تُحذف نهائيًا. تُعرض للاطّلاع والحذف فقط.'
+    : 'تنبيه: الرسائل الأقدم من '+ARCHD+' يومًا تُنقل تلقائيًا إلى «الأرشيف» وتبقى فيه '+ARCHK+' يومًا ثم تُحذف، وتبقى الرسائل المميّزة بنجمة ظاهرة دائمًا.';
+  if(inArch){
+    const box=document.createElement('div'); box.style.cssText='display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px';
+    if(ARCHW&&ARCHW.n){ const w=document.createElement('span'); w.style.cssText='flex:1 1 240px;padding:10px 12px;border-radius:10px;border-right:4px solid var(--warn);background:color-mix(in srgb,var(--warn) 14%,transparent);color:var(--ink)'; w.textContent='⚠️ '+ARCHW.n+' رسالة ستُحذف نهائيًا '+archLeftTxt(ARCHW.at)+'. حمّلي نسخة منها قبل ذلك.'; box.appendChild(w); }
+    if(ARCHN){ const b=document.createElement('button'); b.className='btn sm'; b.innerHTML=ic('dn')+'تحميل رسائل الأرشيف'; b.onclick=downloadArchive; box.appendChild(b); }
+    an.appendChild(box);
+  }
   const L=$('list'); L.innerHTML='';
   const rows=ALL.filter(x=>inStar||inArch||x.status===FILTER).sort((a,b)=>(new Date(b.date)||0)-(new Date(a.date)||0));
   const vis=new Set(rows.map(x=>x.id)); SEL.forEach(id=>{if(!vis.has(id))SEL.delete(id);});
@@ -476,6 +484,7 @@ function render(){
     if(x.note){const n=d.querySelector('.note');n.style.display='block';n.textContent='ملاحظة: '+x.note;}
     const pr=REMS.filter(q=>q.msgId===x.id&&!q.done).sort((a,b)=>a.due-b.due)[0];
     if(pr){const bd=document.createElement('span');bd.className='bd '+(pr.due<=Date.now()?'bad':'warn');bd.innerHTML=ic('al');bd.appendChild(document.createTextNode('تذكير: '+fmtDue(pr.due)));d.querySelector('.badges').appendChild(bd);}
+    if(inArch&&x.exp){const dl=Math.max(0,Math.ceil((x.exp-Date.now())/DAYMS)),bd=document.createElement('span');bd.className='bd '+(dl<=7?'bad':'s');bd.textContent='تُحذف من الأرشيف '+archLeftTxt(x.exp);d.querySelector('.badges').appendChild(bd);}
     const acts=d.querySelector('.acts');
     const mk=(cl,ico,t,fn)=>{const b=document.createElement('button');b.className='btn sm '+cl;b.innerHTML=ico?ic(ico)+t:t;b.onclick=fn;acts.appendChild(b);};
     if(x.source==='واتساب'&&x.phone) mk('ghost','wa','فتح واتساب',()=>window.open('https://wa.me/'+String(x.phone).replace(/\D/g,''),'_blank','noopener'));
@@ -672,6 +681,7 @@ function renderRem(){
   if(RTO){ const b=nextDay(new Date(RTO+'T00:00').getTime()); rows=rows.filter(r=>r.due<b); }
   rows.sort(RSORT==='asc'?(a,b)=>a.due-b.due:RSORT==='desc'?(a,b)=>b.due-a.due:(a,b)=>b.created-a.created);
   const L=$('rList'); L.innerHTML='';
+  if(RTAB==='المكتملة'){ const n=document.createElement('div'); n.style.cssText='font-size:13px;color:var(--mut);margin:0 2px 10px'; n.textContent='تُحذف التذكيرات المكتملة تلقائيًا بعد '+REM_KEEP+' يومًا من إكمالها.'; L.appendChild(n); }
   if(!rows.length){
     L.innerHTML='<div class="empty">'+ic('bl')+'<p></p></div>';
     L.querySelector('p').textContent=REMS.length?'لا توجد تذكيرات مطابقة.':'لا توجد تذكيرات بعد. اضغطي «ذكّرني» داخل أي محادثة أو «تذكير جديد».';
@@ -694,7 +704,7 @@ function remCard(r){
   if(k==='late') add('bad',lateTxt(r),'al');
   else if(k==='today') add('warn',r.due<Date.now()?'فات موعده اليوم':'مستحق اليوم','al');
   else if(k==='up') add('s','قادم');
-  else add('ok','اكتمل '+fmtDue(r.doneAt||r.due),'ck');
+  else { add('ok','اكتمل '+fmtDue(r.doneAt||r.due),'ck'); add('s','تُحذف '+archLeftTxt((r.doneAt||r.due)+REM_KEEP*DAYMS)); }
   if(r.source) add('s',r.source,srcIc(r.source));
   const acts=d.querySelector('.acts'), mk=(cl,ico,t,fn)=>{ const b=document.createElement('button'); b.className='btn sm '+cl; b.innerHTML=ic(ico)+t; b.onclick=fn; acts.appendChild(b); };
   if(r.msgId){ const a=document.createElement('a'); a.className='btn sm'; a.href='#msg='+encodeURIComponent(r.msgId); a.innerHTML=ic('in')+'فتح المحادثة'; a.onclick=e=>{ e.preventDefault(); openConv(r); }; acts.appendChild(a); }
@@ -924,6 +934,47 @@ if('serviceWorker' in navigator){
     const h=u.split('#')[1]||'';
     if(h.indexOf('msg=')===0) openConvById(decodeURIComponent(h.slice(4))); else { setView('rem'); loadRem(true); }
   });
+}
+
+/* ================= الأرشيف: تنبيه الحذف + تحميل الرسائل ================= */
+const REM_KEEP=30;
+async function downloadArchive(){
+  toast('جارٍ تجهيز الملف…'); let off=0,total=1,rows=[];
+  try{
+    while(off<total){
+      const r=await post({action:'archPage',token:TOKEN,offset:off,limit:200});
+      if(r.auth===false){ logout(); return; }
+      if(!r.ok){ toast(r.error==='طلب غير معروف.'?'يلزم نشر إصدار جديد من Apps Script أولًا.':(r.error||'تعذّر التحميل.'),1); return; }
+      rows=rows.concat(r.rows); total=r.total; off+=200; if(!r.rows.length) break;
+    }
+  }catch(e){ toast('تعذّر الاتصال.',1); return; }
+  if(!rows.length){ toast('لا توجد رسائل مؤرشفة لتحميلها.'); return; }
+  const esc=v=>{ let s=String(v==null?'':v); if(/^[=+\-@\t\r]/.test(s)) s="'"+s; return '"'+s.replace(/"/g,'""')+'"'; };
+  const fd=t=>{ const d=new Date(t); return isNaN(d)?'':dStr(d)+' '+tStr(d); };
+  const lines=[['التاريخ','الاسم','الجوال','البريد','المصدر','الحالة','الرسالة','الملاحظة','تُحذف من الأرشيف بتاريخ'].map(esc).join(',')];
+  rows.forEach(x=>lines.push([esc(fd(x.date)),esc(x.name),'"=""'+String(x.phone||'').replace(/\D/g,'')+'"""',esc(x.email),esc(x.source),esc(x.status),esc(x.message),esc(x.note),esc(x.exp?dStr(x.exp):'')].join(',')));
+  const name='الرسائل-المؤرشفة-'+dStr(Date.now())+'.csv', blob=new Blob(['\uFEFF'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
+  try{
+    const file=new File([blob],name,{type:'text/csv'});
+    if(/iPhone|iPad|Android/i.test(navigator.userAgent)&&navigator.canShare&&navigator.canShare({files:[file]})){ await navigator.share({files:[file]}); toast('تم تجهيز الملف ('+rows.length+' رسالة).'); return; }
+  }catch(e){ if(e&&e.name==='AbortError') return; }
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },1500);
+  toast('تم تحميل الملف ('+rows.length+' رسالة).');
+}
+function archLeftTxt(at){ const n=Math.max(0,Math.ceil((at-Date.now())/DAYMS)); return n<=1?'خلال يوم':n===2?'خلال يومين':n<=10?'خلال '+n+' أيام':'خلال '+n+' يومًا'; }
+function archAlert(){   /* مرة واحدة يوميًا عند وجود رسائل ستُحذف قريبًا */
+  if(!ARCHW||!ARCHW.n||!TOKEN) return;
+  const k=dStr(Date.now()); try{ if(localStorage.getItem('archwarn')===k) return; localStorage.setItem('archwarn',k); }catch(e){}
+  const a=document.createElement('div'); a.className='al';
+  a.innerHTML='<div class="alh">'+ic('al')+'<b>تنبيه: الأرشيف</b><button class="alx" type="button" aria-label="إغلاق">×</button></div><div class="alb" style="cursor:default"><div class="aT">رسائل الأرشيف ستُحذف قريبًا</div><div class="aW"></div></div><div class="acts"></div>';
+  a.querySelector('.aW').textContent=ARCHW.n+' رسالة ستُحذف نهائيًا من الأرشيف '+archLeftTxt(ARCHW.at)+'. يمكنك تحميل نسخة منها قبل ذلك.';
+  a.querySelector('.alx').onclick=()=>a.remove();
+  const acts=a.querySelector('.acts'), mk=(cl,ico,t,fn)=>{ const b=document.createElement('button'); b.type='button'; b.className='btn sm '+cl; b.innerHTML=ic(ico)+t; b.onclick=fn; acts.appendChild(b); };
+  mk('','dn','تحميل الرسائل',()=>{ a.remove(); downloadArchive(); });
+  mk('ghost','in','عرض الأرشيف',()=>{ a.remove(); setView('msg'); FILTER=ARCH; SEL.clear(); LIMIT=50; load(); });
+  mk('ghost','','لاحقًا',()=>a.remove());
+  $('alerts').appendChild(a);
 }
 
 /* ---------- البداية ---------- */
