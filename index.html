@@ -164,7 +164,7 @@ a.btn{text-decoration:none}
 .alq{gap:6px;flex-wrap:wrap;margin:0 0 8px}
 .al .acts{margin-top:0}
 @media(max-width:760px){.top .nb{position:absolute;top:-6px;inset-inline-start:-6px;margin:0}.rbar{grid-template-columns:1fr 1fr}.rbar .rs{grid-column:1/-1}#alerts{top:8px;left:8px;right:8px;width:auto}}
-#tgd{width:min(440px,92vw)}#tgd h3{margin:0 0 4px}.tgl{display:flex;flex-direction:column;gap:6px;margin:12px 0;max-height:46vh;overflow:auto}.tgr{display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;cursor:pointer}.tgr span{flex:1}.tgr input[type=checkbox]{width:18px;height:18px;margin:0}.tga{display:flex;gap:8px;margin-bottom:6px}.tga input{flex:1;min-width:0}.tgg{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:14px}.tgc{font:inherit;text-align:right;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}.tgc b{font-size:15px;display:flex;gap:6px;align-items:center}.tgc .bd{align-self:flex-start}.tgc:hover{border-color:var(--acc)}
+#tgd{width:min(440px,92vw)}#tgd h3{margin:0 0 4px}.tgl{display:flex;flex-direction:column;gap:6px;margin:12px 0;max-height:46vh;overflow:auto}.tgr{display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;cursor:pointer}.tgr span{flex:1}.tgr input[type=checkbox]{width:18px;height:18px;margin:0}.tga{display:flex;gap:8px;margin-bottom:6px}.tga input{flex:1;min-width:0}.tgg{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:14px}.tgc{font:inherit;text-align:right;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}.tgc b{font-size:15px;display:flex;gap:6px;align-items:center}.tgc .bd{align-self:flex-start}.tgc:hover{border-color:var(--acc)}:root{--pink:#b0315f}@media (prefers-color-scheme:dark){:root{--pink:#f08aae}}.tgd{width:10px;height:10px;border-radius:50%;flex:none;display:inline-block}
 </style>
 </head>
 <body>
@@ -327,7 +327,7 @@ a.btn{text-decoration:none}
 <div id="toast" role="status"></div>
 
 <script>
-const API = 'https://script.google.com/macros/s/AKfycbxQUowsk6xkZYGwLEQc3aR8YMgbhPBybsU-0mr7dXDX3hyVUG3A742TCdRCOfOe9AplTA/exec';
+const API = 'https://script.google.com/macros/s/AKfycbyrwcCl-Ui1FK_T-fu386dNoyaPnk_hk6H9n2MJGNg695BwMXOkV2PhyZJQqlZS1cvcgg/exec';
 const $ = id => document.getElementById(id);
 const STATUSES = ['جديدة', 'تم الرد', 'لم يُرد عليها'], STAR = 'المميز بنجمة', ARCH = 'الأرشيف';
 const U = new URLSearchParams(location.search).get('u');
@@ -567,7 +567,7 @@ function render(){
     const pr=REMS.filter(q=>q.msgId===x.id&&!q.done).sort((a,b)=>a.due-b.due)[0];
     if(pr){const bd=document.createElement('span');bd.className='bd '+(pr.due<=Date.now()?'bad':'warn');bd.innerHTML=ic('al');bd.appendChild(document.createTextNode('تذكير: '+fmtDue(pr.due)));d.querySelector('.badges').appendChild(bd);}
     if(inArch&&x.exp){const dl=Math.max(0,Math.ceil((x.exp-Date.now())/DAYMS)),bd=document.createElement('span');bd.className='bd '+(dl<=7?'bad':'s');bd.textContent='تُحذف من الأرشيف '+archLeftTxt(x.exp);d.querySelector('.badges').appendChild(bd);}
-    (x.tags||[]).forEach(n=>{const bd=document.createElement('span');bd.className='bd '+tagCls(n);bd.style.cursor='pointer';bd.title='عرض رسائل هذا التصنيف';bd.innerHTML=ic('tg');bd.appendChild(document.createTextNode(n));bd.onclick=()=>tagFilter(n);d.querySelector('.badges').appendChild(bd);});
+    (x.tags||[]).forEach(n=>{const bd=document.createElement('span');bd.className='bd';tagPaint(bd,n);bd.style.cursor='pointer';bd.title='عرض رسائل هذا التصنيف';bd.appendChild(tagDot(n));bd.appendChild(document.createTextNode(n));bd.onclick=()=>tagFilter(n);d.querySelector('.badges').appendChild(bd);});
     const acts=d.querySelector('.acts');
     const mk=(cl,ico,t,fn)=>{const b=document.createElement('button');b.className='btn sm '+cl;b.innerHTML=ico?ic(ico)+t:t;b.onclick=fn;acts.appendChild(b);};
     const gm=x.source==='البريد'?gmailUrl(x):'';
@@ -588,14 +588,16 @@ function render(){
 /* رابط محادثة Gmail: معرّف الرسالة في الموقع يحمل معرّف محادثة Gmail في آخره، والحساب يُحدَّد ببريدها المسجّل حتى لا يُفتح حساب آخر مسجّل في المتصفح */
 const gmailUrl=x=>{ const t=String(x&&x.id||'').split('_').slice(2).join('_'); return t?'https://mail.google.com/mail/?authuser='+encodeURIComponent((ME&&ME.email)||'0')+'#all/'+encodeURIComponent(t):''; };
 /* ===== التصنيفات ===== */
-const tagCls=n=>n==='عاجل'?'bad':n==='مهم'?'warn':n==='مالي'?'ok':'';
+const tagClr=n=>n==='عاجل'?'var(--bad)':n==='مهم'?'var(--pink)':n==='مالي'?'var(--ok)':'var(--acc)';
+const tagDot=n=>{const s=document.createElement('span');s.className='tgd';s.style.background=tagClr(n);return s;};
+const tagPaint=(el,n)=>{el.style.color=tagClr(n);el.style.background='color-mix(in srgb,'+tagClr(n)+' 14%,transparent)';};
 const tagClean=s=>String(s||'').replace(/[|\n]/g,' ').trim().slice(0,24);
 function tagFilter(n){ if(FILTER===ARCH||FILTER===STAR) FILTER='جديدة'; TAGF=(TAGF===n&&VIEW==='msg')?'':n; SEL.clear(); LIMIT=50; setView('msg'); load(); }
 function renderTag(){
   const g=$('tgGrid'); if(!g) return; g.innerHTML='';
   if(!TAGS.length){ g.innerHTML='<div class="empty"><p>لا توجد تصنيفات. اضغطي «إدارة التصنيفات» لإضافة تصنيف.</p></div>'; return; }
-  TAGS.forEach(n=>{ const b=document.createElement('button'); b.className='tgc'; const h=document.createElement('b'); h.innerHTML=ic('tg'); h.appendChild(document.createTextNode(n));
-    const c=document.createElement('span'); c.className='bd '+tagCls(n); c.textContent=(TAGC[n]||0)+' رسالة'; b.append(h,c); b.onclick=()=>tagFilter(n); g.appendChild(b); });
+  TAGS.forEach(n=>{ const b=document.createElement('button'); b.className='tgc'; const h=document.createElement('b'); h.appendChild(tagDot(n)); h.appendChild(document.createTextNode(n)); if(n==='عاجل'||n==='مهم') h.style.color=tagClr(n);
+    const c=document.createElement('span'); c.className='bd'; tagPaint(c,n); c.textContent=(TAGC[n]||0)+' رسالة'; b.append(h,c); b.onclick=()=>tagFilter(n); g.appendChild(b); });
 }
 function tgBox(title){ let d=$('tgd'); if(!d){d=document.createElement('dialog');d.id='tgd';document.body.appendChild(d);} d.innerHTML=''; const h=document.createElement('h3'); h.textContent=title; d.appendChild(h); return d; }
 function tgBtn(cls,txt,fn){ const b=document.createElement('button'); b.className='btn '+cls; b.textContent=txt; b.onclick=fn; return b; }
@@ -605,7 +607,7 @@ function tgAddRow(onAdd){ const A=document.createElement('div'); A.className='tg
 async function tagDlg(x){
   const d=tgBox('تصنيف الرسالة'), sel=new Set(x.tags||[]), L=document.createElement('div'); L.className='tgl';
   const draw=()=>{ L.innerHTML=''; if(!TAGS.length) L.textContent='لا توجد تصنيفات، أضيفي تصنيفًا جديدًا.';
-    TAGS.forEach(n=>{const r=document.createElement('label'),c=document.createElement('input'),s=document.createElement('span'); r.className='tgr'; c.type='checkbox'; c.checked=sel.has(n); c.onchange=()=>{c.checked?sel.add(n):sel.delete(n);}; s.textContent=n; r.append(c,s); L.appendChild(r);}); };
+    TAGS.forEach(n=>{const r=document.createElement('label'),c=document.createElement('input'),s=document.createElement('span'); r.className='tgr'; c.type='checkbox'; c.checked=sel.has(n); c.onchange=()=>{c.checked?sel.add(n):sel.delete(n);}; s.textContent=n; r.append(c,tagDot(n),s); L.appendChild(r);}); };
   draw(); d.appendChild(L);
   d.appendChild(tgAddRow(async n=>{ if(!TAGS.includes(n)){ const r=await post({action:'tagSave',token:TOKEN,list:[...TAGS,n]}); if(!r.ok){toast(r.error||'تعذّرت الإضافة',1);return;} TAGS=r.list; } sel.add(n); draw(); }));
   const act=document.createElement('div'); act.className='dact';
@@ -615,7 +617,7 @@ async function tagDlg(x){
 }
 async function tagManage(){
   const d=tgBox('إدارة التصنيفات'), items=TAGS.map(n=>({o:n,n})), L=document.createElement('div'); L.className='tgl';
-  const draw=()=>{ L.innerHTML=''; items.forEach((it,i)=>{ const r=document.createElement('div'); r.className='tgr'; r.style.cursor='default'; const s=document.createElement('span'); s.textContent=it.n;
+  const draw=()=>{ L.innerHTML=''; items.forEach((it,i)=>{ const r=document.createElement('div'); r.className='tgr'; r.style.cursor='default'; const s=document.createElement('span'); s.textContent=it.n; r.appendChild(tagDot(it.n));
     const e=tgBtn('ghost sm','تعديل',async()=>{ const a=await dlg('تعديل اسم التصنيف',{fields:[{k:'t',label:'الاسم الجديد',value:it.n}],ok:'حفظ'}); const n=a&&tagClean(a.t); if(n&&!items.some(z=>z!==it&&z.n===n)){it.n=n;draw();} });
     const x=tgBtn('danger sm','حذف',()=>{items.splice(i,1);draw();}); r.append(s,e,x); L.appendChild(r); }); };
   draw(); d.appendChild(L);
