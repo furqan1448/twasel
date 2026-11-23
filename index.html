@@ -567,7 +567,7 @@ function render(){
     const pr=REMS.filter(q=>q.msgId===x.id&&!q.done).sort((a,b)=>a.due-b.due)[0];
     if(pr){const bd=document.createElement('span');bd.className='bd '+(pr.due<=Date.now()?'bad':'warn');bd.innerHTML=ic('al');bd.appendChild(document.createTextNode('تذكير: '+fmtDue(pr.due)));d.querySelector('.badges').appendChild(bd);}
     if(inArch&&x.exp){const dl=Math.max(0,Math.ceil((x.exp-Date.now())/DAYMS)),bd=document.createElement('span');bd.className='bd '+(dl<=7?'bad':'s');bd.textContent='تُحذف من الأرشيف '+archLeftTxt(x.exp);d.querySelector('.badges').appendChild(bd);}
-    (x.tags||[]).forEach(n=>{const bd=document.createElement('span');bd.className='bd';tagPaint(bd,n);bd.style.cursor='pointer';bd.title='عرض رسائل هذا التصنيف';bd.appendChild(tagDot(n));bd.appendChild(document.createTextNode(n));bd.onclick=()=>tagFilter(n);d.querySelector('.badges').appendChild(bd);});
+    (x.tags||[]).forEach(n=>{const bd=document.createElement('span');bd.className='bd';tagPaint(bd,n);bd.style.cursor='pointer';bd.title='عرض رسائل هذا التصنيف';bd.appendChild(document.createTextNode(n));bd.onclick=()=>tagFilter(n);d.querySelector('.badges').appendChild(bd);});
     const acts=d.querySelector('.acts');
     const mk=(cl,ico,t,fn)=>{const b=document.createElement('button');b.className='btn sm '+cl;b.innerHTML=ico?ic(ico)+t:t;b.onclick=fn;acts.appendChild(b);};
     const gm=x.source==='البريد'?gmailUrl(x):'';
