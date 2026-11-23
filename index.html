@@ -164,7 +164,7 @@ a.btn{text-decoration:none}
 .alq{gap:6px;flex-wrap:wrap;margin:0 0 8px}
 .al .acts{margin-top:0}
 @media(max-width:760px){.top .nb{position:absolute;top:-6px;inset-inline-start:-6px;margin:0}.rbar{grid-template-columns:1fr 1fr}.rbar .rs{grid-column:1/-1}#alerts{top:8px;left:8px;right:8px;width:auto}}
-#tgd{width:min(440px,92vw)}#tgd h3{margin:0 0 4px}.tgl{display:flex;flex-direction:column;gap:6px;margin:12px 0;max-height:46vh;overflow:auto}.tgr{display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;cursor:pointer}.tgr span{flex:1}.tgr input[type=checkbox]{width:18px;height:18px;margin:0}.tga{display:flex;gap:8px;margin-bottom:6px}.tga input{flex:1;min-width:0}#tagbar .chip{font-size:13px;padding:3px 12px}
+#tgd{width:min(440px,92vw)}#tgd h3{margin:0 0 4px}.tgl{display:flex;flex-direction:column;gap:6px;margin:12px 0;max-height:46vh;overflow:auto}.tgr{display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;cursor:pointer}.tgr span{flex:1}.tgr input[type=checkbox]{width:18px;height:18px;margin:0}.tga{display:flex;gap:8px;margin-bottom:6px}.tga input{flex:1;min-width:0}.tgg{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:14px}.tgc{font:inherit;text-align:right;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}.tgc b{font-size:15px;display:flex;gap:6px;align-items:center}.tgc .bd{align-self:flex-start}.tgc:hover{border-color:var(--acc)}
 </style>
 </head>
 <body>
@@ -238,6 +238,7 @@ a.btn{text-decoration:none}
 <section id="inbox">
   <div class="top"><div class="in"><span class="bm"></span><div class="ttl"><b>صِلة</b><small>رسائلك في مكان واحد</small></div>
     <button class="ib act" id="navMsg" title="الرسائل" aria-label="الرسائل"><svg class="i"><use href="#in"/></svg></button>
+    <button class="ib" id="navTag" title="التصنيفات" aria-label="التصنيفات"><svg class="i"><use href="#tg"/></svg></button>
     <button class="ib" id="navRem" title="التذكيرات" aria-label="التذكيرات"><svg class="i"><use href="#bl"/></svg><span class="nb" id="nb"></span></button>
     
     <button class="ib" id="annBtn" title="إعلان" aria-label="إعلان للمستخدمات" style="display:none"><svg class="i"><use href="#mg"/></svg></button>
@@ -275,6 +276,12 @@ a.btn{text-decoration:none}
     <p id="archNote" style="margin:2px 2px 12px;font-size:13px;color:var(--mut);line-height:1.8"></p>
     <div id="list"></div>
     <p id="ver" style="text-align:center;font-size:12px;color:var(--mut);margin:18px 0 6px"></p>
+  </div>
+  <div class="wrap" id="vTag" style="display:none">
+    <div class="rhead"><h2 class="gr">التصنيفات</h2>
+      <div class="tools" style="margin:0"><button class="btn sm" id="tgManage"><svg class="i"><use href="#nt"/></svg>إدارة التصنيفات</button></div></div>
+    <p style="margin:2px 2px 0;font-size:13px;color:var(--mut);line-height:1.8">اختاري تصنيفًا لعرض كل الرسائل التي تحمله، سواء وردت من الواتساب أو البريد أو النموذج.</p>
+    <div class="tgg" id="tgGrid"></div>
   </div>
   <div class="wrap" id="vRem" style="display:none">
     <div class="rhead"><h2 class="gr">التذكيرات والمتابعات</h2>
@@ -510,14 +517,12 @@ function render(){
     const b=document.createElement('button'); b.className='chip'+(s===FILTER&&!TAGF?' on':''); b.innerHTML=(s===STAR?ic('st')+' ':'')+s+(c==null?'':' ('+c+')');
     b.onclick=()=>{const sw=TAGF||FILTER===STAR||s===STAR||FILTER===ARCH||s===ARCH; TAGF=''; FILTER=s; SEL.clear(); if(sw)LIMIT=50; sw?load():render();}; f.appendChild(b);
   });
-  let tb=$('tagbar'); if(!tb){tb=document.createElement('div');tb.id='tagbar';tb.className='chips';f.after(tb);}
-  tb.innerHTML=''; tb.style.display=inArch?'none':'';
-  { const lb=document.createElement('span'); lb.style.cssText='color:var(--mut);font-size:13px;display:inline-flex;gap:4px;align-items:center'; lb.innerHTML=ic('tg')+'التصنيفات:'; tb.appendChild(lb);
-    TAGS.forEach(n=>{const b=document.createElement('button'); b.className='chip'+(n===TAGF?' on':''); b.textContent=n+' ('+(TAGC[n]||0)+')'; b.onclick=()=>tagFilter(n); tb.appendChild(b);});
-    const m=document.createElement('button'); m.className='chip'; m.innerHTML=ic('nt')+' إدارة'; m.onclick=tagManage; tb.appendChild(m); }
+  renderTag();
   const an=$('archNote'); an.textContent = inStar ? '' : inArch
     ? 'الرسائل المؤرشفة تبقى '+ARCHK+' يومًا من تاريخ نقلها إلى الأرشيف ثم تُحذف نهائيًا. تُعرض للاطّلاع والحذف فقط.'
     : 'تنبيه: الرسائل الأقدم من '+ARCHD+' يومًا تُنقل تلقائيًا إلى «الأرشيف» وتبقى فيه '+ARCHK+' يومًا ثم تُحذف، وتبقى الرسائل المميّزة بنجمة ظاهرة دائمًا.';
+  if(inTag){ an.textContent=''; const bn=document.createElement('div'); bn.style.cssText='display:flex;gap:10px;align-items:center;flex-wrap:wrap;color:var(--ink);font-size:15px';
+    const tt=document.createElement('b'); tt.textContent='التصنيف: '+TAGF+' ('+TAGT+')'; const bk=document.createElement('button'); bk.className='btn ghost sm'; bk.textContent='كل التصنيفات'; bk.onclick=()=>{TAGF='';setView('tag');load(true);}; bn.append(tt,bk); an.appendChild(bn); }
   if(inArch){
     const box=document.createElement('div'); box.style.cssText='display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px';
     if(ARCHW&&ARCHW.n&&ARCHN){ const w=document.createElement('span'); w.style.cssText='flex:1 1 240px;padding:10px 12px;border-radius:10px;border-right:4px solid var(--warn);background:color-mix(in srgb,var(--warn) 14%,transparent);color:var(--ink)'; w.textContent='⚠️ '+ARCHW.n+' رسالة ستُحذف نهائيًا '+archLeftTxt(ARCHW.at)+'. حمّلي نسخة منها قبل ذلك.'; box.appendChild(w); }
@@ -585,7 +590,13 @@ const gmailUrl=x=>{ const t=String(x&&x.id||'').split('_').slice(2).join('_'); r
 /* ===== التصنيفات ===== */
 const tagCls=n=>n==='عاجل'?'bad':n==='مهم'?'warn':n==='مالي'?'ok':'';
 const tagClean=s=>String(s||'').replace(/[|\n]/g,' ').trim().slice(0,24);
-function tagFilter(n){ if(FILTER===ARCH||FILTER===STAR) FILTER='جديدة'; TAGF=(TAGF===n)?'':n; SEL.clear(); LIMIT=50; load(); }
+function tagFilter(n){ if(FILTER===ARCH||FILTER===STAR) FILTER='جديدة'; TAGF=(TAGF===n&&VIEW==='msg')?'':n; SEL.clear(); LIMIT=50; setView('msg'); load(); }
+function renderTag(){
+  const g=$('tgGrid'); if(!g) return; g.innerHTML='';
+  if(!TAGS.length){ g.innerHTML='<div class="empty"><p>لا توجد تصنيفات. اضغطي «إدارة التصنيفات» لإضافة تصنيف.</p></div>'; return; }
+  TAGS.forEach(n=>{ const b=document.createElement('button'); b.className='tgc'; const h=document.createElement('b'); h.innerHTML=ic('tg'); h.appendChild(document.createTextNode(n));
+    const c=document.createElement('span'); c.className='bd '+tagCls(n); c.textContent=(TAGC[n]||0)+' رسالة'; b.append(h,c); b.onclick=()=>tagFilter(n); g.appendChild(b); });
+}
 function tgBox(title){ let d=$('tgd'); if(!d){d=document.createElement('dialog');d.id='tgd';document.body.appendChild(d);} d.innerHTML=''; const h=document.createElement('h3'); h.textContent=title; d.appendChild(h); return d; }
 function tgBtn(cls,txt,fn){ const b=document.createElement('button'); b.className='btn '+cls; b.textContent=txt; b.onclick=fn; return b; }
 function tgAddRow(onAdd){ const A=document.createElement('div'); A.className='tga'; const i=document.createElement('input'); i.placeholder='تصنيف جديد…'; i.maxLength=24;
@@ -713,7 +724,7 @@ function logout(){
 let RELOADING=false;
 $('reload').onclick=async()=>{   /* يعمل من أي صفحة (الرسائل أو التذكيرات) ويُظهر دوران الأيقونة ثم رسالة النتيجة */
   if(RELOADING||!TOKEN) return; RELOADING=true; const b=$('reload'); b.classList.add('spin');
-  let a,c; try{ [a,c]=await Promise.all([load(VIEW==='rem'),loadRem(false)]); }catch(e){ a=c=false; }
+  let a,c; try{ [a,c]=await Promise.all([load(VIEW!=='msg'),loadRem(false)]); }catch(e){ a=c=false; }
   b.classList.remove('spin'); RELOADING=false;
   if(TOKEN&&a!==false&&c!==false) toast('تم التحديث ✓');
 };
@@ -824,12 +835,15 @@ function lateTxt(r){ const n=Math.max(1,Math.round((sod(Date.now())-sod(r.due))/
 
 /* ---------- التنقل بين الرسائل والتذكيرات ---------- */
 function setView(v){
-  VIEW=v; $('vMsg').style.display=v==='msg'?'block':'none'; $('vRem').style.display=v==='rem'?'block':'none';
-  $('navMsg').classList.toggle('act',v==='msg'); $('navRem').classList.toggle('act',v==='rem');
+  VIEW=v; $('vMsg').style.display=v==='msg'?'block':'none'; $('vRem').style.display=v==='rem'?'block':'none'; $('vTag').style.display=v==='tag'?'block':'none';
+  $('navMsg').classList.toggle('act',v==='msg'&&!TAGF); $('navTag').classList.toggle('act',v==='tag'||(v==='msg'&&!!TAGF)); $('navRem').classList.toggle('act',v==='rem');
+  if(v==='tag') renderTag();
   if(v==='rem'){ notifBtn(); renderRem(); }
   window.scrollTo(0,0);
 }
-$('navMsg').onclick=()=>setView('msg');
+$('navMsg').onclick=()=>{ if(TAGF){TAGF='';setView('msg');load();} else setView('msg'); };
+$('navTag').onclick=()=>{ TAGF=''; setView('tag'); load(true); };
+$('tgManage').onclick=()=>tagManage();
 $('navRem').onclick=()=>{ setView('rem'); loadRem(true); };
 function gotoRem(r){ RTAB=RKT[rcls(r)]; RQ=''; $('rQ').value=''; setView('rem'); }
 
@@ -851,7 +865,7 @@ function badge(){
 }
 function afterRem(){
   badge(); renderRem();
-  if(ME&&ALL.length&&VIEW==='msg') render();
+  if(ME&&ALL.length&&(VIEW==='msg'||VIEW==='tag')) render();
   document.querySelectorAll('.al[data-rid]').forEach(e=>{ const r=REMS.find(x=>x.id===e.dataset.rid); if(!r||r.done||r.due>Date.now()) e.remove(); });
 }
 
