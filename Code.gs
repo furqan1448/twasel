@@ -3,7 +3,7 @@
 // مهم: عند أي تحديث لا تنشئي «عملية نشر جديدة». استخدمي: نشر ← إدارة عمليات النشر ← ✏️ تعديل ← الإصدار: «إصدار جديد» ← نشر.
 // بهذه الطريقة يبقى رابط /exec نفسه، فلا يحتاج أي مستخدم لتغيير رابط Meta أو أي ربط آخر.
 const WA_VERIFY_TOKEN = 'furqan-wa-2026';   // أي كلمة تختارينها، وتكتبينها نفسها في Meta
-const VERSION = '2026-11-22-d';               // رقم الإصدار: يظهر عند فتح رابط النشر في المتصفح، ليُعرف هل النشر يعمل بآخر كود
+const VERSION = '2026-11-23-a';               // رقم الإصدار: يظهر عند فتح رابط النشر في المتصفح، ليُعرف هل النشر يعمل بآخر كود
 const MSG = 'الرسائل', USR = 'المستخدمون';
 const COLS = 11;                              // عدد أعمدة جدول الرسائل
 const DEL = 'محذوفة';                         // قديم: صفوف قديمة تُحذف تلقائيًا من الشيت ولا يُكتب هذا النص بعد الآن
@@ -63,6 +63,17 @@ function msgs_() {
     P.setProperty('HDR', '1');
   }
   return sh;
+}
+// ===== التصنيفات (الوسوم) =====
+// ورقة «التصنيفات»: المالكة | معرّف الرسالة | الوسوم (مفصولة بـ |). قائمة وسوم كل مستخدمة تُحفظ في خصائص السكربت.
+const TAGS = 'التصنيفات', TAG_DEF = ['عاجل', 'مهم', 'استفسار', 'طلب', 'تعميم', 'مالي', 'إداري', 'متابعة'];
+function tagSh_() { return sheet_(TAGS, ['المالكة', 'معرّف الرسالة', 'الوسوم']); }
+function tagList_(uid) { try { const v = JSON.parse(PropertiesService.getScriptProperties().getProperty('TL_' + uid) || 'null'); return Array.isArray(v) ? v : TAG_DEF.slice(); } catch (e) { return TAG_DEF.slice(); } }
+function tagName_(s) { return String(s || '').replace(/[|\n]/g, ' ').trim().slice(0, 24); }
+function tagMap_(uid) {   // معرّف الرسالة -> مصفوفة وسوم
+  const sh = tagSh_(), m = {};
+  if (sh.getLastRow() >= 2) sh.getRange(2, 1, sh.getLastRow() - 1, 3).getValues().forEach(r => { if (r[0] === uid && r[2]) m[String(r[1])] = String(r[2]).split('|').filter(Boolean); });
+  return m;
 }
 // ===== الإعلانات =====
 // ورقة «الإعلانات»: المعرف (وقت النشر) | التاريخ | العنوان | النص | الرابط | الناشرة. نصوص عامة موجّهة للجميع فلا تُشفَّر.
@@ -610,19 +621,20 @@ function doPost(e) {
       const sh = msgs_(), wantStarred = !!(d.starred || d.archived), limit = Math.min(Math.max(Number(d.limit) || 100, 1), 1000);
       cleanDeleted_(sh);
       let starredCount = 0;
-      const mine = [], counts = {};
+      const mine = [], counts = {}, tc = {}, tm = tagMap_(me[0]), wantTag = d.tag ? String(d.tag) : '';
       if (sh.getLastRow() >= 2) {
         sh.getRange(2, 1, sh.getLastRow() - 1, COLS).getValues().forEach(r => {
           if ((r[9] || first) !== me[0] || r[6] === DEL) return;       // الرسائل القديمة بلا مالكة تعود لأول حساب
           const isStar = r[10] === 'نعم';                              // عمود «نعم» القديم (الأرشيف) صار يعني: مميزة بنجمة
           if (isStar) starredCount++;
           counts[r[6]] = (counts[r[6]] || 0) + 1;
-          if (!wantStarred || isStar) mine.push(r);
+          (tm[r[0]] || []).forEach(t => { tc[t] = (tc[t] || 0) + 1; });
+          if (wantTag ? (tm[r[0]] || []).indexOf(wantTag) >= 0 : (!wantStarred || isStar)) mine.push(r);
         });
       }
       const ord = new Map(mine.map((r, i) => [r, i]));
       mine.sort((a, b) => (new Date(b[1]).getTime() || 0) - (new Date(a[1]).getTime() || 0) || ord.get(b) - ord.get(a));   // الأحدث أولًا
-      return out_({ ok: true, v: VERSION, rows: mine.slice(0, limit).map(rowOut_), starredCount, counts, total: mine.length, archDays: ARCHIVE_DAYS, archKeep: ARCHIVE_KEEP_DAYS, archWarn: archWarn_(me[0]), ch: chOf_(me[0]), mail: Number(PropertiesService.getScriptProperties().getProperty('ML_' + me[0]) || 0) });
+      return out_({ ok: true, v: VERSION, rows: mine.slice(0, limit).map(r => { const o = rowOut_(r); o.tags = tm[r[0]] || []; return o; }), starredCount, counts, tl: tagList_(me[0]), tc, total: mine.length, archDays: ARCHIVE_DAYS, archKeep: ARCHIVE_KEEP_DAYS, archWarn: archWarn_(me[0]), ch: chOf_(me[0]), mail: Number(PropertiesService.getScriptProperties().getProperty('ML_' + me[0]) || 0) });
     }
 
     // ---- تحميل الرسائل المؤرشفة (صفحات) ----
@@ -656,6 +668,35 @@ function doPost(e) {
       if (st !== undefined) sh.getRange(f.row, 11).setValue(st ? 'نعم' : '');
       touch_(me[0]);
       return out_({ ok: true });
+    }
+
+    if (d.action === 'tagSet') {   // يضبط تصنيفات رسالة واحدة
+      const f = findRow_(msgs_(), String(d.id || ''), me);
+      if (!f) return out_({ ok: false, error: 'الرسالة غير موجودة.' });
+      const list = tagList_(me[0]), id = String(f.vals[0]);
+      const tags = (Array.isArray(d.tags) ? d.tags : []).map(tagName_).filter((t, i, a) => t && a.indexOf(t) === i && list.indexOf(t) >= 0).slice(0, 12);
+      const sh = tagSh_(), n = sh.getLastRow(), v = n >= 2 ? sh.getRange(2, 1, n - 1, 3).getValues() : [];
+      const i = v.findIndex(r => r[0] === me[0] && String(r[1]) === id);
+      if (i >= 0) { if (tags.length) sh.getRange(i + 2, 3).setValue(tags.join('|')); else sh.deleteRow(i + 2); }
+      else if (tags.length) sh.appendRow([me[0], id, tags.join('|')]);
+      touch_(me[0]);
+      return out_({ ok: true, tags });
+    }
+    if (d.action === 'tagSave') {   // حفظ قائمة التصنيفات (إضافة/تعديل اسم/حذف) وتطبيق ذلك على الرسائل
+      const list = (Array.isArray(d.list) ? d.list : []).map(tagName_).filter((t, i, a) => t && a.indexOf(t) === i).slice(0, 30);
+      const ren = d.renames && typeof d.renames === 'object' ? d.renames : {};
+      const sh = tagSh_(), n = sh.getLastRow();
+      if (n >= 2) {
+        const rg = sh.getRange(2, 1, n - 1, 3), v = rg.getValues();
+        v.forEach(r => {
+          if (r[0] !== me[0]) return;
+          r[2] = String(r[2]).split('|').filter(Boolean).map(t => ren[t] !== undefined ? tagName_(ren[t]) : t).filter((t, i, x) => list.indexOf(t) >= 0 && x.indexOf(t) === i).join('|');
+        });
+        rg.setValues(v);
+      }
+      PropertiesService.getScriptProperties().setProperty('TL_' + me[0], JSON.stringify(list));
+      touch_(me[0]);
+      return out_({ ok: true, list });
     }
 
     if (d.action === 'delete') {

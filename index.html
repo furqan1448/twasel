@@ -164,6 +164,7 @@ a.btn{text-decoration:none}
 .alq{gap:6px;flex-wrap:wrap;margin:0 0 8px}
 .al .acts{margin-top:0}
 @media(max-width:760px){.top .nb{position:absolute;top:-6px;inset-inline-start:-6px;margin:0}.rbar{grid-template-columns:1fr 1fr}.rbar .rs{grid-column:1/-1}#alerts{top:8px;left:8px;right:8px;width:auto}}
+#tgd{width:min(440px,92vw)}#tgd h3{margin:0 0 4px}.tgl{display:flex;flex-direction:column;gap:6px;margin:12px 0;max-height:46vh;overflow:auto}.tgr{display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;cursor:pointer}.tgr span{flex:1}.tgr input[type=checkbox]{width:18px;height:18px;margin:0}.tga{display:flex;gap:8px;margin-bottom:6px}.tga input{flex:1;min-width:0}#tagbar .chip{font-size:13px;padding:3px 12px}
 </style>
 </head>
 <body>
@@ -191,6 +192,7 @@ a.btn{text-decoration:none}
 <symbol id="ex" viewBox="0 0 24 24"><path d="M17.9 17.9A10.5 10.5 0 0 1 12 19c-6.4 0-10-7-10-7a18 18 0 0 1 4.1-4.9M9.9 5.2A9.7 9.7 0 0 1 12 5c6.4 0 10 7 10 7a18 18 0 0 1-2.2 3.2M1 1l22 22"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></symbol>
 <symbol id="mg" viewBox="0 0 24 24"><path d="M3 11v2a1 1 0 0 0 1 1h3l6 4.5V5.5L7 10H4a1 1 0 0 0-1 1Z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19.5 6a9 9 0 0 1 0 12"/></symbol>
 <symbol id="us" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+<symbol id="tg" viewBox="0 0 24 24"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1.2"/></symbol>
 </defs></svg>
 
 <!-- صفحة الزائر -->
@@ -322,7 +324,7 @@ const API = 'https://script.google.com/macros/s/AKfycbyrwcCl-Ui1FK_T-fu386dNoyaP
 const $ = id => document.getElementById(id);
 const STATUSES = ['جديدة', 'تم الرد', 'لم يُرد عليها'], STAR = 'المميز بنجمة', ARCH = 'الأرشيف';
 const U = new URLSearchParams(location.search).get('u');
-let CH = 0, POLLING = false, MAILAT = 0, TOKEN = '', KEY = '', ME = null, ALL = [], STARN = 0, COUNTS = {}, ARCHN = null, ARCHD = 90, ARCHK = 30, ARCHW = null, LIMIT = 50, FILTER = 'جديدة', SEL = new Set();
+let CH = 0, POLLING = false, MAILAT = 0, TOKEN = '', KEY = '', ME = null, ALL = [], STARN = 0, COUNTS = {}, ARCHN = null, ARCHD = 90, ARCHK = 30, ARCHW = null, LIMIT = 50, FILTER = 'جديدة', SEL = new Set(), TAGS = [], TAGC = {}, TAGF = '', TAGT = 0;
 const show = id => ['pub','auth','inbox'].forEach(s => $(s).style.display = s===id ? 'block' : 'none');
 const disp = p => { p = String(p||''); return p.startsWith('966') ? '0' + p.slice(3) : p; };
 const ic = n => '<svg class="i"><use href="#'+n+'"/></svg>';
@@ -487,7 +489,7 @@ async function load(silent){
   if(inArch && silent) return; /* لا نعيد تحميل الأرشيف مع التحديث التلقائي */
   try{
     const tk=TOKEN; if(!tk) return;
-    const r = await post(inArch?{action:'list',token:tk,archive:true,limit:LIMIT}:{action:'list',token:tk,starred:inStar,limit:LIMIT});
+    const r = await post(inArch?{action:'list',token:tk,archive:true,limit:LIMIT}:{action:'list',token:tk,starred:inStar,limit:LIMIT,tag:TAGF});
     if(!TOKEN) return; /* خرجت المستخدمة أثناء التحميل */
     if(r.auth===false){logout();return;}
     if(!r.ok){if(!silent)$('list').textContent=r.error||'تعذّر التحميل.';return false;}
@@ -495,19 +497,24 @@ async function load(silent){
     if(r.archDays) ARCHD=r.archDays;
     if(r.archKeep) ARCHK=r.archKeep; ARCHW=r.archWarn||null; setTimeout(archAlert,700);
     if(inArch){ ALL=r.rows; ARCHN=r.total||0; render(); return true; }
-    ALL=r.rows; STARN=r.starredCount||0; COUNTS=r.counts||{}; MAILAT=r.mail||0; CH=r.ch||0; mailBtn(); render(); return true;
+    ALL=r.rows; TAGS=r.tl||TAGS; TAGC=r.tc||{}; TAGT=r.total||0; if(TAGF&&!TAGS.includes(TAGF)) TAGF=''; STARN=r.starredCount||0; COUNTS=r.counts||{}; MAILAT=r.mail||0; CH=r.ch||0; mailBtn(); render(); return true;
   }catch(e){if(!silent)$('list').textContent='تعذّر تحميل الرسائل.'; return false;}
 }
 const srcIc = s => s==='واتساب'?'wa':s==='البريد'?'ml':'fm';
 function render(){
-  const inStar = FILTER===STAR, inArch = FILTER===ARCH, cnt=s=>COUNTS[s]||0, SUM=Object.values(COUNTS).reduce((a,b)=>a+b,0);
+  const inStar = FILTER===STAR, inArch = FILTER===ARCH, inTag = !!TAGF, cnt=s=>COUNTS[s]||0, SUM=Object.values(COUNTS).reduce((a,b)=>a+b,0);
   $('stats').innerHTML='<div class="card stat"><b>'+cnt('جديدة')+'</b><span>رسائل جديدة</span></div><div class="card stat o"><b>'+cnt('تم الرد')+'</b><span>تم الرد</span></div><div class="card stat w"><b>'+cnt('لم يُرد عليها')+'</b><span>لم يُرد عليها</span></div>';
   const f=$('filters'); f.innerHTML='';
   [...STATUSES,STAR,ARCH].forEach(s=>{
     const c = s===STAR?STARN:s===ARCH?ARCHN:cnt(s);
-    const b=document.createElement('button'); b.className='chip'+(s===FILTER?' on':''); b.innerHTML=(s===STAR?ic('st')+' ':'')+s+(c==null?'':' ('+c+')');
-    b.onclick=()=>{const sw=FILTER===STAR||s===STAR||FILTER===ARCH||s===ARCH; FILTER=s; SEL.clear(); if(sw)LIMIT=50; sw?load():render();}; f.appendChild(b);
+    const b=document.createElement('button'); b.className='chip'+(s===FILTER&&!TAGF?' on':''); b.innerHTML=(s===STAR?ic('st')+' ':'')+s+(c==null?'':' ('+c+')');
+    b.onclick=()=>{const sw=TAGF||FILTER===STAR||s===STAR||FILTER===ARCH||s===ARCH; TAGF=''; FILTER=s; SEL.clear(); if(sw)LIMIT=50; sw?load():render();}; f.appendChild(b);
   });
+  let tb=$('tagbar'); if(!tb){tb=document.createElement('div');tb.id='tagbar';tb.className='chips';f.after(tb);}
+  tb.innerHTML=''; tb.style.display=inArch?'none':'';
+  { const lb=document.createElement('span'); lb.style.cssText='color:var(--mut);font-size:13px;display:inline-flex;gap:4px;align-items:center'; lb.innerHTML=ic('tg')+'التصنيفات:'; tb.appendChild(lb);
+    TAGS.forEach(n=>{const b=document.createElement('button'); b.className='chip'+(n===TAGF?' on':''); b.textContent=n+' ('+(TAGC[n]||0)+')'; b.onclick=()=>tagFilter(n); tb.appendChild(b);});
+    const m=document.createElement('button'); m.className='chip'; m.innerHTML=ic('nt')+' إدارة'; m.onclick=tagManage; tb.appendChild(m); }
   const an=$('archNote'); an.textContent = inStar ? '' : inArch
     ? 'الرسائل المؤرشفة تبقى '+ARCHK+' يومًا من تاريخ نقلها إلى الأرشيف ثم تُحذف نهائيًا. تُعرض للاطّلاع والحذف فقط.'
     : 'تنبيه: الرسائل الأقدم من '+ARCHD+' يومًا تُنقل تلقائيًا إلى «الأرشيف» وتبقى فيه '+ARCHK+' يومًا ثم تُحذف، وتبقى الرسائل المميّزة بنجمة ظاهرة دائمًا.';
@@ -518,9 +525,9 @@ function render(){
     an.appendChild(box);
   }
   const L=$('list'); L.innerHTML='';
-  const rows=ALL.filter(x=>inStar||inArch||x.status===FILTER).sort((a,b)=>(new Date(b.date)||0)-(new Date(a.date)||0));
+  const rows=ALL.filter(x=>inStar||inArch||inTag||x.status===FILTER).sort((a,b)=>(new Date(b.date)||0)-(new Date(a.date)||0));
   const vis=new Set(rows.map(x=>x.id)); SEL.forEach(id=>{if(!vis.has(id))SEL.delete(id);});
-  const more=()=>{const tot=inArch?ARCHN:inStar?STARN:(FILTER==='جديدة'||STATUSES.includes(FILTER)?cnt(FILTER):SUM), left=tot-rows.length; if(left>0){const m=document.createElement('button');m.className='btn ghost';m.style.cssText='display:flex;margin:12px auto';m.textContent='عرض الأقدم ('+left+')';m.onclick=()=>{LIMIT+=100;load();};L.appendChild(m);}};
+  const more=()=>{const tot=inTag?TAGT:inArch?ARCHN:inStar?STARN:(FILTER==='جديدة'||STATUSES.includes(FILTER)?cnt(FILTER):SUM), left=tot-rows.length; if(left>0){const m=document.createElement('button');m.className='btn ghost';m.style.cssText='display:flex;margin:12px auto';m.textContent='عرض الأقدم ('+left+')';m.onclick=()=>{LIMIT+=100;load();};L.appendChild(m);}};
   if(!rows.length){L.innerHTML='<div class="empty">'+ic('in')+'<p>'+(inArch?'لا توجد رسائل مؤرشفة.':inStar?'لا توجد رسائل مميزة بنجمة.':'لا توجد رسائل هنا.')+'</p></div>';more();return;}
 
   /* شريط التحديد والإجراءات الجماعية */
@@ -555,6 +562,7 @@ function render(){
     const pr=REMS.filter(q=>q.msgId===x.id&&!q.done).sort((a,b)=>a.due-b.due)[0];
     if(pr){const bd=document.createElement('span');bd.className='bd '+(pr.due<=Date.now()?'bad':'warn');bd.innerHTML=ic('al');bd.appendChild(document.createTextNode('تذكير: '+fmtDue(pr.due)));d.querySelector('.badges').appendChild(bd);}
     if(inArch&&x.exp){const dl=Math.max(0,Math.ceil((x.exp-Date.now())/DAYMS)),bd=document.createElement('span');bd.className='bd '+(dl<=7?'bad':'s');bd.textContent='تُحذف من الأرشيف '+archLeftTxt(x.exp);d.querySelector('.badges').appendChild(bd);}
+    (x.tags||[]).forEach(n=>{const bd=document.createElement('span');bd.className='bd '+tagCls(n);bd.style.cursor='pointer';bd.title='عرض رسائل هذا التصنيف';bd.innerHTML=ic('tg');bd.appendChild(document.createTextNode(n));bd.onclick=()=>tagFilter(n);d.querySelector('.badges').appendChild(bd);});
     const acts=d.querySelector('.acts');
     const mk=(cl,ico,t,fn)=>{const b=document.createElement('button');b.className='btn sm '+cl;b.innerHTML=ico?ic(ico)+t:t;b.onclick=fn;acts.appendChild(b);};
     const gm=x.source==='البريد'?gmailUrl(x):'';
@@ -564,6 +572,7 @@ function render(){
     STATUSES.filter(s=>s!==x.status&&s!=='جديدة').forEach(s=>mk('',s==='تم الرد'?'ck':'',s,()=>upd(x,{status:s})));
     mk('ghost','nt','ملاحظة',async()=>{const a=await dlg('ملاحظة',{fields:[{k:'t',label:'اكتبي الملاحظة',area:1,value:x.note||''}],ok:'حفظ'}); if(a) upd(x,{note:a.t});});
     mk('ghost','al','ذكّرني',()=>remindFor(x));
+    mk('ghost','tg','تصنيف',()=>tagDlg(x));
     mk('ghost'+(x.starred?' on':''),'st',x.starred?'إزالة النجمة':'تمييز بنجمة',()=>star(x,!x.starred));
     mk('danger','tr','حذف',()=>del(x));
     L.appendChild(d);
@@ -573,6 +582,42 @@ function render(){
 }
 /* رابط محادثة Gmail: معرّف الرسالة في الموقع يحمل معرّف محادثة Gmail في آخره، والحساب يُحدَّد ببريدها المسجّل حتى لا يُفتح حساب آخر مسجّل في المتصفح */
 const gmailUrl=x=>{ const t=String(x&&x.id||'').split('_').slice(2).join('_'); return t?'https://mail.google.com/mail/?authuser='+encodeURIComponent((ME&&ME.email)||'0')+'#all/'+encodeURIComponent(t):''; };
+/* ===== التصنيفات ===== */
+const tagCls=n=>n==='عاجل'?'bad':n==='مهم'?'warn':n==='مالي'?'ok':'';
+const tagClean=s=>String(s||'').replace(/[|\n]/g,' ').trim().slice(0,24);
+function tagFilter(n){ if(FILTER===ARCH||FILTER===STAR) FILTER='جديدة'; TAGF=(TAGF===n)?'':n; SEL.clear(); LIMIT=50; load(); }
+function tgBox(title){ let d=$('tgd'); if(!d){d=document.createElement('dialog');d.id='tgd';document.body.appendChild(d);} d.innerHTML=''; const h=document.createElement('h3'); h.textContent=title; d.appendChild(h); return d; }
+function tgBtn(cls,txt,fn){ const b=document.createElement('button'); b.className='btn '+cls; b.textContent=txt; b.onclick=fn; return b; }
+function tgAddRow(onAdd){ const A=document.createElement('div'); A.className='tga'; const i=document.createElement('input'); i.placeholder='تصنيف جديد…'; i.maxLength=24;
+  const go=()=>{const n=tagClean(i.value); if(n){i.value=''; onAdd(n);}}; i.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();go();}};
+  A.append(i,tgBtn('ghost','إضافة',go)); return A; }
+async function tagDlg(x){
+  const d=tgBox('تصنيف الرسالة'), sel=new Set(x.tags||[]), L=document.createElement('div'); L.className='tgl';
+  const draw=()=>{ L.innerHTML=''; if(!TAGS.length) L.textContent='لا توجد تصنيفات، أضيفي تصنيفًا جديدًا.';
+    TAGS.forEach(n=>{const r=document.createElement('label'),c=document.createElement('input'),s=document.createElement('span'); r.className='tgr'; c.type='checkbox'; c.checked=sel.has(n); c.onchange=()=>{c.checked?sel.add(n):sel.delete(n);}; s.textContent=n; r.append(c,s); L.appendChild(r);}); };
+  draw(); d.appendChild(L);
+  d.appendChild(tgAddRow(async n=>{ if(!TAGS.includes(n)){ const r=await post({action:'tagSave',token:TOKEN,list:[...TAGS,n]}); if(!r.ok){toast(r.error||'تعذّرت الإضافة',1);return;} TAGS=r.list; } sel.add(n); draw(); }));
+  const act=document.createElement('div'); act.className='dact';
+  const ok=tgBtn('','حفظ',async()=>{ ok.disabled=true; const r=await post({action:'tagSet',token:TOKEN,id:x.id,tags:TAGS.filter(n=>sel.has(n))}); ok.disabled=false;
+    if(!r.ok){toast(r.error||'تعذّر الحفظ',1);return;} x.tags=r.tags; d.close(); render(); load(true); });
+  act.append(ok,tgBtn('ghost','إلغاء',()=>d.close())); d.appendChild(act); d.showModal();
+}
+async function tagManage(){
+  const d=tgBox('إدارة التصنيفات'), items=TAGS.map(n=>({o:n,n})), L=document.createElement('div'); L.className='tgl';
+  const draw=()=>{ L.innerHTML=''; items.forEach((it,i)=>{ const r=document.createElement('div'); r.className='tgr'; r.style.cursor='default'; const s=document.createElement('span'); s.textContent=it.n;
+    const e=tgBtn('ghost sm','تعديل',async()=>{ const a=await dlg('تعديل اسم التصنيف',{fields:[{k:'t',label:'الاسم الجديد',value:it.n}],ok:'حفظ'}); const n=a&&tagClean(a.t); if(n&&!items.some(z=>z!==it&&z.n===n)){it.n=n;draw();} });
+    const x=tgBtn('danger sm','حذف',()=>{items.splice(i,1);draw();}); r.append(s,e,x); L.appendChild(r); }); };
+  draw(); d.appendChild(L);
+  d.appendChild(tgAddRow(n=>{ if(!items.some(z=>z.n===n)) items.push({o:null,n}); draw(); }));
+  const act=document.createElement('div'); act.className='dact';
+  const ok=tgBtn('','حفظ',async()=>{
+    const removed=TAGS.filter(n=>!items.some(z=>z.o===n));
+    if(removed.length){ const c=await dlg('حذف تصنيفات',{text:'سيُزال من كل الرسائل: '+removed.join('، '),ok:'متابعة',danger:true}); if(!c) return; }
+    const renames={}; items.forEach(z=>{if(z.o&&z.o!==z.n) renames[z.o]=z.n;});
+    ok.disabled=true; const r=await post({action:'tagSave',token:TOKEN,list:items.map(z=>z.n),renames}); ok.disabled=false;
+    if(!r.ok){toast(r.error||'تعذّر الحفظ',1);return;} TAGS=r.list; if(TAGF&&renames[TAGF]) TAGF=renames[TAGF]; d.close(); load(); });
+  act.append(ok,tgBtn('ghost','إلغاء',()=>d.close())); d.appendChild(act); d.showModal();
+}
 async function upd(x,patch){
   if(patch.status&&patch.status!==x.status){COUNTS[x.status]=Math.max(0,(COUNTS[x.status]||0)-1);COUNTS[patch.status]=(COUNTS[patch.status]||0)+1;}
   Object.assign(x,patch); render();
