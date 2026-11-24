@@ -306,7 +306,19 @@ a.btn{text-decoration:none}
   <div class="arow"><div><small>رقم الجوال</small><b id="aPh"></b></div><button class="btn ghost sm" id="aPhB" type="button">تغيير</button></div>
   <div class="arow"><div><small>البريد الإلكتروني</small><b id="aEm"></b></div><button class="btn ghost sm" id="aEmB" type="button">تغيير</button></div>
   <div class="arow"><div><small>كلمة المرور</small><b>••••••••</b></div><button class="btn ghost sm" id="aPwB" type="button">تغيير</button></div>
+  <div class="arow"><div><small>أسماء جهات الاتصال (من جوالك)</small><b id="aCn" style="direction:rtl">—</b></div><button class="btn ghost sm" id="aCnB" type="button">استيراد</button></div>
   <div class="dact"><button class="btn ghost" id="aClose" type="button">إغلاق</button></div></dialog>
+
+<dialog id="cndlg"><h3>استيراد أسماء جهات الاتصال</h3>
+  <p>يعرض الموقع اسم الشخص كما سمّيتِه في جوالك بدل الاسم الذي كتبه هو في واتساب. يُقرأ الملف داخل متصفحك فقط، ويُحفظ الاسم مشفّرًا والرقم بصيغة لا يمكن قراءتها.</p>
+  <div style="margin:12px 0;font-size:14px;line-height:1.9;color:var(--mut)">
+    <b style="color:var(--ink)">آيفون:</b> من iCloud.com ← جهات الاتصال ← تحديد الكل ← تصدير vCard.<br>
+    <b style="color:var(--ink)">أندرويد / قوقل:</b> من contacts.google.com ← تصدير ← vCard أو Google CSV.
+  </div>
+  <label class="btn ghost" for="cnFile" style="display:inline-flex;cursor:pointer">اختيار الملف</label>
+  <input type="file" id="cnFile" hidden accept=".vcf,.csv,.txt,text/vcard,text/x-vcard,text/csv">
+  <div id="cnSt" style="margin-top:12px;font-size:14px"></div>
+  <div class="dact"><button class="btn" id="cnGo" type="button" disabled>استيراد</button><button class="btn ghost" id="cnDel" type="button" style="display:none">حذف الأسماء المستوردة</button><button class="btn ghost" id="cnX" type="button">إغلاق</button></div></dialog>
 
 <dialog id="dlg"><h3 id="dT"></h3><p id="dM"></p><div id="dF"></div><div class="dact"><button class="btn" id="dOk"></button><button class="btn ghost" id="dNo">إلغاء</button></div></dialog>
 <dialog id="rdlg"><h3 id="rdT"></h3><p id="rdWho"></p>
@@ -359,7 +371,7 @@ function dlg(title,{text='',fields=[],ok='تأكيد',danger=false}={}){
   });
 }
 /* الطلبات القرائية (لا تغيّر بيانات) تُعطى مهلة فلا يعلق التحديث الفوري أبدًا؛ أما الكتابة فتُحصى لنعرف متى نتجاهل تحميلًا قد يسبقها */
-const READS = new Set(['list','poll','remList','msgOne','keys','annList','annAll','archPage','profile']);
+const READS = new Set(['list','poll','remList','msgOne','keys','annList','annAll','archPage','profile','contactsInfo']);
 async function post(o,ms){
   const wr = !READS.has(o&&o.action); let ctl=null, tm=0;
   if(ms && typeof AbortController!=='undefined'){ ctl=new AbortController(); tm=setTimeout(()=>ctl.abort(),ms); }
@@ -468,7 +480,76 @@ $('forgot').onclick=async()=>{
 };
 /* ---------- حسابي: كلمة المرور + رقم الجوال + البريد ---------- */
 const saveMe=()=>{ try{localStorage.setItem('me',JSON.stringify(ME));}catch(e){} };
-function openAcct(){ if(!ME) return; $('aPh').textContent=disp(ME.phone); $('aEm').textContent=ME.email; $('adlg').showModal(); }
+function openAcct(){ if(!ME) return; $('aPh').textContent=disp(ME.phone); $('aEm').textContent=ME.email; $('adlg').showModal(); cnCount(); }
+/* ---------- أسماء جهات الاتصال: استيراد من ملف vcf / csv (يُقرأ داخل المتصفح فقط) ---------- */
+function cnQP(s){ try{ const b=[]; s.replace(/=([0-9A-Fa-f]{2})|([^=]+)|=/g,(m,h,c)=>{ if(h) b.push(parseInt(h,16)); else if(c) for(const x of new TextEncoder().encode(c)) b.push(x); return ''; }); return new TextDecoder('utf-8').decode(new Uint8Array(b)); }catch(e){ return s; } }
+function cnVcf(t){
+  const raw=t.replace(/\r\n?/g,'\n').split('\n'), lines=[];
+  for(let i=0;i<raw.length;i++){ let l=raw[i];
+    if(/QUOTED-PRINTABLE/i.test(l)){ while(l.endsWith('=')&&i+1<raw.length) l=l.slice(0,-1)+raw[++i]; }
+    else if(/^[ \t]/.test(l)&&lines.length){ lines[lines.length-1]+=l.slice(1); continue; }
+    lines.push(l); }
+  const out=[]; let c=null;
+  lines.forEach(l=>{
+    const u=l.trim().toUpperCase();
+    if(u==='BEGIN:VCARD'){ c={fn:'',n:'',org:'',tels:[]}; return; }
+    if(u==='END:VCARD'){ if(c){ const nm=c.fn||c.n||c.org; c.tels.forEach(p=>out.push({n:nm,p:p})); } c=null; return; }
+    if(!c) return; const k=l.indexOf(':'); if(k<1) return;
+    const head=l.slice(0,k), prop=head.split(';')[0].replace(/^.*\./,'').toUpperCase(); let v=l.slice(k+1);
+    if(/QUOTED-PRINTABLE/i.test(head)) v=cnQP(v);
+    if(prop==='FN') c.fn=v.replace(/\\([,;])/g,'$1').replace(/\\n/gi,' ').trim();
+    else if(prop==='N'){ const a=v.split(';'); c.n=[a[3],a[1],a[2],a[0],a[4]].map(x=>(x||'').replace(/\\([,;])/g,'$1').trim()).filter(Boolean).join(' '); }
+    else if(prop==='ORG') c.org=v.split(';')[0].trim();
+    else if(prop==='TEL') c.tels.push(v.replace(/^tel:/i,'').split(/;ext=|x\d+$/i)[0].trim());
+  });
+  return out;
+}
+function cnCsv(t){
+  t=t.replace(/^\uFEFF/,''); const first=t.split(/\r?\n/)[0]||'';
+  const cnt=ch=>first.split(ch).length, dl=cnt(';')>cnt(',')&&cnt(';')>=cnt('\t')?';':(cnt('\t')>cnt(',')?'\t':',');
+  const rows=[]; let r=[],f='',q=false;
+  for(let i=0;i<t.length;i++){ const c=t[i];
+    if(q){ if(c==='"'){ if(t[i+1]==='"'){f+='"';i++;} else q=false; } else f+=c; }
+    else if(c==='"') q=true;
+    else if(c===dl){ r.push(f); f=''; }
+    else if(c==='\n'||c==='\r'){ if(c==='\r'&&t[i+1]==='\n') i++; r.push(f); f=''; if(r.some(x=>x.trim())) rows.push(r); r=[]; }
+    else f+=c; }
+  r.push(f); if(r.some(x=>x.trim())) rows.push(r);
+  if(!rows.length) return [];
+  const H=rows[0].map(x=>x.trim().toLowerCase()), isPh=h=>/phone|mobile|tel|جوال|هاتف|موبايل|رقم/.test(h)&&!/type|label|نوع/.test(h)&&!/\bfax\b/.test(h);
+  const pc=[]; H.forEach((h,i)=>{ if(isPh(h)) pc.push(i); });
+  const out=[];
+  if(pc.length){
+    const nm=H.findIndex(h=>/^(name|display name|full name|الاسم|اسم)$/.test(h));
+    const fi=H.findIndex(h=>/^(first name|given name|الاسم الأول)$/.test(h)), mi=H.findIndex(h=>/^(middle name|additional name)$/.test(h)), li=H.findIndex(h=>/^(last name|family name|اسم العائلة)$/.test(h)), oi=H.findIndex(h=>/organization.*name|^(company|organization)$/.test(h));
+    rows.slice(1).forEach(x=>{
+      let n=nm>=0?(x[nm]||'').trim():''; if(!n) n=[fi,mi,li].map(i=>i>=0?(x[i]||'').trim():'').filter(Boolean).join(' '); if(!n&&oi>=0) n=(x[oi]||'').trim();
+      pc.forEach(i=>String(x[i]||'').split(/\s*:::\s*/).forEach(p=>{ if(p.trim()) out.push({n:n,p:p.trim()}); }));
+    });
+  } else {   /* بلا عناوين: نبحث في كل صف عن خانة الرقم وخانة الاسم */
+    rows.forEach(x=>{ const pi=x.findIndex(v=>/^[+\d][\d\s()\-.]{6,}$/.test(v.trim())); if(pi<0) return; const n=x.filter((v,i)=>i!==pi&&v.trim())[0]||''; out.push({n:n.trim(),p:x[pi].trim()}); });
+  }
+  return out;
+}
+function cnParse(name,text){
+  const raw=/BEGIN:VCARD/i.test(text)?cnVcf(text):cnCsv(text), seen=new Set(), items=[];
+  raw.forEach(z=>{ const d=String(z.p||'').replace(/\D/g,''); if(d.length<8||!String(z.n||'').trim()) return; const k=d.slice(-9); if(seen.has(k)) return; seen.add(k); items.push({n:z.n.trim(),p:d}); });
+  return items;
+}
+
+let CNI=[];
+async function cnCount(){ try{ const r=await post({action:'contactsInfo',token:TOKEN}); if(r&&r.ok){ $('aCn').textContent=r.count?('تم استيراد '+r.count+' اسم'):'لم تُستورد أسماء بعد'; return r.count; } }catch(e){} return 0; }
+function cnOpen(){ CNI=[]; $('cnFile').value=''; $('cnGo').disabled=true; $('cnSt').textContent=''; $('cnDel').style.display='none'; $('adlg').close(); $('cndlg').showModal(); cnCount().then(n=>{ if(n){ $('cnDel').style.display=''; $('cnSt').textContent='لديك '+n+' اسمًا مستوردًا. استيراد ملف جديد يضيف الجديد ويحدّث الموجود.'; } }); }
+$('aCnB').onclick=cnOpen; $('cnX').onclick=()=>$('cndlg').close();
+$('cnFile').onchange=async e=>{ const f=e.target.files&&e.target.files[0]; if(!f) return; $('cnGo').disabled=true;
+  try{ CNI=cnParse(f.name,await f.text()); }catch(err){ CNI=[]; }
+  $('cnSt').textContent=CNI.length?('تم العثور على '+CNI.length+' جهة اتصال بأرقامها. اضغطي «استيراد».'):'لم أجد أرقامًا وأسماء في هذا الملف. تأكدي أنه ملف vCard (.vcf) أو CSV.'; $('cnGo').disabled=!CNI.length; };
+$('cnGo').onclick=async()=>{ if(!CNI.length) return; const b=$('cnGo'); b.disabled=true; let add=0,upd=0,done=0,total=0;
+  try{ for(let i=0;i<CNI.length;i+=800){ const r=await post({action:'contactsImport',token:TOKEN,items:CNI.slice(i,i+800)}); if(!r||!r.ok){ $('cnSt').textContent=(r&&r.error)||'تعذّر الاستيراد، حاولي مرة ثانية.'; b.disabled=false; return; } add+=r.added; upd+=r.updated; total=r.total; done=Math.min(CNI.length,i+800); $('cnSt').textContent='جارٍ الاستيراد… '+done+' من '+CNI.length; }
+    $('cnSt').textContent='تم: أُضيف '+add+' وتحدّث '+upd+'. المجموع '+total+' اسمًا.'; $('aCn').textContent='تم استيراد '+total+' اسم'; $('cnDel').style.display=''; CNI=[]; toast('تم استيراد الأسماء'); load(true,true);
+  }catch(err){ $('cnSt').textContent='تعذّر الاتصال، حاولي مرة ثانية.'; b.disabled=false; } };
+$('cnDel').onclick=async()=>{ const a=await dlg('حذف الأسماء المستوردة',{text:'ستعود الأسماء لما كتبه المرسلون بأنفسهم في واتساب.',ok:'حذف',danger:true}); if(!a) return; const r=await post({action:'contactsClear',token:TOKEN}); if(r&&r.ok){ $('cnSt').textContent='تم حذف الأسماء المستوردة.'; $('aCn').textContent='لم تُستورد أسماء بعد'; $('cnDel').style.display='none'; load(true,true); } else toast((r&&r.error)||'تعذّر الحذف',1); };
+
 $('pwBtn').onclick=openAcct;
 $('aClose').onclick=()=>$('adlg').close();
 $('aPwB').onclick=()=>{ $('adlg').close(); changePw(); };

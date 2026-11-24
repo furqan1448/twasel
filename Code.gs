@@ -3,7 +3,7 @@
 // مهم: عند أي تحديث لا تنشئي «عملية نشر جديدة». استخدمي: نشر ← إدارة عمليات النشر ← ✏️ تعديل ← الإصدار: «إصدار جديد» ← نشر.
 // بهذه الطريقة يبقى رابط /exec نفسه، فلا يحتاج أي مستخدم لتغيير رابط Meta أو أي ربط آخر.
 const WA_VERIFY_TOKEN = 'furqan-wa-2026';   // أي كلمة تختارينها، وتكتبينها نفسها في Meta
-const VERSION = '2026-11-24-fast';               // رقم الإصدار: يظهر عند فتح رابط النشر في المتصفح، ليُعرف هل النشر يعمل بآخر كود
+const VERSION = '2026-11-24-contacts';               // رقم الإصدار: يظهر عند فتح رابط النشر في المتصفح، ليُعرف هل النشر يعمل بآخر كود
 const MSG = 'الرسائل', USR = 'المستخدمون';
 const COLS = 11;                              // عدد أعمدة جدول الرسائل
 const DEL = 'محذوفة';                         // قديم: صفوف قديمة تُحذف تلقائيًا من الشيت ولا يُكتب هذا النص بعد الآن
@@ -303,12 +303,39 @@ function userByKey_(k) { return k ? allUsers_().find(r => r[6] === k) : null; }
 function userById_(id) { return allUsers_().find(r => r[0] === id); }
 function userByPhone_(p) { const n = norm_(p); return n ? allUsers_().find(r => norm_(r[2]) === n) : null; }
 
-function rowOut_(r) {
-  return {
+function rowOut_(r, cm) {
+  const o = {
     id: r[0], date: r[1], name: dec_(r[2]), phone: dec_(r[3]), email: dec_(r[4]), message: dec_(r[5]),
     status: r[6], note: dec_(r[7]), source: r[8] || 'النموذج', starred: r[10] === 'نعم'
   };
+  if (cm && o.source === 'واتساب') {   // الاسم الذي سمّتيه في جوالك (من الملف المستورد) يغلب اسم واتساب الذي كتبه المرسل بنفسه
+    const nm = cname_(cm, o.phone);
+    if (nm) { o.wname = o.name; o.name = nm; }
+  }
+  return o;
 }
+// ===== أسماء جهات الاتصال (مستوردة من ملف جهات الاتصال) =====
+// ورقة «جهات الاتصال»: المالكة | بصمة الرقم (HMAC لا يُعاد منه الرقم) | الاسم (مشفّر). لا يُحفظ أي رقم مقروء.
+const CT = 'جهات الاتصال', CT_MAX = 20000;
+function ct_() { const sh = sheet_(CT, ['المالكة', 'بصمة الرقم', 'الاسم']); return sh; }
+function pk_(phone) {   // المفتاح: آخر 9 أرقام، فيتطابق الرقم سواء حُفظ محليًا (05...) أو دوليًا (+966...)
+  const n = String(phone || '').replace(/\D/g, '');
+  if (n.length < 8) return '';
+  return Utilities.base64EncodeWebSafe(Utilities.computeHmacSha256Signature('ph:' + n.slice(-9), key_())).slice(0, 14);
+}
+let CM_ = {};
+function cmOf_(uid) {   // null إذا لم تستورد أسماء (فلا تُقرأ الورقة أصلًا ولا يتباطأ الموقع)
+  if (!Number(PropertiesService.getScriptProperties().getProperty('CN_' + uid) || 0)) return null;
+  if (CM_[uid]) return CM_[uid];
+  const cache = CacheService.getScriptCache(), c = cache.get('CM_' + uid);
+  if (c) { try { return (CM_[uid] = JSON.parse(c)); } catch (e) {} }
+  const m = {}, sh = ct_(), n = sh.getLastRow();
+  if (n >= 2) sh.getRange(2, 1, n - 1, 3).getValues().forEach(r => { if (r[0] === uid) m[r[1]] = r[2]; });
+  try { cache.put('CM_' + uid, JSON.stringify(m), 600); } catch (e) {}   // تتجاوز الحد لو كثيرة جدًا: تُقرأ من الورقة
+  return (CM_[uid] = m);
+}
+function cname_(cm, phone) { const k = pk_(phone); return k && cm[k] ? dec_(cm[k]) : ''; }
+function cmDrop_(uid) { delete CM_[uid]; try { CacheService.getScriptCache().remove('CM_' + uid); } catch (e) {} }
 // يجد رسالة تخص هذه المستخدمة (الرسائل القديمة بلا مالكة تعود لأول حساب)
 function findRow_(sh, id, me) {
   if (sh.getLastRow() < 2) return null;
@@ -360,7 +387,7 @@ function doPost(e) {
     d = { action: 'waNotify', token: p[1], title: p[2], text: p.slice(3).join('§§') };
   } else d = JSON.parse(raw);
   const lock = LockService.getScriptLock();
-  const needLock = d.action !== 'list' && d.action !== 'keys' && d.action !== 'poll' && d.action !== 'remList' && d.action !== 'msgOne' && d.action !== 'remDue' && d.action !== 'pushTest' && d.action !== 'archPage' && d.action !== 'annList' && d.action !== 'annAll';   // القراءة لا تنتظر بعضها، فيسرع الموقع
+  const needLock = d.action !== 'list' && d.action !== 'keys' && d.action !== 'poll' && d.action !== 'remList' && d.action !== 'msgOne' && d.action !== 'remDue' && d.action !== 'pushTest' && d.action !== 'archPage' && d.action !== 'annList' && d.action !== 'annAll' && d.action !== 'contactsInfo';   // القراءة لا تنتظر بعضها، فيسرع الموقع
   if (needLock) lock.waitLock(20000);
   try {
     if (e.parameter && e.parameter.wh) { handleWhapi_(e.parameter.wh, d); return out_({ ok: true }); }   // Whapi.Cloud
@@ -559,7 +586,7 @@ function doPost(e) {
     // ---- جلب محادثة واحدة (لفتحها من التذكير) ----
     if (d.action === 'msgOne') {
       const f = findRow_(msgs_(), String(d.id || ''), me);
-      return f ? out_({ ok: true, row: rowOut_(f.vals) }) : out_({ ok: false, error: 'الرسالة غير موجودة.' });
+      return f ? out_({ ok: true, row: rowOut_(f.vals, cmOf_(me[0])) }) : out_({ ok: false, error: 'الرسالة غير موجودة.' });
     }
 
     // ---- تنبيهات الجوال ----
@@ -642,7 +669,7 @@ function doPost(e) {
       const sh = msgs_(), wantStarred = !!(d.starred || d.archived), limit = Math.min(Math.max(Number(d.limit) || 100, 1), 1000);
       cleanDeleted_(sh);
       let starredCount = 0;
-      const mine = [], counts = {}, tc = {}, tm = tagMap_(me[0]), wantTag = d.tag ? String(d.tag) : '';
+      const mine = [], counts = {}, tc = {}, tm = tagMap_(me[0]), cm = cmOf_(me[0]), wantTag = d.tag ? String(d.tag) : '';
       if (sh.getLastRow() >= 2) {
         sh.getRange(2, 1, sh.getLastRow() - 1, COLS).getValues().forEach(r => {
           if ((r[9] || first) !== me[0] || r[6] === DEL) return;       // الرسائل القديمة بلا مالكة تعود لأول حساب
@@ -655,13 +682,13 @@ function doPost(e) {
       }
       const ord = new Map(mine.map((r, i) => [r, i]));
       mine.sort((a, b) => (new Date(b[1]).getTime() || 0) - (new Date(a[1]).getTime() || 0) || ord.get(b) - ord.get(a));   // الأحدث أولًا
-      return out_({ ok: true, v: VERSION, rows: mine.slice(0, limit).map(r => { const o = rowOut_(r); o.tags = tm[r[0]] || []; return o; }), starredCount, counts, tl: tagList_(me[0]), tc, total: mine.length, archDays: ARCHIVE_DAYS, archKeep: ARCHIVE_KEEP_DAYS, archWarn: archWarn_(me[0]), ch: chBefore, mail: Number(PropertiesService.getScriptProperties().getProperty('ML_' + me[0]) || 0) });
+      return out_({ ok: true, v: VERSION, rows: mine.slice(0, limit).map(r => { const o = rowOut_(r, cm); o.tags = tm[r[0]] || []; return o; }), starredCount, counts, tl: tagList_(me[0]), tc, total: mine.length, archDays: ARCHIVE_DAYS, archKeep: ARCHIVE_KEEP_DAYS, archWarn: archWarn_(me[0]), ch: chBefore, mail: Number(PropertiesService.getScriptProperties().getProperty('ML_' + me[0]) || 0) });
     }
 
     // ---- تحميل الرسائل المؤرشفة (صفحات) ----
     if (d.action === 'archPage') {
       const all = archMine_(me), off = Math.max(0, Number(d.offset) || 0), lim = Math.min(Math.max(Number(d.limit) || 200, 1), 300);
-      return out_({ ok: true, total: all.length, rows: all.slice(off, off + lim).map(archOut_) });
+      return out_({ ok: true, total: all.length, rows: (function (cm) { return all.slice(off, off + lim).map(r => archOut_(r, cm)); })(cmOf_(me[0])) });
     }
 
     // ---- حذف رسالة مؤرشفة نهائيًا ----
@@ -715,6 +742,38 @@ function doPost(e) {
       }
       PropertiesService.getScriptProperties().setProperty('TL_' + me[0], JSON.stringify(list));
       return out_(Object.assign({ ok: true, list }, tOut_(touch_(me[0]))));
+    }
+
+    // ---- أسماء جهات الاتصال: استيراد من ملف (vcf / csv) يُقرأ في المتصفح، ولا يصل للخادم إلا الاسم والرقم ----
+    if (d.action === 'contactsInfo') return out_({ ok: true, count: Number(PropertiesService.getScriptProperties().getProperty('CN_' + me[0]) || 0) });
+    if (d.action === 'contactsImport') {
+      const items = Array.isArray(d.items) ? d.items.slice(0, 1500) : [];
+      const sh = ct_(), n = sh.getLastRow(), vals = n >= 2 ? sh.getRange(2, 1, n - 1, 3).getValues() : [];
+      const idx = {}; let mineN = 0;
+      vals.forEach((r, i) => { if (r[0] === me[0]) { idx[r[1]] = i; mineN++; } });
+      const fresh = []; let upd = 0, add = 0;
+      items.forEach(it => {
+        const k = pk_(it && it.p), name = String((it && it.n) || '').replace(/\s+/g, ' ').trim().slice(0, 80);
+        if (!k || !name) return;
+        if (idx[k] !== undefined) { const i = idx[k]; if (i < vals.length) vals[i][2] = enc_(name); else fresh[i - vals.length][2] = enc_(name); upd++; return; }
+        if (mineN + add >= CT_MAX) return;
+        idx[k] = vals.length + fresh.length; fresh.push([me[0], k, enc_(name)]); add++;
+      });
+      if (upd && vals.length) sh.getRange(2, 1, vals.length, 3).setValues(vals);
+      if (fresh.length) { const row = sh.getLastRow() + 1; sh.getRange(row, 1, fresh.length, 3).setNumberFormat('@').setValues(fresh); }
+      const total = mineN + add;
+      PropertiesService.getScriptProperties().setProperty('CN_' + me[0], String(total)); cmDrop_(me[0]);
+      return out_(Object.assign({ ok: true, added: add, updated: upd, total }, tOut_(touch_(me[0]))));
+    }
+    if (d.action === 'contactsClear') {
+      const sh = ct_(), n = sh.getLastRow();
+      if (n >= 2) {
+        const kept = sh.getRange(2, 1, n - 1, 3).getValues().filter(r => r[0] !== me[0]);
+        if (kept.length) sh.getRange(2, 1, kept.length, 3).setValues(kept);
+        if (n - 1 - kept.length > 0) sh.deleteRows(kept.length + 2, n - 1 - kept.length);
+      }
+      PropertiesService.getScriptProperties().deleteProperty('CN_' + me[0]); cmDrop_(me[0]);
+      return out_(Object.assign({ ok: true }, tOut_(touch_(me[0]))));
     }
 
     if (d.action === 'delete') {
@@ -1089,7 +1148,7 @@ function archWarnCalc_(rows) {
   return n ? { n: n, at: at } : null;
 }
 function setArchWarn_(uid, w) { const P = PropertiesService.getScriptProperties(); if (w) P.setProperty('AW_' + uid, JSON.stringify(w)); else P.deleteProperty('AW_' + uid); }
-function archOut_(r) { const o = rowOut_(r), t = Number(r[COLS]); o.exp = t ? t + ARCHIVE_KEEP_DAYS * 86400000 : 0; return o; }
+function archOut_(r, cm) { const o = rowOut_(r, cm), t = Number(r[COLS]); o.exp = t ? t + ARCHIVE_KEEP_DAYS * 86400000 : 0; return o; }
 
 function installArchiveTrigger() {
   ScriptApp.getProjectTriggers().forEach(t => { if (t.getHandlerFunction() === 'archiveOld') ScriptApp.deleteTrigger(t); });
@@ -1101,5 +1160,5 @@ function installArchiveTrigger() {
 function archIds_() { return (PropertiesService.getScriptProperties().getProperty('ARCH_ALL') || '').split(',').filter(Boolean); }
 function listArchive_(me, d) {
   const arBefore = arOf_(me[0]), limit = Math.min(Math.max(Number(d.limit) || 100, 1), 1000), mine = archMine_(me);
-  return out_({ ok: true, v: VERSION, archive: true, ar: arBefore, archDays: ARCHIVE_DAYS, archKeep: ARCHIVE_KEEP_DAYS, archWarn: (function () { const w = archWarnCalc_(mine); setArchWarn_(me[0], w); return w; })(), rows: mine.slice(0, limit).map(archOut_), total: mine.length });
+  return out_({ ok: true, v: VERSION, archive: true, ar: arBefore, archDays: ARCHIVE_DAYS, archKeep: ARCHIVE_KEEP_DAYS, archWarn: (function () { const w = archWarnCalc_(mine); setArchWarn_(me[0], w); return w; })(), rows: (function (cm) { return mine.slice(0, limit).map(r => archOut_(r, cm)); })(cmOf_(me[0])), total: mine.length });
 }
