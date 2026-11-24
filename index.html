@@ -65,7 +65,7 @@ textarea{min-height:120px;resize:vertical}
 .selbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 14px;margin-bottom:12px;position:sticky;top:8px;z-index:4}.selbar .ck{margin-inline-end:auto}
 .item.picked{box-shadow:0 0 0 2px var(--acc)}
 .star{color:#e0a100;align-items:center}.star .i{fill:#f5b800;stroke:#c98f00}
-.btn.ghost.on{color:#b57f00;background:#fff6d6;border-color:#f0cf6a}.btn.ghost.on .i{fill:#f5b800}
+.btn.ghost.on .i{fill:#f5b800;stroke:#c98f00}
 .chip .i{width:14px;height:14px;vertical-align:-2px}
 .chip{font:inherit;font-size:14px;font-weight:500;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:99px;padding:5px 14px}.chip.on{background:var(--acc);border-color:var(--acc);color:#fff}
 .item{padding:16px 18px;margin-bottom:12px;display:grid;grid-template-columns:auto 1fr;gap:14px;border-right:5px solid var(--warn)}
@@ -331,7 +331,7 @@ const API = 'https://script.google.com/macros/s/AKfycbz3RUKVEnZ8XZEb40pOGsvXuhLD
 const $ = id => document.getElementById(id);
 const STATUSES = ['جديدة', 'تم الرد', 'لم يُرد عليها'], STAR = 'المميز بنجمة', ARCH = 'الأرشيف';
 const U = new URLSearchParams(location.search).get('u');
-let VERTXT = '', CH = 0, ARC = 0, WRITES = 0, WSEQ = 0, LSEQ = 0, RSEQ = 0, POLLING = false, PSTART = 0, PTIMER = 0, PFAIL = 0, MAILAT = 0, TOKEN = '', KEY = '', ME = null, ALL = [], STARN = 0, COUNTS = {}, ARCHN = null, ARCHD = 90, ARCHK = 30, ARCHW = null, LIMIT = 50, FILTER = 'جديدة', SEL = new Set(), TAGS = [], TAGC = {}, TAGF = '', TAGT = 0;
+let LDN = 0, RLDN = 0, VERTXT = '', CH = 0, ARC = 0, WRITES = 0, WSEQ = 0, LSEQ = 0, RSEQ = 0, POLLING = false, PSTART = 0, PTIMER = 0, PFAIL = 0, MAILAT = 0, TOKEN = '', KEY = '', ME = null, ALL = [], STARN = 0, COUNTS = {}, ARCHN = null, ARCHD = 90, ARCHK = 30, ARCHW = null, LIMIT = 50, FILTER = 'جديدة', SEL = new Set(), TAGS = [], TAGC = {}, TAGF = '', TAGT = 0;
 const show = id => ['pub','auth','inbox'].forEach(s => $(s).style.display = s===id ? 'block' : 'none');
 const disp = p => { p = String(p||''); return p.startsWith('966') ? '0' + p.slice(3) : p; };
 const ic = n => '<svg class="i"><use href="#'+n+'"/></svg>';
@@ -518,7 +518,7 @@ async function load(silent,force){
   if(!silent) $('list').innerHTML='<div class="sk"></div><div class="sk"></div><div class="sk"></div>';
   const inStar = FILTER===STAR, inArch = FILTER===ARCH;
   if(inArch && silent && !force) return; /* الأرشيف لا يُعاد تحميله إلا عند تغيّره فعلًا (يتولى ذلك الفحص الدوري) */
-  const seq=++LSEQ, w0=WSEQ;
+  const seq=++LSEQ, w0=WSEQ; LDN++;
   try{
     const tk=TOKEN; if(!tk) return;
     const r = await post(inArch?{action:'list',token:tk,archive:true,limit:LIMIT}:{action:'list',token:tk,starred:inStar,limit:LIMIT,tag:TAGF},30000);
@@ -533,11 +533,12 @@ async function load(silent,force){
     if(inArch){ ALL=r.rows; ARCHN=r.total||0; if(r.ar!==undefined) ARC=r.ar; render(); return true; }
     ALL=r.rows; TAGS=r.tl||TAGS; TAGC=r.tc||{}; TAGT=r.total||0; if(TAGF&&!TAGS.includes(TAGF)) TAGF=''; STARN=r.starredCount||0; COUNTS=r.counts||{}; MAILAT=r.mail||0; CH=r.ch||0; mailBtn(); render(); return true;
   }catch(e){if(!silent)$('list').textContent='تعذّر تحميل الرسائل.'; return false;}
+  finally{ LDN--; }
 }
 /* أثناء عرض الأرشيف: نحدّث الأعداد والتصنيفات فقط (بطلب خفيف) كي تبقى الإحصائيات صحيحة دون المساس بقائمة الأرشيف */
 async function loadCounts(){
   const tk=TOKEN; if(!tk) return;
-  const w0=WSEQ;
+  const w0=WSEQ; LDN++;
   try{
     const r = await post({action:'list',token:tk,starred:false,limit:1,tag:''},30000);
     if(!TOKEN) return;
@@ -546,6 +547,7 @@ async function loadCounts(){
     if(!r.ok) return false;
     TAGS=r.tl||TAGS; TAGC=r.tc||{}; STARN=r.starredCount||0; COUNTS=r.counts||{}; MAILAT=r.mail||0; CH=r.ch||0; mailBtn(); if(FILTER===ARCH) render(); return true;
   }catch(e){ return false; }
+  finally{ LDN--; }
 }
 const srcIc = s => s==='واتساب'?'wa':s==='البريد'?'ml':'fm';
 function render(){
@@ -817,8 +819,8 @@ async function poll(){
       if(r.me) syncMe(r.me);
       if(r.an!==undefined) annCheck(r.an);
       if(r.mail){MAILAT=r.mail;mailBtn();}
-      if(r.ch!==CH){ if((FILTER===ARCH?await loadCounts():await load(true))===false) PFAIL++; }
-      if(r.rc!==undefined&&r.rc!==RC){ if((await loadRem(true))===false) PFAIL++; }
+      if(r.ch!==CH && !LDN){ if((FILTER===ARCH?await loadCounts():await load(true))===false) PFAIL++; }
+      if(r.rc!==undefined&&r.rc!==RC&&!RLDN){ if((await loadRem(true))===false) PFAIL++; }
       if(FILTER===ARCH&&r.ar!==undefined&&r.ar!==ARC){ if((await load(true,true))===false) PFAIL++; }
     } else PFAIL++;
   }catch(e){ PFAIL++; }
@@ -938,7 +940,7 @@ function gotoRem(r){ RTAB=RKT[rcls(r)]; RQ=''; $('rQ').value=''; setView('rem');
 /* ---------- التحميل ---------- */
 async function loadRem(silent){
   const tk=TOKEN; if(!tk) return;
-  const seq=++RSEQ, w0=WSEQ;
+  const seq=++RSEQ, w0=WSEQ; RLDN++;
   try{
     const r=await post({action:'remList',token:tk},30000);
     if(!TOKEN) return;
@@ -948,6 +950,7 @@ async function loadRem(silent){
     if(!r.ok){ if(!silent) toast(r.error||'تعذّر تحميل التذكيرات.',1); return false; }
     REMS=r.rows||[]; RDONE=r.doneTotal||0; RC=r.rc||0; afterRem(); checkDue(); return true;
   }catch(e){ if(!silent) toast('تعذّر تحميل التذكيرات.',1); return false; }
+  finally{ RLDN--; }
 }
 function badge(){
   const t1=nextDay(Date.now()), n=REMS.filter(r=>!r.done&&r.due<t1).length, dueNow=REMS.filter(r=>!r.done&&r.due<=Date.now()).length, b=$('nb');

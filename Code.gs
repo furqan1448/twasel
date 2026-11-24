@@ -3,7 +3,7 @@
 // مهم: عند أي تحديث لا تنشئي «عملية نشر جديدة». استخدمي: نشر ← إدارة عمليات النشر ← ✏️ تعديل ← الإصدار: «إصدار جديد» ← نشر.
 // بهذه الطريقة يبقى رابط /exec نفسه، فلا يحتاج أي مستخدم لتغيير رابط Meta أو أي ربط آخر.
 const WA_VERIFY_TOKEN = 'furqan-wa-2026';   // أي كلمة تختارينها، وتكتبينها نفسها في Meta
-const VERSION = '2026-11-24-rt';               // رقم الإصدار: يظهر عند فتح رابط النشر في المتصفح، ليُعرف هل النشر يعمل بآخر كود
+const VERSION = '2026-11-24-fast';               // رقم الإصدار: يظهر عند فتح رابط النشر في المتصفح، ليُعرف هل النشر يعمل بآخر كود
 const MSG = 'الرسائل', USR = 'المستخدمون';
 const COLS = 11;                              // عدد أعمدة جدول الرسائل
 const DEL = 'محذوفة';                         // قديم: صفوف قديمة تُحذف تلقائيًا من الشيت ولا يُكتب هذا النص بعد الآن
@@ -438,7 +438,10 @@ function doPost(e) {
     const me = (d.action === 'waNotify' || d.action === 'mailIn') ? userByKey_(d.token) : userBySession_(d.token);
     if (!me) return out_({ ok: false, error: 'انتهت الجلسة، يرجى تسجيل الدخول.', auth: false });
 
-    if (d.action === 'poll') { const PP = PropertiesService.getScriptProperties(); return out_({ ok: true, ch: chOf_(me[0]), rc: remChOf_(me[0]), ar: arOf_(me[0]), mail: Number(PP.getProperty('ML_' + me[0]) || 0), adm: isAdm_(me), an: Number(PP.getProperty('ANN_LAST') || 0), me: { name: String(me[1] || ''), phone: String(me[2] || ''), email: String(me[3] || '') } }); }
+    if (d.action === 'poll') {
+      const PP = PropertiesService.getScriptProperties(), g = k => Number(PP.getProperty(k) || 0), gl = g('GL'), id = me[0];   // علامة GL تُقرأ مرة واحدة بدل ثلاث
+      return out_({ ok: true, ch: Math.max(g('CH_' + id), gl), rc: Math.max(g('RC_' + id), gl), ar: Math.max(g('AR_' + id), gl), mail: g('ML_' + id), adm: isAdm_(me), an: g('ANN_LAST'), me: { name: String(me[1] || ''), phone: String(me[2] || ''), email: String(me[3] || '') } });
+    }
 
     // ---- الإعلانات: القراءة لكل مستخدمة، والنشر والحذف للمسؤولة فقط (يُتحقق منها هنا في الخادم) ----
     if (d.action === 'annList') {
@@ -798,7 +801,7 @@ function handleWhatsApp_(d, key) {
     const v = ch.value || {};
 
     (v.messages || []).forEach(m => {
-      if (!ids) ids = sh.getLastRow() > 1 ? sh.getRange(2, 1, sh.getLastRow() - 1, 1).getValues().flat() : [];   // مرة واحدة لكل طلب
+      if (!ids) { const last = sh.getLastRow(), from = Math.max(2, last - 1999); ids = last > 1 ? sh.getRange(from, 1, last - from + 1, 1).getValues().flat() : []; }   // آخر 2000 صف تكفي لمنع التكرار، وتُقرأ مرة واحدة لكل طلب
       if (ids.indexOf(m.id) >= 0 || isGone_(m.id)) return;
       ids.push(m.id);
       const c = (v.contacts || []).find(x => x.wa_id === m.from);
@@ -846,13 +849,13 @@ let TS_ = {};   // ذاكرة داخل التنفيذ الواحد
 function tombSet_(pre, days) {
   const k = pre + days;
   if (TS_[k]) return TS_[k];
-  const P = PropertiesService.getScriptProperties(), set = {}, d0 = day_();
+  const P = PropertiesService.getScriptProperties(), set = {}, d0 = day_(), all = P.getProperties();   // طلب واحد بدل عشرات القراءات
   for (let d = d0; d > d0 - days; d--) for (let n = 0; ; n++) {
-    const v = P.getProperty(pre + d + '.' + n); if (v == null) break;
+    const v = all[pre + d + '.' + n]; if (v == null) break;
     for (let i = 0; i + 8 <= v.length; i += 8) set[v.substr(i, 8)] = 1;
   }
   try {   // السجل القديم (قبل هذا الإصدار) يبقى معتمدًا حتى لا يعود ما حُذف قريبًا
-    JSON.parse(P.getProperty(pre === 'T' ? 'TOMB' : 'TOMBC') || '[]').forEach(x => { set[String(x).slice(0, 8)] = 1; });
+    JSON.parse(all[pre === 'T' ? 'TOMB' : 'TOMBC'] || '[]').forEach(x => { set[String(x).slice(0, 8)] = 1; });
   } catch (e) {}
   return (TS_[k] = set);
 }
