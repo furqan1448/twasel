@@ -113,11 +113,13 @@ dialog h3{margin:0 0 4px;font-size:20px}dialog p{margin:0;color:var(--mut)}.dact
 .item.swa .bd:not(.s){background:#1f9d551f;color:#1f9d55}.item.sml .bd:not(.s){background:#3b6fd41f;color:#3b6fd4}
 .item.new{box-shadow:0 0 0 2px color-mix(in srgb,var(--acc) 14%,transparent)}
 @media(max-width:760px){
-.top{position:sticky;top:0;bottom:auto;width:auto;height:auto}
-.top .in{flex-direction:row;align-items:center;height:auto;padding:10px 14px;gap:10px}
-.top .ttl{flex:1;margin:0}.top .ttl b{font-size:17px}.top .ttl small{display:none}
-.top .ib{width:40px;height:40px;padding:0;justify-content:center;border:1px solid #ffffff44}.top .ib::after{display:none}
-#outBtn{margin-top:0}.wrap{margin:0 auto;padding:18px 14px 70px}
+/* نفس شكل اللابتوب: الشريط على اليمين، لكن بعرض مصغّر (أيقونات فقط) كي يتسع الجوال */
+.top{width:64px}
+.top .in{padding:14px 8px;gap:6px;align-items:center}
+.top .ttl{display:none}
+.top .ib{width:46px;height:46px;padding:0;justify-content:center;border:0}.top .ib::after{display:none}
+#outBtn{margin-top:auto}
+.wrap{margin:0 64px 0 0;padding:18px 12px 70px}
 }
 
 
@@ -131,7 +133,7 @@ dialog h3{margin:0 0 4px;font-size:20px}dialog p{margin:0;color:var(--mut)}.dact
 /* الشريط الجانبي */
 .top{overflow:hidden}.top .in{position:relative;z-index:1}
 .top:before{inset:auto auto -60px -60px;width:190px;height:190px;border:2px solid rgba(194,170,133,.3);box-shadow:0 0 0 26px rgba(194,170,133,.07),0 0 0 54px rgba(194,170,133,.035)}
-@media(max-width:760px){.top:before{display:none}.hero:before{width:150px;height:150px;inset:-60px auto auto -60px;box-shadow:0 0 0 20px rgba(194,170,133,.07)}}
+@media(max-width:760px){.top{overflow-y:auto;overflow-x:hidden}.top:before{display:none}.hero:before{width:150px;height:150px;inset:-60px auto auto -60px;box-shadow:0 0 0 20px rgba(194,170,133,.07)}}
 
 /* ===== التذكيرات والمتابعات ===== */
 select{width:100%;padding:12px 14px;font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:10px}
@@ -166,7 +168,7 @@ a.btn{text-decoration:none}
 .alb{cursor:pointer;margin:6px 0 8px}.aT{font-weight:800;font-size:17px;line-height:1.5}.aW{color:var(--mut);font-size:14px}
 .alq{gap:6px;flex-wrap:wrap;margin:0 0 8px}
 .al .acts{margin-top:0}
-@media(max-width:760px){.top .nb{position:absolute;top:-6px;inset-inline-start:-6px;margin:0}.rbar{grid-template-columns:1fr 1fr}.rbar .rs{grid-column:1/-1}#alerts{top:8px;left:8px;right:8px;width:auto}}
+@media(max-width:760px){.top .ib{position:relative}.top .nb{position:absolute;top:0;inset-inline-start:0;margin:0}.rbar{grid-template-columns:1fr 1fr}.rbar .rs{grid-column:1/-1}#alerts{top:8px;left:8px;right:8px;width:auto}}
 #tgd{width:min(520px,94vw)}#tgd h3{margin:0 0 4px}.tgl{display:flex;flex-direction:column;gap:6px;margin:12px 0;max-height:46vh;overflow:auto}.tgr{display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;cursor:pointer}.tgr .tn{flex:1}.tgr input[type=checkbox]{width:18px;height:18px;margin:0}.tga{display:flex;gap:8px;margin-bottom:6px}.tga input{flex:1;min-width:0}.tgg{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:14px}.tgc{font:inherit;text-align:right;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}.tgc b{font-size:15px;display:flex;gap:6px;align-items:center}.tgc .bd{align-self:flex-start}.tgc:hover{border-color:var(--acc)}:root{--pink:#b0315f}@media (prefers-color-scheme:dark){:root{--pink:#f08aae}}.tgd{width:10px;height:10px;border-radius:50%;flex:none;display:inline-block}.tgs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0;max-height:46vh;overflow:auto}.tgo{font:inherit;font-weight:500;cursor:pointer;border:2px solid transparent;border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px;text-align:right}.tgo .tn{flex:1}.tgi{width:18px;height:18px;border-radius:50%;display:inline-grid;place-items:center;flex:none;color:#fff}.tgi .i{width:11px;height:11px;stroke-width:3}
 </style>
 </head>
@@ -357,7 +359,7 @@ a.btn{text-decoration:none}
 
 <script>
 /* ===== رابط النشر (Apps Script): غيّريه هنا فقط ===== */
-const API = 'https://script.google.com/macros/s/AKfycbyY1o60aPAvyyijIOXw9D3FlCS574xxfln8ZypTrXPksH5Bw4sEaSnWSYfvJUfEesodAQ/exec';
+const API = 'https://script.google.com/macros/s/AKfycbysxUPbG2cmZZ14l9uWxYCsM_M81wvVJZSwNdj3CGk8JFp-YYSJyDAgIKnyPVmDnTYz7Q/exec';
 const $ = id => document.getElementById(id);
 const STATUSES = ['جديدة', 'تم الرد', 'لم يُرد عليها'], STAR = 'المميز بنجمة', ARCH = 'الأرشيف';
 const U = new URLSearchParams(location.search).get('u');
