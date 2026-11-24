@@ -273,6 +273,7 @@ a.btn{text-decoration:none}
       <code id="cUrl"></code><button class="btn ghost sm" id="cCopy">نسخ الرابط</button>
     </div>
     <div class="chips" id="filters"></div>
+    <input type="search" id="q" placeholder="ابحثي في الرسائل بالاسم أو الرقم أو النص…" autocomplete="off" enterkeyhint="search" style="margin:0 0 12px">
     <p id="archNote" style="margin:2px 2px 12px;font-size:13px;color:var(--mut);line-height:1.8"></p>
     <div id="list"></div>
     <p id="ver" style="text-align:center;font-size:12px;color:var(--mut);margin:18px 0 6px"></p>
@@ -327,7 +328,8 @@ a.btn{text-decoration:none}
 <div id="toast" role="status"></div>
 
 <script>
-const API = 'https://script.google.com/macros/s/AKfycbwMvIkRlI-03zzajL4SCeY6ySRsyTsvHUFABGbHk8HFShQFrldWmgP6OrLvp3dpy3Vvhw/exec';
+/* ===== رابط النشر (Apps Script): غيّريه هنا فقط ===== */
+const API = 'https://script.google.com/macros/s/AKfycbwwkKz20ZxmU8ezpDCEpxnqwg61eWyZj0SoZ-p3ZSR-7hSNL-z8Mqgj5q6vJkaB9Ly2kg/exec';
 const $ = id => document.getElementById(id);
 const STATUSES = ['جديدة', 'تم الرد', 'لم يُرد عليها'], STAR = 'المميز بنجمة', ARCH = 'الأرشيف';
 const U = new URLSearchParams(location.search).get('u');
@@ -557,6 +559,24 @@ async function loadCounts(){
   }catch(e){ return false; }
   finally{ LDN--; }
 }
+/* ---------- البحث في الرسائل ---------- */
+let QS='', QT=0, QD='';
+const nz = t => String(t||'').toLowerCase()
+  .replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d))
+  .replace(/[\u064B-\u065F\u0670\u0640]/g,'').replace(/[أإآٱ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/\s+/g,' ').trim();
+function qmatch(x){
+  const ph=String(x.phone||''), hay=nz([x.name,ph,disp(ph),x.email,x.message,x.note,(x.tags||[]).join(' '),x.source].join(' '));
+  if(hay.indexOf(QS)>=0) return true;
+  return QD.length>=3 && (ph.replace(/\D/g,'').indexOf(QD)>=0 || disp(ph).replace(/\D/g,'').indexOf(QD)>=0);
+}
+function clearSearch(){ QS=''; QD=''; const q=$('q'); if(q) q.value=''; }
+$('q').addEventListener('input',()=>{
+  clearTimeout(QT);
+  QT=setTimeout(()=>{
+    const raw=$('q').value; QS=nz(raw); QD=/^[\d\s+\-()٠-٩]+$/.test(raw.trim())?nz(raw).replace(/\D/g,''):'';
+    if(QS&&LIMIT<1000){ LIMIT=1000; render(); load(true,FILTER===ARCH); } else render();   /* البحث يشمل أحدث 1000 رسالة */
+  },200);
+});
 const srcIc = s => s==='واتساب'?'wa':s==='البريد'?'ml':'fm';
 function render(){
   const inStar = FILTER===STAR, inArch = FILTER===ARCH, inTag = !!TAGF, cnt=s=>COUNTS[s]||0, SUM=Object.values(COUNTS).reduce((a,b)=>a+b,0);
@@ -566,7 +586,7 @@ function render(){
     const c = s===STAR?STARN:s===ARCH?ARCHN:cnt(s);
     const b=document.createElement('button'); b.className='chip'+(s===FILTER&&!TAGF?' on':''); b.innerHTML=(s===STAR?ic('st')+' ':'')+s+(c==null?'':' ('+c+')');
     b.onclick=()=>{
-      const from=FILTER, hadTag=!!TAGF, sw=hadTag||from===STAR||s===STAR||from===ARCH||s===ARCH;
+      if(QS) clearSearch(); const from=FILTER, hadTag=!!TAGF, sw=hadTag||from===STAR||s===STAR||from===ARCH||s===ARCH;
       if(from!==ARCH&&from!==STAR&&!hadTag) MSGBAK=ALL;   /* نحتفظ بآخر قائمة رسائل لنعرضها فورًا عند الرجوع */
       TAGF=''; FILTER=s; SEL.clear(); if(sw)LIMIT=50;
       if(!sw){ render(); return; }
@@ -589,10 +609,10 @@ function render(){
     an.appendChild(box);
   }
   const L=$('list'); L.innerHTML='';
-  const rows=ALL.filter(x=>inStar||inArch||inTag||x.status===FILTER).sort((a,b)=>(new Date(b.date)||0)-(new Date(a.date)||0));
+  const rows=(QS?ALL.filter(qmatch):ALL.filter(x=>inStar||inArch||inTag||x.status===FILTER)).sort((a,b)=>(new Date(b.date)||0)-(new Date(a.date)||0));
   const vis=new Set(rows.map(x=>x.id)); SEL.forEach(id=>{if(!vis.has(id))SEL.delete(id);});
-  const more=()=>{const tot=inTag?TAGT:inArch?ARCHN:inStar?STARN:(FILTER==='جديدة'||STATUSES.includes(FILTER)?cnt(FILTER):SUM), left=tot-rows.length; if(left>0){const m=document.createElement('button');m.className='btn ghost';m.style.cssText='display:flex;margin:12px auto';m.textContent='عرض الأقدم ('+left+')';m.onclick=()=>{LIMIT+=100;load();};L.appendChild(m);}};
-  if(!rows.length){L.innerHTML='<div class="empty">'+ic('in')+'<p>'+(inArch?'لا توجد رسائل مؤرشفة.':inStar?'لا توجد رسائل مميزة بنجمة.':'لا توجد رسائل هنا.')+'</p></div>';more();return;}
+  const more=()=>{if(QS) return; const tot=inTag?TAGT:inArch?ARCHN:inStar?STARN:(FILTER==='جديدة'||STATUSES.includes(FILTER)?cnt(FILTER):SUM), left=tot-rows.length; if(left>0){const m=document.createElement('button');m.className='btn ghost';m.style.cssText='display:flex;margin:12px auto';m.textContent='عرض الأقدم ('+left+')';m.onclick=()=>{LIMIT+=100;load();};L.appendChild(m);}};
+  if(!rows.length){L.innerHTML='<div class="empty">'+ic('in')+'<p>'+(QS?'لا توجد نتائج مطابقة للبحث.':inArch?'لا توجد رسائل مؤرشفة.':inStar?'لا توجد رسائل مميزة بنجمة.':'لا توجد رسائل هنا.')+'</p></div>';more();return;}
 
   /* شريط التحديد والإجراءات الجماعية */
   const bar=document.createElement('div'); bar.className='card selbar';
@@ -608,6 +628,7 @@ function render(){
     bb('ghost','st',allStar?'إزالة النجمة':'تمييز بنجمة',()=>bulk('star',picked,!allStar));
     bb('danger','tr','حذف',()=>bulk('delete',picked));
   }
+  if(QS){ const qn=document.createElement('p'); qn.style.cssText='margin:0 2px 10px;font-size:13px;color:var(--mut)'; qn.textContent='نتائج البحث ('+rows.length+')'+(ALL.length>=1000?' — يشمل أحدث 1000 رسالة':''); L.appendChild(qn); }
   if(!inArch) L.appendChild(bar);
 
   rows.forEach(x=>{
@@ -652,7 +673,7 @@ const tagCol=n=>TCOL[n]||TCOL['متابعة'];
 const tagDot=n=>{const s=document.createElement('span');s.className='tgd';s.style.background=tagCol(n)[0];return s;};
 const tagPaint=(el,n)=>{const c=tagCol(n);el.style.color=c[0];el.style.background=c[1];};
 const tagClean=s=>String(s||'').replace(/[|\n]/g,' ').trim().slice(0,24);
-function tagFilter(n){ if(FILTER===ARCH||FILTER===STAR) FILTER='جديدة'; TAGF=(TAGF===n&&VIEW==='msg')?'':n; SEL.clear(); LIMIT=50; setView('msg'); load(); }
+function tagFilter(n){ clearSearch(); if(FILTER===ARCH||FILTER===STAR) FILTER='جديدة'; TAGF=(TAGF===n&&VIEW==='msg')?'':n; SEL.clear(); LIMIT=50; setView('msg'); load(); }
 function renderTag(){
   const g=$('tgGrid'); if(!g) return; g.innerHTML='';
   if(!TAGS.length){ g.innerHTML='<div class="empty"><p>لا توجد تصنيفات. اضغطي «إدارة التصنيفات» لإضافة تصنيف.</p></div>'; return; }
@@ -782,7 +803,7 @@ $('cCopy').onclick=e=>cp('cUrl',e.target);
 function logout(){
   const t=TOKEN;
   /* الخروج الفوري من الواجهة أولًا، دون انتظار الخادم */
-  KEY='';TOKEN='';ME=null;ALL=[];ARCPRE=null;ARCSCH=0;MSGBAK=null;ARCHN=null;SEL=new Set();REMS=[];RC=0;CH=0;ARC=0;RDONE=0;$('alerts').innerHTML='';document.title='صِلة للتواصل';
+  KEY='';TOKEN='';ME=null;ALL=[];clearSearch();ARCPRE=null;ARCSCH=0;MSGBAK=null;ARCHN=null;SEL=new Set();REMS=[];RC=0;CH=0;ARC=0;RDONE=0;$('alerts').innerHTML='';document.title='صِلة للتواصل';
   try{localStorage.removeItem('tok');localStorage.removeItem('me');}catch(e){}
   show('auth'); pwReset(); admUi();
   /* اشتراك التنبيهات يبقى في المتصفح (لا نلغيه) فلا تُطلب إعادة التفعيل عند الدخول؛ نفصل الجهاز عن الحساب في الخادم فقط */
