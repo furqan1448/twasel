@@ -327,11 +327,11 @@ a.btn{text-decoration:none}
 <div id="toast" role="status"></div>
 
 <script>
-const API = 'https://script.google.com/macros/s/AKfycbzyDg4_c_u2FG77-6Nmn3PbsSU6ICq0PVSjCUBBvGK82tM4CYqgjYQHvy6uetdcBF3BFA/exec';
+const API = 'https://script.google.com/macros/s/AKfycbz3RUKVEnZ8XZEb40pOGsvXuhLD4Y4LZCJjqW-q5EsrNvWTT-jWrLBfTgNHkait59RQ3w/exec';
 const $ = id => document.getElementById(id);
 const STATUSES = ['جديدة', 'تم الرد', 'لم يُرد عليها'], STAR = 'المميز بنجمة', ARCH = 'الأرشيف';
 const U = new URLSearchParams(location.search).get('u');
-let CH = 0, ARC = 0, WRITES = 0, WSEQ = 0, LSEQ = 0, RSEQ = 0, POLLING = false, PSTART = 0, PTIMER = 0, PFAIL = 0, MAILAT = 0, TOKEN = '', KEY = '', ME = null, ALL = [], STARN = 0, COUNTS = {}, ARCHN = null, ARCHD = 90, ARCHK = 30, ARCHW = null, LIMIT = 50, FILTER = 'جديدة', SEL = new Set(), TAGS = [], TAGC = {}, TAGF = '', TAGT = 0;
+let VERTXT = '', CH = 0, ARC = 0, WRITES = 0, WSEQ = 0, LSEQ = 0, RSEQ = 0, POLLING = false, PSTART = 0, PTIMER = 0, PFAIL = 0, MAILAT = 0, TOKEN = '', KEY = '', ME = null, ALL = [], STARN = 0, COUNTS = {}, ARCHN = null, ARCHD = 90, ARCHK = 30, ARCHW = null, LIMIT = 50, FILTER = 'جديدة', SEL = new Set(), TAGS = [], TAGC = {}, TAGF = '', TAGT = 0;
 const show = id => ['pub','auth','inbox'].forEach(s => $(s).style.display = s===id ? 'block' : 'none');
 const disp = p => { p = String(p||''); return p.startsWith('966') ? '0' + p.slice(3) : p; };
 const ic = n => '<svg class="i"><use href="#'+n+'"/></svg>';
@@ -527,7 +527,7 @@ async function load(silent,force){
     if(seq!==LSEQ) return; /* وصل ردّ أحدث منه: لا نكتب فوقه بنسخة أقدم */
     if(silent && (WRITES>0 || WSEQ!==w0)) return; /* كتابة جارية قد يسبقها هذا الردّ: نتجاهله ويُعاد التحميل في الفحص التالي */
     if(!r.ok){if(!silent)$('list').textContent=r.error||'تعذّر التحميل.';return false;}
-    $('ver').textContent = r.v ? ('إصدار الخادم: '+r.v) : 'تنبيه: الخادم يعمل بكود قديم، يرجى نشر إصدار جديد من Apps Script.';
+    VERTXT = r.v ? ('إصدار الخادم: '+r.v) : 'تنبيه: الخادم يعمل بكود قديم، يرجى نشر إصدار جديد من Apps Script.'; $('ver').textContent = VERTXT;
     if(r.archDays) ARCHD=r.archDays;
     if(r.archKeep) ARCHK=r.archKeep; ARCHW=r.archWarn||null; setTimeout(archAlert,700);
     if(inArch){ ALL=r.rows; ARCHN=r.total||0; if(r.ar!==undefined) ARC=r.ar; render(); return true; }
@@ -786,10 +786,15 @@ $('reload').onclick=async()=>{   /* يعمل من أي صفحة (الرسائل 
 };
 /* ================= التحديث الفوري (Real-time) =================
    الخادم Google Apps Script لا يدعم WebSocket، فالمستمِع المناسب لهذه التقنية هو «فحص علامة التغيّر»:
-   طلب خفيف كل ٣ ثوانٍ يعيد علامات (رسائل · تذكيرات · أرشيف · إعلانات · بيانات الحساب)، وعند تغيّر أي علامة فقط
+   طلب خفيف كل ثانيتين يعيد علامات (رسائل · تذكيرات · أرشيف · إعلانات · بيانات الحساب)، وعند تغيّر أي علامة فقط
    يُعاد تحميل ذلك القسم بصمت. العلامات يرفعها الخادم عند أي كتابة من أي جهاز أو واتساب أو بريد أو تعديل يدوي في الشيت. */
-const pollGap = () => PFAIL ? Math.min(30000, 3000*Math.pow(2,Math.min(PFAIL,4))) : 3000;   /* ٣ث، وعند تعثّر الاتصال يتباطأ تدريجيًا ثم يعود فور نجاحه */
+const pollGap = () => PFAIL ? Math.min(30000, 2000*Math.pow(2,Math.min(PFAIL,4))) : 2000;   /* ثانيتان، وعند تعثّر الاتصال يتباطأ تدريجيًا ثم يعود فور نجاحه */
 function schedulePoll(ms){ clearTimeout(PTIMER); PTIMER=setTimeout(poll, ms==null?pollGap():ms); }
+/* مؤشر هادئ في سطر الإصدار الموجود أصلًا: يؤكد أن التحديث الفوري يعمل (وقت آخر فحص ناجح) أو أنه انقطع */
+function liveMark(on){
+  const t=$('ver'); if(!t) return;
+  t.textContent=(VERTXT?VERTXT+' · ':'')+(on?'التحديث الفوري يعمل ✓ '+new Date().toLocaleTimeString('ar-SA',{timeStyle:'medium'}):'انقطع الاتصال، تتم إعادة المحاولة…');
+}
 function syncMe(m){   /* تغيير الجوال/البريد من جهاز آخر ينعكس هنا */
   if(!ME||!m) return;
   if(String(ME.name||'')===m.name && String(ME.phone||'')===m.phone && String(ME.email||'')===m.email) return;
@@ -807,7 +812,7 @@ async function poll(){
     if(!TOKEN){}
     else if(r.auth===false){ logout(); }
     else if(r.ok){
-      PFAIL=0;
+      PFAIL=0; liveMark(true);
       if(r.adm!==undefined&&!!r.adm!==!!(ME&&ME.admin)&&ME){ ME.admin=!!r.adm; saveMe(); admUi(); }
       if(r.me) syncMe(r.me);
       if(r.an!==undefined) annCheck(r.an);
@@ -817,6 +822,7 @@ async function poll(){
       if(FILTER===ARCH&&r.ar!==undefined&&r.ar!==ARC){ if((await load(true,true))===false) PFAIL++; }
     } else PFAIL++;
   }catch(e){ PFAIL++; }
+  if(PFAIL>=2) liveMark(false);
   POLLING=false; schedulePoll();
 }
 /* فحص فوري عند عودة الصفحة للظهور أو التركيز أو عودة الاتصال (مثلًا بعد قفل الجوال) */
