@@ -310,7 +310,7 @@ a.btn{text-decoration:none}
   <div class="arow"><div><small>أسماء جهات الاتصال (من جوالك)</small><b id="aCn" style="direction:rtl">—</b></div><button class="btn ghost sm" id="aCnB" type="button">استيراد</button></div>
   <div class="dact"><button class="btn ghost" id="aClose" type="button">إغلاق</button></div></dialog>
 
-<dialog id="cndlg"><h3>استيراد أسماء جهات الاتصال</h3>
+<dialog id="cndlg"><h3>أسماء جهات الاتصال</h3>
   <p>يعرض الموقع اسم الشخص كما سمّيتِه في جوالك بدل الاسم الذي كتبه هو في واتساب. يُقرأ الملف داخل متصفحك فقط، ويُحفظ الاسم مشفّرًا والرقم بصيغة لا يمكن قراءتها.</p>
   <div style="margin:12px 0;font-size:14px;line-height:1.9;color:var(--mut)">
     <b style="color:var(--ink)">آيفون:</b> من iCloud.com ← جهات الاتصال ← القوائم ← اضغطي ضغطة مطوّلة على «كل iCloud» ← تصدير.<br>
@@ -319,7 +319,13 @@ a.btn{text-decoration:none}
   <label class="btn ghost" for="cnFile" style="display:inline-flex;cursor:pointer">اختيار الملف</label>
   <input type="file" id="cnFile" hidden accept=".vcf,.csv,.txt,text/vcard,text/x-vcard,text/csv">
   <div id="cnSt" style="margin-top:12px;font-size:14px"></div>
-  <div class="dact"><button class="btn" id="cnGo" type="button" disabled>استيراد</button><button class="btn ghost" id="cnDel" type="button" style="display:none">حذف الأسماء المستوردة</button><button class="btn ghost" id="cnX" type="button">إغلاق</button></div></dialog>
+  <h4 style="margin:22px 0 4px;font-size:15px">أو إضافة اسم ورقم يدويًا</h4>
+  <p style="font-size:13px">إن كان الرقم موجودًا مسبقًا يتحدّث اسمه.</p>
+  <label for="cnN" style="margin-top:8px">الاسم</label><input id="cnN" autocomplete="off" maxlength="80">
+  <label for="cnP">رقم الجوال</label><input id="cnP" type="tel" inputmode="tel" autocomplete="off" placeholder="05xxxxxxxx">
+  <div id="cnMSt" style="margin-top:8px;font-size:14px"></div>
+  <button class="btn ghost" id="cnAdd" type="button" style="margin-top:8px">إضافة</button>
+  <div class="dact"><button class="btn" id="cnGo" type="button" disabled>استيراد من الملف</button><button class="btn ghost" id="cnDel" type="button" style="display:none">حذف الأسماء المستوردة</button><button class="btn ghost" id="cnX" type="button">إغلاق</button></div></dialog>
 
 <dialog id="dlg"><h3 id="dT"></h3><p id="dM"></p><div id="dF"></div><div class="dact"><button class="btn" id="dOk"></button><button class="btn ghost" id="dNo">إلغاء</button></div></dialog>
 <dialog id="pdlg"><h3>التنبيهات</h3><p id="pdM">اختاري نوع التنبيهات التي تصلك على هذا الجهاز.</p>
@@ -546,15 +552,25 @@ function cnParse(name,text){
 
 let CNI=[];
 async function cnCount(){ try{ const r=await post({action:'contactsInfo',token:TOKEN}); if(r&&r.ok){ $('aCn').textContent=r.count?('تم استيراد '+r.count+' اسم'):'لم تُستورد أسماء بعد'; return r.count; } }catch(e){} return 0; }
-function cnOpen(){ CNI=[]; $('cnFile').value=''; $('cnGo').disabled=true; $('cnSt').textContent=''; $('cnDel').style.display='none'; $('adlg').close(); $('cndlg').showModal(); cnCount().then(n=>{ if(n){ $('cnDel').style.display=''; $('cnSt').textContent='لديك '+n+' اسمًا مستوردًا. استيراد ملف جديد يضيف الجديد ويحدّث الموجود.'; } }); }
+function cnOpen(){ CNI=[]; $('cnN').value=''; $('cnP').value=''; $('cnMSt').textContent=''; $('cnFile').value=''; $('cnGo').disabled=true; $('cnSt').textContent=''; $('cnDel').style.display='none'; $('adlg').close(); $('cndlg').showModal(); cnCount().then(n=>{ if(n){ $('cnDel').style.display=''; $('cnSt').textContent='لديك '+n+' اسمًا مستوردًا. استيراد ملف جديد يضيف الجديد ويحدّث الموجود.'; } }); }
 $('aCnB').onclick=cnOpen; $('cnX').onclick=()=>$('cndlg').close();
 $('cnFile').onchange=async e=>{ const f=e.target.files&&e.target.files[0]; if(!f) return; $('cnGo').disabled=true;
   try{ CNI=cnParse(f.name,await f.text()); }catch(err){ CNI=[]; }
   $('cnSt').textContent=CNI.length?('تم العثور على '+CNI.length+' جهة اتصال بأرقامها. اضغطي «استيراد».'):'لم أجد أرقامًا وأسماء في هذا الملف. تأكدي أنه ملف vCard (.vcf) أو CSV.'; $('cnGo').disabled=!CNI.length; };
-$('cnGo').onclick=async()=>{ if(!CNI.length) return; const b=$('cnGo'); b.disabled=true; let add=0,upd=0,done=0,total=0;
-  try{ for(let i=0;i<CNI.length;i+=800){ const r=await post({action:'contactsImport',token:TOKEN,items:CNI.slice(i,i+800)}); if(!r||!r.ok){ $('cnSt').textContent=(r&&r.error)||'تعذّر الاستيراد، حاولي مرة ثانية.'; b.disabled=false; return; } add+=r.added; upd+=r.updated; total=r.total; done=Math.min(CNI.length,i+800); $('cnSt').textContent='جارٍ الاستيراد… '+done+' من '+CNI.length; }
-    $('cnSt').textContent='تم: أُضيف '+add+' وتحدّث '+upd+'. المجموع '+total+' اسمًا.'; $('aCn').textContent='تم استيراد '+total+' اسم'; $('cnDel').style.display=''; CNI=[]; toast('تم استيراد الأسماء'); load(true,true);
+$('cnGo').onclick=async()=>{ if(!CNI.length) return; const b=$('cnGo'); b.disabled=true; let add=0,upd=0,done=0,total=0,full=false;
+  try{ for(let i=0;i<CNI.length;i+=800){ const r=await post({action:'contactsImport',token:TOKEN,items:CNI.slice(i,i+800)}); if(!r||!r.ok){ $('cnSt').textContent=(r&&r.error)||'تعذّر الاستيراد، حاولي مرة ثانية.'; b.disabled=false; return; } add+=r.added; upd+=r.updated; total=r.total; if(r.full) full=true; done=Math.min(CNI.length,i+800); $('cnSt').textContent='جارٍ الاستيراد… '+done+' من '+CNI.length; }
+    $('cnSt').textContent='تم: أُضيف '+add+' وتحدّث '+upd+'. المجموع '+total+' اسمًا.'+(full?' (وصلتِ للحد الأعلى، تم تجاهل الباقي)':''); $('aCn').textContent='تم استيراد '+total+' اسم'; $('cnDel').style.display=''; CNI=[]; toast('تم استيراد الأسماء'); load(true,true);
   }catch(err){ $('cnSt').textContent='تعذّر الاتصال، حاولي مرة ثانية.'; b.disabled=false; } };
+const AR2EN=s=>String(s||'').replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d));
+$('cnAdd').onclick=async()=>{ const nm=$('cnN').value.replace(/\s+/g,' ').trim(), ph=AR2EN($('cnP').value).replace(/\D/g,''), st=$('cnMSt'), b=$('cnAdd');
+  if(!nm){ st.textContent='اكتبي الاسم.'; return; } if(ph.length<8){ st.textContent='رقم الجوال غير صحيح.'; return; }
+  b.disabled=true; st.textContent='جارٍ الحفظ…';
+  try{ const r=await post({action:'contactsImport',token:TOKEN,items:[{n:nm,p:ph}]});
+    if(!r||!r.ok){ st.textContent=(r&&r.error)||'تعذّرت الإضافة، حاولي مرة ثانية.'; }
+    else if(r.full&&!r.added&&!r.updated){ st.textContent='وصلتِ للحد الأعلى ('+r.max+' اسم). احذفي الأسماء المستوردة أو استوردي قائمة أقل.'; }
+    else { st.textContent=r.added?('تمت إضافة «'+nm+'» ✓'):('تم تحديث اسم هذا الرقم إلى «'+nm+'» ✓'); $('cnN').value=''; $('cnP').value=''; $('aCn').textContent='تم استيراد '+r.total+' اسم'; $('cnDel').style.display=''; load(true,true); }
+  }catch(err){ st.textContent='تعذّر الاتصال، حاولي مرة ثانية.'; }
+  b.disabled=false; };
 $('cnDel').onclick=async()=>{ const a=await dlg('حذف الأسماء المستوردة',{text:'ستعود الأسماء لما كتبه المرسلون بأنفسهم في واتساب.',ok:'حذف',danger:true}); if(!a) return; const r=await post({action:'contactsClear',token:TOKEN}); if(r&&r.ok){ $('cnSt').textContent='تم حذف الأسماء المستوردة.'; $('aCn').textContent='لم تُستورد أسماء بعد'; $('cnDel').style.display='none'; load(true,true); } else toast((r&&r.error)||'تعذّر الحذف',1); };
 
 $('pwBtn').onclick=openAcct;

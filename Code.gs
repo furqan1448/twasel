@@ -3,7 +3,7 @@
 // مهم: عند أي تحديث لا تنشئي «عملية نشر جديدة». استخدمي: نشر ← إدارة عمليات النشر ← ✏️ تعديل ← الإصدار: «إصدار جديد» ← نشر.
 // بهذه الطريقة يبقى رابط /exec نفسه، فلا يحتاج أي مستخدم لتغيير رابط Meta أو أي ربط آخر.
 const WA_VERIFY_TOKEN = 'furqan-wa-2026';   // أي كلمة تختارينها، وتكتبينها نفسها في Meta
-const VERSION = '2026-11-24-pushmodes';               // رقم الإصدار: يظهر عند فتح رابط النشر في المتصفح، ليُعرف هل النشر يعمل بآخر كود
+const VERSION = '2026-11-25-contactpacks';               // رقم الإصدار: يظهر عند فتح رابط النشر في المتصفح، ليُعرف هل النشر يعمل بآخر كود
 const MSG = 'الرسائل', USR = 'المستخدمون';
 const COLS = 11;                              // عدد أعمدة جدول الرسائل
 const DEL = 'محذوفة';                         // قديم: صفوف قديمة تُحذف تلقائيًا من الشيت ولا يُكتب هذا النص بعد الآن
@@ -205,23 +205,31 @@ function flushMsgPush_() {
   });
 }
 function pushTick() {
-  const now = Date.now(), cand = {}, lock = LockService.getScriptLock();
+  // نسجّل «وقت الإرسال» في الشيت قبل إرسال الإشعار، لأن الجوال يستدعي remDue فور وصول الإشعار.
+  // (كان التسجيل يتم بعد الإرسال، فيصل الجوال أحيانًا قبل التسجيل ولا يجد التذكير فيعرض نصًا عامًا بدل عنوان التذكير)
+  const now = Date.now(), claimed = [], lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
     const sh = rems_(), n = sh.getLastRow() - 1; if (n < 1) return;
-    sh.getRange(2, 1, n, RCOLS).getValues().forEach(r => {
+    const has = {};
+    sh.getRange(2, 1, n, RCOLS).getValues().forEach((r, i) => {
       const due = Number(r[3]) || 0;
       if (r[4] === 'مكتمل' || !due || due > now || now - due > 86400000 || Number(r[13]) === due) return;
-      (cand[r[2]] = cand[r[2]] || []).push({ id: r[0], due: due });
+      const uid = r[2]; if (has[uid] === undefined) has[uid] = subs_(uid).length > 0;
+      if (!has[uid]) return;
+      sh.getRange(i + 2, 14, 1, 2).setValues([[due, now]]);
+      claimed.push({ id: r[0], uid: uid, due: due });
     });
   } finally { lock.releaseLock(); }
-  const cache = {}, done = [];
-  Object.keys(cand).forEach(uid => { if (subs_(uid).length && pushAll_(uid, cache) > 0) cand[uid].forEach(c => done.push(c)); });
-  if (!done.length) return;
-  lock.waitLock(20000);
+  if (!claimed.length) return;
+  const cache = {}, byUid = {}, failed = [];
+  claimed.forEach(c => (byUid[c.uid] = byUid[c.uid] || []).push(c));
+  Object.keys(byUid).forEach(uid => { if (pushAll_(uid, cache) <= 0) byUid[uid].forEach(c => failed.push(c)); });
+  if (!failed.length) return;
+  lock.waitLock(20000);   // فشل الإرسال: نلغي التسجيل ليُعاد المحاولة في الدقيقة القادمة
   try {
     const sh = rems_(), n = sh.getLastRow() - 1, ids = sh.getRange(2, 1, n, 1).getValues();
-    done.forEach(c => { const i = ids.findIndex(x => x[0] === c.id); if (i >= 0) sh.getRange(i + 2, 14, 1, 2).setValues([[c.due, now]]); });
+    failed.forEach(c => { const i = ids.findIndex(x => x[0] === c.id); if (i >= 0) sh.getRange(i + 2, 14, 1, 2).setValues([['', '']]); });
   } finally { lock.releaseLock(); }
 }
 function installPushTrigger() {
@@ -334,8 +342,44 @@ function rowOut_(r, cm) {
 }
 // ===== أسماء جهات الاتصال (مستوردة من ملف جهات الاتصال) =====
 // ورقة «جهات الاتصال»: المالكة | بصمة الرقم (HMAC لا يُعاد منه الرقم) | الاسم (مشفّر). لا يُحفظ أي رقم مقروء.
-const CT = 'جهات الاتصال', CT_MAX = 20000;
-function ct_() { const sh = sheet_(CT, ['المالكة', 'بصمة الرقم', 'الاسم']); return sh; }
+// التخزين: صف واحد لكل مستخدمة (وليس صفًا لكل جهة اتصال)، تُحزَم جهاتها داخل خلايا قليلة. فلو أضافت 50 مستخدمة آلاف الأسماء يبقى الشيت صغيرًا وسريعًا.
+const CT = 'جهات الاتصال', CT2 = 'حزم جهات الاتصال', CT_MAX = 6000, CT_CELL = 45000;   // CT = الورقة القديمة (تُنقل تلقائيًا مرة واحدة ثم تُحذف)
+function ct_() { return sheet_(CT2, ['المالكة', 'العدد', 'الحزم (مشفّرة)']); }
+function ctRow_(sh, uid) {   // رقم صف المستخدمة (يقرأ عمود المالكة فقط)
+  const n = sh.getLastRow(); if (n < 2) return 0;
+  const i = sh.getRange(2, 1, n - 1, 1).getValues().findIndex(r => r[0] === uid);
+  return i < 0 ? 0 : i + 2;
+}
+function ctLoad_(uid) {   // {بصمة: اسم مشفّر} من الشيت مباشرة
+  const sh = ct_(), row = ctRow_(sh, uid); if (!row) return {};
+  const cells = sh.getRange(row, 3, 1, Math.max(1, sh.getLastColumn() - 2)).getValues()[0];
+  const txt = cells.join('');
+  try { return txt ? JSON.parse(txt) : {}; } catch (e) { return {}; }
+}
+function ctSave_(uid, map) {
+  const sh = ct_(), txt = JSON.stringify(map), parts = txt.length > 2 ? (txt.match(new RegExp('[\\s\\S]{1,' + CT_CELL + '}', 'g')) || []) : [];
+  const need = parts.length + 2; if (sh.getMaxColumns() < need) sh.insertColumnsAfter(sh.getMaxColumns(), need - sh.getMaxColumns());
+  const w = sh.getMaxColumns(); let row = ctRow_(sh, uid);
+  if (!parts.length) { if (row) sh.deleteRow(row); return; }
+  if (!row) row = sh.getLastRow() + 1;
+  const line = [uid, Object.keys(map).length].concat(parts); while (line.length < w) line.push('');
+  sh.getRange(row, 1, 1, w).setNumberFormat('@').setValues([line]);
+}
+function ctMigrate_() {   // مرة واحدة: ينقل ما استوردته المستخدمات سابقًا من الورقة القديمة (صف لكل جهة) إلى الحزم
+  const P = PropertiesService.getScriptProperties(); if (P.getProperty('CT_V2')) return;
+  const lock = LockService.getScriptLock(), had = lock.hasLock(); if (!had) lock.waitLock(20000);
+  try {
+    if (P.getProperty('CT_V2')) return;
+    const old = ss_().getSheetByName(CT);
+    if (old) {
+      const n = old.getLastRow(), by = {};
+      if (n >= 2) old.getRange(2, 1, n - 1, 3).getValues().forEach(r => { if (r[0] && r[1]) (by[r[0]] = by[r[0]] || {})[r[1]] = r[2]; });
+      Object.keys(by).forEach(uid => { ctSave_(uid, by[uid]); P.setProperty('CN_' + uid, String(Object.keys(by[uid]).length)); });
+      P.setProperty('CT_V2', '1');
+      ss_().deleteSheet(old);
+    } else P.setProperty('CT_V2', '1');
+  } finally { if (!had) lock.releaseLock(); }
+}
 function pk_(phone) {   // المفتاح: آخر 9 أرقام، فيتطابق الرقم سواء حُفظ محليًا (05...) أو دوليًا (+966...)
   const n = String(phone || '').replace(/\D/g, '');
   if (n.length < 8) return '';
@@ -345,15 +389,29 @@ let CM_ = {};
 function cmOf_(uid) {   // null إذا لم تستورد أسماء (فلا تُقرأ الورقة أصلًا ولا يتباطأ الموقع)
   if (!Number(PropertiesService.getScriptProperties().getProperty('CN_' + uid) || 0)) return null;
   if (CM_[uid]) return CM_[uid];
-  const cache = CacheService.getScriptCache(), c = cache.get('CM_' + uid);
-  if (c) { try { return (CM_[uid] = JSON.parse(c)); } catch (e) {} }
-  const m = {}, sh = ct_(), n = sh.getLastRow();
-  if (n >= 2) sh.getRange(2, 1, n - 1, 3).getValues().forEach(r => { if (r[0] === uid) m[r[1]] = r[2]; });
-  try { cache.put('CM_' + uid, JSON.stringify(m), 600); } catch (e) {}   // تتجاوز الحد لو كثيرة جدًا: تُقرأ من الورقة
+  try { ctMigrate_(); } catch (e) {}
+  const cache = CacheService.getScriptCache();
+  try {   // الذاكرة المؤقتة (10 دقائق): نفس النص المشفّر مقسّمًا إلى قطع ≤ 90 ألف حرف
+    const n = Number(cache.get('CMN_' + uid) || 0);
+    if (n) {
+      const keys = []; for (let i = 0; i < n; i++) keys.push('CMP_' + uid + '_' + i);
+      const got = cache.getAll(keys); let txt = ''; keys.forEach(k => { txt += (got[k] || ''); });
+      if (txt && keys.every(k => got[k])) return (CM_[uid] = JSON.parse(txt));
+    }
+  } catch (e) {}
+  const m = ctLoad_(uid);
+  try {
+    const txt = JSON.stringify(m), put = {}, parts = txt.match(/[\s\S]{1,90000}/g) || [];
+    parts.forEach((p, i) => { put['CMP_' + uid + '_' + i] = p; }); put['CMN_' + uid] = String(parts.length);
+    cache.putAll(put, 600);
+  } catch (e) {}
   return (CM_[uid] = m);
 }
 function cname_(cm, phone) { const k = pk_(phone); return k && cm[k] ? dec_(cm[k]) : ''; }
-function cmDrop_(uid) { delete CM_[uid]; try { CacheService.getScriptCache().remove('CM_' + uid); } catch (e) {} }
+function cmDrop_(uid) {
+  delete CM_[uid];
+  try { const c = CacheService.getScriptCache(), n = Number(c.get('CMN_' + uid) || 0), ks = ['CMN_' + uid]; for (let i = 0; i < n; i++) ks.push('CMP_' + uid + '_' + i); c.removeAll(ks); } catch (e) {}
+}
 // يجد رسالة تخص هذه المستخدمة (الرسائل القديمة بلا مالكة تعود لأول حساب)
 function findRow_(sh, id, me) {
   if (sh.getLastRow() < 2) return null;
@@ -785,32 +843,25 @@ function doPost_(e) {
 
     // ---- أسماء جهات الاتصال: استيراد من ملف (vcf / csv) يُقرأ في المتصفح، ولا يصل للخادم إلا الاسم والرقم ----
     if (d.action === 'contactsInfo') return out_({ ok: true, count: Number(PropertiesService.getScriptProperties().getProperty('CN_' + me[0]) || 0) });
-    if (d.action === 'contactsImport') {
+    if (d.action === 'contactsImport') {   // يخدم الاستيراد من ملف، والإضافة اليدوية (عنصر واحد)
+      ctMigrate_();
       const items = Array.isArray(d.items) ? d.items.slice(0, 1500) : [];
-      const sh = ct_(), n = sh.getLastRow(), vals = n >= 2 ? sh.getRange(2, 1, n - 1, 3).getValues() : [];
-      const idx = {}; let mineN = 0;
-      vals.forEach((r, i) => { if (r[0] === me[0]) { idx[r[1]] = i; mineN++; } });
-      const fresh = []; let upd = 0, add = 0;
+      const map = ctLoad_(me[0]); let upd = 0, add = 0, full = false, cnt = Object.keys(map).length;
       items.forEach(it => {
         const k = pk_(it && it.p), name = String((it && it.n) || '').replace(/\s+/g, ' ').trim().slice(0, 80);
         if (!k || !name) return;
-        if (idx[k] !== undefined) { const i = idx[k]; if (i < vals.length) vals[i][2] = enc_(name); else fresh[i - vals.length][2] = enc_(name); upd++; return; }
-        if (mineN + add >= CT_MAX) return;
-        idx[k] = vals.length + fresh.length; fresh.push([me[0], k, enc_(name)]); add++;
+        if (map[k] !== undefined) { map[k] = enc_(name); upd++; return; }
+        if (cnt + add >= CT_MAX) { full = true; return; }
+        map[k] = enc_(name); add++;
       });
-      if (upd && vals.length) sh.getRange(2, 1, vals.length, 3).setValues(vals);
-      if (fresh.length) { const row = sh.getLastRow() + 1; sh.getRange(row, 1, fresh.length, 3).setNumberFormat('@').setValues(fresh); }
-      const total = mineN + add;
+      if (add || upd) ctSave_(me[0], map);
+      const total = cnt + add;
       PropertiesService.getScriptProperties().setProperty('CN_' + me[0], String(total)); cmDrop_(me[0]);
-      return out_(Object.assign({ ok: true, added: add, updated: upd, total }, tOut_(touch_(me[0]))));
+      return out_(Object.assign({ ok: true, added: add, updated: upd, total, full, max: CT_MAX }, tOut_(touch_(me[0]))));
     }
     if (d.action === 'contactsClear') {
-      const sh = ct_(), n = sh.getLastRow();
-      if (n >= 2) {
-        const kept = sh.getRange(2, 1, n - 1, 3).getValues().filter(r => r[0] !== me[0]);
-        if (kept.length) sh.getRange(2, 1, kept.length, 3).setValues(kept);
-        if (n - 1 - kept.length > 0) sh.deleteRows(kept.length + 2, n - 1 - kept.length);
-      }
+      ctMigrate_();
+      ctSave_(me[0], {});
       PropertiesService.getScriptProperties().deleteProperty('CN_' + me[0]); cmDrop_(me[0]);
       return out_(Object.assign({ ok: true }, tOut_(touch_(me[0]))));
     }

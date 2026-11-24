@@ -22,9 +22,15 @@ self.addEventListener('push', e => e.waitUntil((async () => {
   try {
     const api = await kv('api'), tok = await kv('tok'), mode = await kv('mode');
     if (api && tok) {
-      const r = await fetch(api, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'remDue', token: tok, mode: mode === 'all' ? 'all' : 'rem' }) });
-      const j = await r.json();
-      if (j && j.ok) { items = j.rows || []; test = !!j.test; msg = j.msg || null; }
+      // نعيد المحاولة حتى 3 مرات (بينها 1.2 ثانية) إن لم تصل التفاصيل بعد، كي لا يظهر نص عام بدل عنوان التذكير
+      for (let a = 0; a < 3; a++) {
+        try {
+          const r = await fetch(api, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'remDue', token: tok, mode: mode === 'all' ? 'all' : 'rem' }) });
+          const j = await r.json();
+          if (j && j.ok) { items = j.rows || []; test = !!j.test; msg = j.msg || null; if (items.length || test || msg) break; }
+        } catch (err) {}
+        if (a < 2) await new Promise(res => setTimeout(res, 1200));
+      }
     }
   } catch (err) {}
   const base = self.registration.scope, icon = 'icon-192.png';
