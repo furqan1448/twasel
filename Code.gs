@@ -3,7 +3,7 @@
 // مهم: عند أي تحديث لا تنشئي «عملية نشر جديدة». استخدمي: نشر ← إدارة عمليات النشر ← ✏️ تعديل ← الإصدار: «إصدار جديد» ← نشر.
 // بهذه الطريقة يبقى رابط /exec نفسه، فلا يحتاج أي مستخدم لتغيير رابط Meta أو أي ربط آخر.
 const WA_VERIFY_TOKEN = 'furqan-wa-2026';   // أي كلمة تختارينها، وتكتبينها نفسها في Meta
-const VERSION = '2026-11-23-a';               // رقم الإصدار: يظهر عند فتح رابط النشر في المتصفح، ليُعرف هل النشر يعمل بآخر كود
+const VERSION = '2026-11-24-rt';               // رقم الإصدار: يظهر عند فتح رابط النشر في المتصفح، ليُعرف هل النشر يعمل بآخر كود
 const MSG = 'الرسائل', USR = 'المستخدمون';
 const COLS = 11;                              // عدد أعمدة جدول الرسائل
 const DEL = 'محذوفة';                         // قديم: صفوف قديمة تُحذف تلقائيًا من الشيت ولا يُكتب هذا النص بعد الآن
@@ -101,8 +101,9 @@ function remOut_(r) {
     title: dec_(r[5]), note: dec_(r[6]), msgId: String(r[7] || ''), name: dec_(r[8]), phone: dec_(r[9]), email: dec_(r[10]), source: r[11] || ''
   };
 }
-function rtouch_(id) { const v = String(Date.now()); PropertiesService.getScriptProperties().setProperty('RC_' + id, v); return Number(v); }
-function remChOf_(id) { return Number(PropertiesService.getScriptProperties().getProperty('RC_' + id) || 0); }
+let LASTRP_ = 0;  // العلامة السابقة لآخر rtouch_
+function rtouch_(id) { LASTRP_ = remChOf_(id); return stampBump_('RC_' + id); }
+function remChOf_(id) { return Math.max(Number(PropertiesService.getScriptProperties().getProperty('RC_' + id) || 0), glOf_()); }
 function findRem_(sh, id, me) {
   const n = sh.getLastRow() - 1; if (n < 1) return null;
   const vals = sh.getRange(2, 1, n, RCOLS).getValues(), i = vals.findIndex(r => r[0] === id && r[2] === me[0]);
@@ -227,8 +228,19 @@ function users_() {
 }
 
 // علامة «تغيّر شيء» لكل مستخدمة: يفحصها الموقع كل بضع ثوانٍ بطلب خفيف، فتظهر الرسائل الجديدة فورًا دون تحديث الصفحة
-function touch_(id) { PropertiesService.getScriptProperties().setProperty('CH_' + id, String(Date.now())); }
-function chOf_(id) { return Number(PropertiesService.getScriptProperties().getProperty('CH_' + id) || 0); }
+// كل علامة تتزايد دائمًا (لا تتكرر حتى لو حدث تغيّران في اللحظة نفسها). والعلامة العامة GL تُرفع عند أي تغيير يخص الجميع
+// (الأرشفة التلقائية، التنظيف، أو تعديل يدوي في الشيت) فتُعيد كل الأجهزة تحميل بياناتها فورًا.
+function stampBump_(key) {
+  const P = PropertiesService.getScriptProperties(), old = Number(P.getProperty(key) || 0), v = Math.max(Date.now(), old + 1);
+  P.setProperty(key, String(v)); return v;
+}
+function glOf_() { return Number(PropertiesService.getScriptProperties().getProperty('GL') || 0); }
+function touchAll_() { return stampBump_('GL'); }
+let LASTP_ = 0;   // العلامة السابقة لآخر touch_ (تُرجَع للمتصفح ليعرف هل تغيّر شيء آخر بين تحميله وكتابته)
+function touch_(id) { LASTP_ = chOf_(id); return stampBump_('CH_' + id); }
+function chOf_(id) { return Math.max(Number(PropertiesService.getScriptProperties().getProperty('CH_' + id) || 0), glOf_()); }
+function arOf_(id) { return Math.max(Number(PropertiesService.getScriptProperties().getProperty('AR_' + id) || 0), glOf_()); }
+function tOut_(v) { return { ch: v, cp: LASTP_ }; }   // يُضاف لردّ أي كتابة على الرسائل
 
 function out_(o) {
   return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
@@ -248,7 +260,10 @@ function hash_(pw, salt) {
 function isAdm_(r) { return !!r && /^(مس[ؤئ]ول[ةه]?|مدير[ةه]?|admin)$/i.test(String(r[8] || '').trim()); }
 function pub_(r) { return { id: r[0], name: r[1], phone: r[2], email: r[3], admin: isAdm_(r) }; }
 // عند أي تعديل يدوي في الشيت تُمسح ذاكرة المستخدمين المؤقتة، فتظهر صلاحية «مسؤول» فور كتابتها دون انتظار
-function onEdit(e) { try { CacheService.getScriptCache().remove('USERS'); } catch (err) {} }
+function onEdit(e) {
+  try { CacheService.getScriptCache().remove('USERS'); } catch (err) {}
+  try { touchAll_(); } catch (err) {}   // تعديل يدوي في الشيت (رسالة/حالة/تذكير...) يظهر فورًا في الموقع لكل المستخدمات
+}
 
 let UC_ = null;   // المستخدمون: تُقرأ من ذاكرة مؤقتة (10 دقائق) بدل قراءة الشيت مع كل طلب
 function allUsers_() {
@@ -329,6 +344,7 @@ function doGet(e) {
     lock.waitLock(20000);
     try {
       mailIn_(me, items);
+      if (items.length) touch_(me[0]);   // كان مسار GET لا يُعلم الموقع بوصول بريد جديد
       PropertiesService.getScriptProperties().setProperty('ML_' + me[0], String(Date.now()));
     } finally { lock.releaseLock(); }
     return out_({ ok: true, count: items.length, expected: regEmail });
@@ -422,7 +438,7 @@ function doPost(e) {
     const me = (d.action === 'waNotify' || d.action === 'mailIn') ? userByKey_(d.token) : userBySession_(d.token);
     if (!me) return out_({ ok: false, error: 'انتهت الجلسة، يرجى تسجيل الدخول.', auth: false });
 
-    if (d.action === 'poll') { const PP = PropertiesService.getScriptProperties(); return out_({ ok: true, ch: chOf_(me[0]), rc: remChOf_(me[0]), mail: Number(PP.getProperty('ML_' + me[0]) || 0), adm: isAdm_(me), an: Number(PP.getProperty('ANN_LAST') || 0) }); }
+    if (d.action === 'poll') { const PP = PropertiesService.getScriptProperties(); return out_({ ok: true, ch: chOf_(me[0]), rc: remChOf_(me[0]), ar: arOf_(me[0]), mail: Number(PP.getProperty('ML_' + me[0]) || 0), adm: isAdm_(me), an: Number(PP.getProperty('ANN_LAST') || 0), me: { name: String(me[1] || ''), phone: String(me[2] || ''), email: String(me[3] || '') } }); }
 
     // ---- الإعلانات: القراءة لكل مستخدمة، والنشر والحذف للمسؤولة فقط (يُتحقق منها هنا في الخادم) ----
     if (d.action === 'annList') {
@@ -534,8 +550,7 @@ function doPost(e) {
     if (d.action === 'addManual') {
       if (!d.name) return out_({ ok: false, error: 'الاسم مطلوب.' });
       msgs_().appendRow([Utilities.getUuid(), new Date(), enc_(String(d.name).slice(0, 200)), enc_(norm_(d.phone)), '', enc_(String(d.message || '').slice(0, 5000)), 'جديدة', '', 'واتساب', me[0], '']);
-      touch_(me[0]);
-      return out_({ ok: true });
+      return out_(Object.assign({ ok: true }, tOut_(touch_(me[0]))));
     }
 
     // ---- جلب محادثة واحدة (لفتحها من التذكير) ----
@@ -573,11 +588,11 @@ function doPost(e) {
     // ---- التذكيرات والمتابعات ----
     if (d.action === 'remList') {
       // كل التذكيرات المعلّقة + آخر 100 مكتملة (ويُفكّ تشفير المعروض فقط)
-      const sh = rems_(), n = sh.getLastRow() - 1, pend = [], done = [];
+      const rcBefore = remChOf_(me[0]), sh = rems_(), n = sh.getLastRow() - 1, pend = [], done = [];
       if (n > 0) sh.getRange(2, 1, n, RCOLS).getValues().forEach(r => { if (r[2] === me[0]) (r[4] === 'مكتمل' ? done : pend).push(r); });
       pend.sort((a, b) => (Number(a[3]) || 0) - (Number(b[3]) || 0));
       done.sort((a, b) => (Number(b[12]) || 0) - (Number(a[12]) || 0));
-      return out_({ ok: true, rows: pend.slice(0, 500).concat(done.slice(0, 100)).map(remOut_), doneTotal: done.length, rc: remChOf_(me[0]) });
+      return out_({ ok: true, rows: pend.slice(0, 500).concat(done.slice(0, 100)).map(remOut_), doneTotal: done.length, rc: rcBefore });
     }
     if (d.action === 'remAdd') {
       const title = String(d.title || '').trim().slice(0, 200), due = Number(d.due);
@@ -591,7 +606,8 @@ function doPost(e) {
       }
       const row = [Utilities.getUuid(), new Date(), me[0], due, 'معلّق', enc_(title), enc_(String(d.note || '').slice(0, 2000)), msgId, enc_(name), enc_(phone), enc_(email), source, ''];
       rems_().appendRow(row);
-      return out_({ ok: true, rem: remOut_(row), rc: rtouch_(me[0]) });
+      const rcN = rtouch_(me[0]);
+      return out_({ ok: true, rem: remOut_(row), rc: rcN, rp: LASTRP_ });
     }
     if (d.action === 'remUpdate') {
       const sh = rems_(), f = findRem_(sh, String(d.id || ''), me);
@@ -606,18 +622,20 @@ function doPost(e) {
         if (d.phone !== undefined) row[9] = enc_(norm_(d.phone));
       }
       sh.getRange(f.row, 1, 1, RCOLS).setValues([row]);
-      return out_({ ok: true, rc: rtouch_(me[0]) });
+      const rcN = rtouch_(me[0]);
+      return out_({ ok: true, rc: rcN, rp: LASTRP_ });
     }
     if (d.action === 'remDelete') {
       const sh = rems_(), f = findRem_(sh, String(d.id || ''), me);
       if (f) sh.deleteRow(f.row);
-      return out_({ ok: true, rc: rtouch_(me[0]) });
+      const rcN = rtouch_(me[0]);
+      return out_({ ok: true, rc: rcN, rp: LASTRP_ });
     }
 
     if (d.action === 'list') {
       // يُرجع أحدث رسائل العرض المطلوب فقط (الافتراضي 100) مع أعداد الحالات كاملة، ويفك تشفير المعروض فقط
       if (d.archive) return listArchive_(me, d);   // عرض الرسائل المؤرشفة (للقراءة والحذف فقط)
-      const first = allUsers_()[0][0];
+      const first = allUsers_()[0][0], chBefore = chOf_(me[0]);   // العلامة تُقرأ قبل الصفوف: لو تغيّر شيء أثناء القراءة يُعاد التحميل في الفحص التالي ولا يضيع تحديث
       const sh = msgs_(), wantStarred = !!(d.starred || d.archived), limit = Math.min(Math.max(Number(d.limit) || 100, 1), 1000);
       cleanDeleted_(sh);
       let starredCount = 0;
@@ -634,7 +652,7 @@ function doPost(e) {
       }
       const ord = new Map(mine.map((r, i) => [r, i]));
       mine.sort((a, b) => (new Date(b[1]).getTime() || 0) - (new Date(a[1]).getTime() || 0) || ord.get(b) - ord.get(a));   // الأحدث أولًا
-      return out_({ ok: true, v: VERSION, rows: mine.slice(0, limit).map(r => { const o = rowOut_(r); o.tags = tm[r[0]] || []; return o; }), starredCount, counts, tl: tagList_(me[0]), tc, total: mine.length, archDays: ARCHIVE_DAYS, archKeep: ARCHIVE_KEEP_DAYS, archWarn: archWarn_(me[0]), ch: chOf_(me[0]), mail: Number(PropertiesService.getScriptProperties().getProperty('ML_' + me[0]) || 0) });
+      return out_({ ok: true, v: VERSION, rows: mine.slice(0, limit).map(r => { const o = rowOut_(r); o.tags = tm[r[0]] || []; return o; }), starredCount, counts, tl: tagList_(me[0]), tc, total: mine.length, archDays: ARCHIVE_DAYS, archKeep: ARCHIVE_KEEP_DAYS, archWarn: archWarn_(me[0]), ch: chBefore, mail: Number(PropertiesService.getScriptProperties().getProperty('ML_' + me[0]) || 0) });
     }
 
     // ---- تحميل الرسائل المؤرشفة (صفحات) ----
@@ -652,7 +670,7 @@ function doPost(e) {
           if (!ash || ash.getLastRow() < 2) continue;
           const vals = ash.getRange(2, 1, ash.getLastRow() - 1, COLS).getValues();
           const i = vals.findIndex(r => r[0] === d.id && (r[9] || first) === me[0]);
-          if (i >= 0) { ash.deleteRow(i + 2); setArchWarn_(me[0], archWarnCalc_(archMine_(me))); return out_({ ok: true }); }
+          if (i >= 0) { ash.deleteRow(i + 2); setArchWarn_(me[0], archWarnCalc_(archMine_(me))); stampBump_('AR_' + me[0]); return out_({ ok: true }); }
         } catch (e) {}
       }
       return out_({ ok: false, error: 'الرسالة غير موجودة.' });
@@ -666,8 +684,7 @@ function doPost(e) {
       if (d.note !== undefined) sh.getRange(f.row, 8).setValue(enc_(String(d.note).slice(0, 2000)));
       const st = d.starred !== undefined ? d.starred : d.archived;
       if (st !== undefined) sh.getRange(f.row, 11).setValue(st ? 'نعم' : '');
-      touch_(me[0]);
-      return out_({ ok: true });
+      return out_(Object.assign({ ok: true }, tOut_(touch_(me[0]))));
     }
 
     if (d.action === 'tagSet') {   // يضبط تصنيفات رسالة واحدة
@@ -679,8 +696,7 @@ function doPost(e) {
       const i = v.findIndex(r => r[0] === me[0] && String(r[1]) === id);
       if (i >= 0) { if (tags.length) sh.getRange(i + 2, 3).setValue(tags.join('|')); else sh.deleteRow(i + 2); }
       else if (tags.length) sh.appendRow([me[0], id, tags.join('|')]);
-      touch_(me[0]);
-      return out_({ ok: true, tags });
+      return out_(Object.assign({ ok: true, tags }, tOut_(touch_(me[0]))));
     }
     if (d.action === 'tagSave') {   // حفظ قائمة التصنيفات (إضافة/تعديل اسم/حذف) وتطبيق ذلك على الرسائل
       const list = (Array.isArray(d.list) ? d.list : []).map(tagName_).filter((t, i, a) => t && a.indexOf(t) === i).slice(0, 30);
@@ -695,15 +711,14 @@ function doPost(e) {
         rg.setValues(v);
       }
       PropertiesService.getScriptProperties().setProperty('TL_' + me[0], JSON.stringify(list));
-      touch_(me[0]);
-      return out_({ ok: true, list });
+      return out_(Object.assign({ ok: true, list }, tOut_(touch_(me[0]))));
     }
 
     if (d.action === 'delete') {
       const sh = msgs_(), f = findRow_(sh, d.id, me);
       if (!f) return out_({ ok: false, error: 'الرسالة غير موجودة.' });
-      buryRows_([f.vals], me[0]); sh.deleteRow(f.row); touch_(me[0]);          // حذف الصف كاملًا من الشيت، بلا أي أثر نصي
-      return out_({ ok: true });
+      buryRows_([f.vals], me[0]); sh.deleteRow(f.row);          // حذف الصف كاملًا من الشيت، بلا أي أثر نصي
+      return out_(Object.assign({ ok: true }, tOut_(touch_(me[0]))));
     }
     if (d.action === 'bulk') {
       // إجراء جماعي على رسائل محددة: status (تم الرد...) | star (تمييز/إزالة) | delete
@@ -722,8 +737,7 @@ function doPost(e) {
       } else {
         hit.forEach(h => d.op === 'status' ? sh.getRange(h.row, 7).setValue(d.value) : sh.getRange(h.row, 11).setValue(d.value ? 'نعم' : ''));
       }
-      if (hit.length) touch_(me[0]);
-      return out_({ ok: true, count: hit.length });
+      return out_(Object.assign({ ok: true, count: hit.length }, hit.length ? tOut_(touch_(me[0])) : {}));
     }
     if (d.action === 'deleteReplied') {
       const sh = msgs_();
@@ -733,8 +747,9 @@ function doPost(e) {
         if ((r[9] || first) !== me[0] || r[6] !== 'تم الرد' || r[10] === 'نعم') return;
         ids.push(r); rows.push(i + 2);
       });
-      if (ids.length) { buryRows_(ids, me[0]); rows.reverse().forEach(x => sh.deleteRow(x)); touch_(me[0]); }
-      return out_({ ok: true, deleted: ids.length });
+      let tt = {};
+      if (ids.length) { buryRows_(ids, me[0]); rows.reverse().forEach(x => sh.deleteRow(x)); tt = tOut_(touch_(me[0])); }
+      return out_(Object.assign({ ok: true, deleted: ids.length }, tt));
     }
     return out_({ ok: false, error: 'طلب غير معروف.' });
   } finally { if (needLock) lock.releaseLock(); }
@@ -988,6 +1003,7 @@ function archiveOld() {
   lock.waitLock(30000);
   try {
     [moveOld_, purgeArchive_, purgeReminders_].forEach(f => { try { f(); } catch (e) { Logger.log(f.name + ': ' + e); } });
+    touchAll_();   // الرسائل والتذكيرات والأرشيف تغيّرت للجميع
   } finally { lock.releaseLock(); }
 }
 function moveOld_() {
@@ -1081,6 +1097,6 @@ function installArchiveTrigger() {
 
 function archIds_() { return (PropertiesService.getScriptProperties().getProperty('ARCH_ALL') || '').split(',').filter(Boolean); }
 function listArchive_(me, d) {
-  const limit = Math.min(Math.max(Number(d.limit) || 100, 1), 1000), mine = archMine_(me);
-  return out_({ ok: true, v: VERSION, archive: true, archDays: ARCHIVE_DAYS, archKeep: ARCHIVE_KEEP_DAYS, archWarn: (function () { const w = archWarnCalc_(mine); setArchWarn_(me[0], w); return w; })(), rows: mine.slice(0, limit).map(archOut_), total: mine.length });
+  const arBefore = arOf_(me[0]), limit = Math.min(Math.max(Number(d.limit) || 100, 1), 1000), mine = archMine_(me);
+  return out_({ ok: true, v: VERSION, archive: true, ar: arBefore, archDays: ARCHIVE_DAYS, archKeep: ARCHIVE_KEEP_DAYS, archWarn: (function () { const w = archWarnCalc_(mine); setArchWarn_(me[0], w); return w; })(), rows: mine.slice(0, limit).map(archOut_), total: mine.length });
 }

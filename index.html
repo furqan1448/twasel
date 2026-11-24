@@ -331,7 +331,7 @@ const API = 'https://script.google.com/macros/s/AKfycbxQUowsk6xkZYGwLEQc3aR8YMgb
 const $ = id => document.getElementById(id);
 const STATUSES = ['جديدة', 'تم الرد', 'لم يُرد عليها'], STAR = 'المميز بنجمة', ARCH = 'الأرشيف';
 const U = new URLSearchParams(location.search).get('u');
-let CH = 0, POLLING = false, MAILAT = 0, TOKEN = '', KEY = '', ME = null, ALL = [], STARN = 0, COUNTS = {}, ARCHN = null, ARCHD = 90, ARCHK = 30, ARCHW = null, LIMIT = 50, FILTER = 'جديدة', SEL = new Set(), TAGS = [], TAGC = {}, TAGF = '', TAGT = 0;
+let CH = 0, ARC = 0, WRITES = 0, WSEQ = 0, LSEQ = 0, RSEQ = 0, POLLING = false, PSTART = 0, PTIMER = 0, PFAIL = 0, MAILAT = 0, TOKEN = '', KEY = '', ME = null, ALL = [], STARN = 0, COUNTS = {}, ARCHN = null, ARCHD = 90, ARCHK = 30, ARCHW = null, LIMIT = 50, FILTER = 'جديدة', SEL = new Set(), TAGS = [], TAGC = {}, TAGF = '', TAGT = 0;
 const show = id => ['pub','auth','inbox'].forEach(s => $(s).style.display = s===id ? 'block' : 'none');
 const disp = p => { p = String(p||''); return p.startsWith('966') ? '0' + p.slice(3) : p; };
 const ic = n => '<svg class="i"><use href="#'+n+'"/></svg>';
@@ -353,10 +353,26 @@ function dlg(title,{text='',fields=[],ok='تأكيد',danger=false}={}){
     d.showModal(); const f1=F.querySelector('input,textarea'); if(f1)f1.focus();
   });
 }
-async function post(o){
-  const r = await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(o)});
-  return r.json();
+/* الطلبات القرائية (لا تغيّر بيانات) تُعطى مهلة فلا يعلق التحديث الفوري أبدًا؛ أما الكتابة فتُحصى لنعرف متى نتجاهل تحميلًا قد يسبقها */
+const READS = new Set(['list','poll','remList','msgOne','keys','annList','annAll','archPage','profile']);
+async function post(o,ms){
+  const wr = !READS.has(o&&o.action); let ctl=null, tm=0;
+  if(ms && typeof AbortController!=='undefined'){ ctl=new AbortController(); tm=setTimeout(()=>ctl.abort(),ms); }
+  if(wr){ WRITES++; WSEQ++; }
+  try{
+    const r = await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(o),signal:ctl?ctl.signal:undefined});
+    return await r.json();
+  } finally {
+    if(tm) clearTimeout(tm);
+    if(wr){ WSEQ++; if(--WRITES===0) schedulePoll(400); }   /* بعد انتهاء أي كتابة نفحص التغييرات فورًا */
+  }
 }
+/* آخر نسخة من العنصر بعد أي إعادة تحميل (النوافذ المفتوحة تحتفظ بنسخ قديمة) */
+const cur  = x => (x&&ALL.find(y=>y.id===x.id))||x;
+const curR = r => (r&&REMS.find(y=>y.id===r.id))||r;
+/* إن لم يتغيّر شيء آخر بين تحميلنا وكتابتنا نتبنّى علامة الخادم الجديدة فلا نُعيد التحميل بلا داعٍ، وإلا يكتشف الفحص التالي التغيير */
+const adoptCH = r => { if(r && r.cp!==undefined && r.cp===CH) CH=r.ch; };
+const adoptRC = r => { if(r && r.rp!==undefined && r.rp===RC) RC=r.rc; };
 /* للحذف: إن فشل الاتصال أو انشغل الخادم نعيد المحاولة مرة، ولا نعدّ الحذف ناجحًا إلا بتأكيد الخادم */
 async function postSafe(o){
   for(let k=0;k<2;k++){
@@ -367,15 +383,23 @@ async function postSafe(o){
 }
 
 /* ---------- صفحة الزائر ---------- */
+function pubFill(u){
+  $('pTitle').textContent = 'تواصل مع ' + u.name;
+  $('phoneTxt').textContent = disp(u.phone); $('phoneLink').href = 'tel:+' + u.phone;
+  $('mailTxt').textContent = u.email; $('mailLink').href = 'mailto:' + u.email;
+}
 async function initPublic(){
   show('pub');
   try{
     const r = await (await fetch(API+'?action=profile&u='+encodeURIComponent(U))).json();
     if(!r.ok){ $('pTitle').textContent = r.error||'الصفحة غير موجودة'; return; }
-    $('pTitle').textContent = 'تواصل مع ' + r.user.name;
-    $('phoneTxt').textContent = disp(r.user.phone); $('phoneLink').href = 'tel:+' + r.user.phone;
-    $('mailTxt').textContent = r.user.email; $('mailLink').href = 'mailto:' + r.user.email;
+    pubFill(r.user);
   }catch(e){ $('pTitle').textContent = 'تعذّر تحميل الصفحة'; }
+}
+/* صفحة الزائر: تتحدّث بيانات التواصل تلقائيًا إن غيّرتها صاحبة الصفحة (دون المساس بما كتبه الزائر في النموذج) */
+async function pubRefresh(){
+  if(!U||document.hidden) return;
+  try{ const r = await (await fetch(API+'?action=profile&u='+encodeURIComponent(U))).json(); if(r&&r.ok&&r.user) pubFill(r.user); }catch(e){}
 }
 $('send').onclick = async () => {
   const name=$('n').value.trim(), message=$('m').value.trim();
@@ -490,22 +514,38 @@ function openInbox(){
 }
 $('copy').onclick=()=>navigator.clipboard.writeText($('myLink').textContent).then(()=>toast('تم نسخ الرابط'));
 
-async function load(silent){
+async function load(silent,force){
   if(!silent) $('list').innerHTML='<div class="sk"></div><div class="sk"></div><div class="sk"></div>';
   const inStar = FILTER===STAR, inArch = FILTER===ARCH;
-  if(inArch && silent) return; /* لا نعيد تحميل الأرشيف مع التحديث التلقائي */
+  if(inArch && silent && !force) return; /* الأرشيف لا يُعاد تحميله إلا عند تغيّره فعلًا (يتولى ذلك الفحص الدوري) */
+  const seq=++LSEQ, w0=WSEQ;
   try{
     const tk=TOKEN; if(!tk) return;
-    const r = await post(inArch?{action:'list',token:tk,archive:true,limit:LIMIT}:{action:'list',token:tk,starred:inStar,limit:LIMIT,tag:TAGF});
+    const r = await post(inArch?{action:'list',token:tk,archive:true,limit:LIMIT}:{action:'list',token:tk,starred:inStar,limit:LIMIT,tag:TAGF},30000);
     if(!TOKEN) return; /* خرجت المستخدمة أثناء التحميل */
     if(r.auth===false){logout();return;}
+    if(seq!==LSEQ) return; /* وصل ردّ أحدث منه: لا نكتب فوقه بنسخة أقدم */
+    if(silent && (WRITES>0 || WSEQ!==w0)) return; /* كتابة جارية قد يسبقها هذا الردّ: نتجاهله ويُعاد التحميل في الفحص التالي */
     if(!r.ok){if(!silent)$('list').textContent=r.error||'تعذّر التحميل.';return false;}
     $('ver').textContent = r.v ? ('إصدار الخادم: '+r.v) : 'تنبيه: الخادم يعمل بكود قديم، يرجى نشر إصدار جديد من Apps Script.';
     if(r.archDays) ARCHD=r.archDays;
     if(r.archKeep) ARCHK=r.archKeep; ARCHW=r.archWarn||null; setTimeout(archAlert,700);
-    if(inArch){ ALL=r.rows; ARCHN=r.total||0; render(); return true; }
+    if(inArch){ ALL=r.rows; ARCHN=r.total||0; if(r.ar!==undefined) ARC=r.ar; render(); return true; }
     ALL=r.rows; TAGS=r.tl||TAGS; TAGC=r.tc||{}; TAGT=r.total||0; if(TAGF&&!TAGS.includes(TAGF)) TAGF=''; STARN=r.starredCount||0; COUNTS=r.counts||{}; MAILAT=r.mail||0; CH=r.ch||0; mailBtn(); render(); return true;
   }catch(e){if(!silent)$('list').textContent='تعذّر تحميل الرسائل.'; return false;}
+}
+/* أثناء عرض الأرشيف: نحدّث الأعداد والتصنيفات فقط (بطلب خفيف) كي تبقى الإحصائيات صحيحة دون المساس بقائمة الأرشيف */
+async function loadCounts(){
+  const tk=TOKEN; if(!tk) return;
+  const w0=WSEQ;
+  try{
+    const r = await post({action:'list',token:tk,starred:false,limit:1,tag:''},30000);
+    if(!TOKEN) return;
+    if(r.auth===false){logout();return;}
+    if(WRITES>0||WSEQ!==w0) return;
+    if(!r.ok) return false;
+    TAGS=r.tl||TAGS; TAGC=r.tc||{}; STARN=r.starredCount||0; COUNTS=r.counts||{}; MAILAT=r.mail||0; CH=r.ch||0; mailBtn(); if(FILTER===ARCH) render(); return true;
+  }catch(e){ return false; }
 }
 const srcIc = s => s==='واتساب'?'wa':s==='البريد'?'ml':'fm';
 function render(){
@@ -617,7 +657,7 @@ async function tagDlg(x){
   d.appendChild(tgAddRow(async n=>{ if(!TAGS.includes(n)){ const r=await post({action:'tagSave',token:TOKEN,list:[...TAGS,n]}); if(!r.ok){toast(r.error||'تعذّرت الإضافة',1);return;} TAGS=r.list; } sel.add(n); draw(); }));
   const act=document.createElement('div'); act.className='dact';
   const ok=tgBtn('','حفظ',async()=>{ ok.disabled=true; const r=await post({action:'tagSet',token:TOKEN,id:x.id,tags:TAGS.filter(n=>sel.has(n))}); ok.disabled=false;
-    if(!r.ok){toast(r.error||'تعذّر الحفظ',1);return;} x.tags=r.tags; d.close(); render(); load(true); });
+    if(!r.ok){toast(r.error||'تعذّر الحفظ',1);return;} cur(x).tags=r.tags; d.close(); render(); adoptCH(r); });
   act.append(ok,tgBtn('ghost','إلغاء',()=>d.close())); d.appendChild(act); d.showModal();
 }
 async function tagManage(){
@@ -637,21 +677,28 @@ async function tagManage(){
   act.append(ok,tgBtn('ghost','إلغاء',()=>d.close())); d.appendChild(act); d.showModal();
 }
 async function upd(x,patch){
+  x=cur(x);
   if(patch.status&&patch.status!==x.status){COUNTS[x.status]=Math.max(0,(COUNTS[x.status]||0)-1);COUNTS[patch.status]=(COUNTS[patch.status]||0)+1;}
   Object.assign(x,patch); render();
   const r=await post({action:'update',token:TOKEN,id:x.id,...patch});
-  if(!r.ok){toast(r.error||'تعذّر الحفظ',1);load();}
+  if(r.auth===false){logout();return;}
+  if(!r.ok){toast(r.error||'تعذّر الحفظ',1);load();return;}
+  adoptCH(r);
 }
 async function star(x,on){
+  x=cur(x); if(!!x.starred===!!on) return;
   x.starred=on; STARN=Math.max(0,STARN+(on?1:-1));
-  if(!on&&FILTER===STAR) ALL=ALL.filter(y=>y!==x);
+  if(!on&&FILTER===STAR) ALL=ALL.filter(y=>y.id!==x.id);
   render(); toast(on?'تم التمييز بنجمة':'أُزيلت النجمة');
   const r=await post({action:'update',token:TOKEN,id:x.id,starred:on});
-  if(!r.ok){toast(r.error||'تعذّر الحفظ',1);load();}
+  if(r.auth===false){logout();return;}
+  if(!r.ok){toast(r.error||'تعذّر الحفظ',1);load();return;}
+  adoptCH(r);
 }
 async function delArch(x){
   if(!await dlg('حذف الرسالة',{text:'سيتم حذف هذه الرسالة المؤرشفة نهائيًا ولا يمكن استرجاعها.',ok:'حذف نهائي',danger:true})) return;
-  ALL=ALL.filter(y=>y!==x); ARCHN=Math.max(0,(ARCHN||0)-1);
+  x=cur(x);
+  ALL=ALL.filter(y=>y.id!==x.id); ARCHN=Math.max(0,(ARCHN||0)-1);
   if(ARCHW){ if(!ARCHN) ARCHW=null; else if(x.exp&&x.exp-Date.now()<=7*DAYMS) ARCHW.n=Math.max(0,ARCHW.n-1); }
   render();
   const r=await postSafe({action:'archDelete',token:TOKEN,id:x.id});
@@ -660,16 +707,18 @@ async function delArch(x){
 }
 async function del(x){
   if(!await dlg('حذف الرسالة',{text:'سيتم حذف هذه الرسالة نهائيًا من الشيت ولا يمكن استرجاعها.',ok:'حذف نهائي',danger:true})) return;
-  ALL=ALL.filter(y=>y!==x); COUNTS[x.status]=Math.max(0,(COUNTS[x.status]||0)-1); if(x.starred) STARN=Math.max(0,STARN-1);
+  x=cur(x);
+  ALL=ALL.filter(y=>y.id!==x.id); COUNTS[x.status]=Math.max(0,(COUNTS[x.status]||0)-1); if(x.starred) STARN=Math.max(0,STARN-1);
   SEL.delete(x.id); render();
   const r=await postSafe({action:'delete',token:TOKEN,id:x.id});
   if(r.auth===false){logout();return;}
-  (r.ok||r.error==='الرسالة غير موجودة.')?toast('تم الحذف نهائيًا'):(toast(r.error||'تعذّر الحذف',1),load());
+  (r.ok||r.error==='الرسالة غير موجودة.')?(toast('تم الحذف نهائيًا'),adoptCH(r)):(toast(r.error||'تعذّر الحذف',1),load());
 }
 /* إجراء جماعي على الرسائل المحددة */
 async function bulk(op,picked,value){
   const n=picked.length, ids=picked.map(x=>x.id);
   if(op==='delete' && !await dlg('حذف الرسائل المحددة',{text:'سيتم حذف '+n+' رسالة نهائيًا من الشيت ولا يمكن استرجاعها.',ok:'حذف نهائي',danger:true})) return;
+  picked=picked.map(cur);
   picked.forEach(x=>{
     if(op==='status'){ if(x.status!==value){COUNTS[x.status]=Math.max(0,(COUNTS[x.status]||0)-1);COUNTS[value]=(COUNTS[value]||0)+1;} x.status=value; }
     else if(op==='star'){ if(!!x.starred!==value) STARN=Math.max(0,STARN+(value?1:-1)); x.starred=value; }
@@ -714,7 +763,7 @@ $('cCopy').onclick=e=>cp('cUrl',e.target);
 function logout(){
   const t=TOKEN;
   /* الخروج الفوري من الواجهة أولًا، دون انتظار الخادم */
-  KEY='';TOKEN='';ME=null;ALL=[];SEL=new Set();REMS=[];RC=0;RDONE=0;$('alerts').innerHTML='';document.title='صِلة للتواصل';
+  KEY='';TOKEN='';ME=null;ALL=[];SEL=new Set();REMS=[];RC=0;CH=0;ARC=0;RDONE=0;$('alerts').innerHTML='';document.title='صِلة للتواصل';
   try{localStorage.removeItem('tok');localStorage.removeItem('me');}catch(e){}
   show('auth'); pwReset(); admUi();
   /* اشتراك التنبيهات يبقى في المتصفح (لا نلغيه) فلا تُطلب إعادة التفعيل عند الدخول؛ نفصل الجهاز عن الحساب في الخادم فقط */
@@ -735,20 +784,46 @@ $('reload').onclick=async()=>{   /* يعمل من أي صفحة (الرسائل 
   b.classList.remove('spin'); RELOADING=false;
   if(TOKEN&&a!==false&&c!==false) toast('تم التحديث ✓');
 };
-/* تحديث تلقائي هادئ كل 30 ثانية ليظهر البريد الجديد دون الضغط على زر التحديث */
-/* ظهور فوري: طلب خفيف كل 6 ثوانٍ يسأل «هل تغيّر شيء؟»، وعند التغيّر فقط تُحمَّل الرسائل بصمت */
-async function poll(){
-  if(POLLING||!TOKEN||document.hidden||$('inbox').style.display!=='block'||$('dlg').open||$('rdlg').open) return;
-  POLLING=true;
-  try{
-    const r=await post({action:'poll',token:TOKEN});
-    if(r.auth===false){ logout(); }
-    else if(r.ok){ if(r.adm!==undefined&&!!r.adm!==!!(ME&&ME.admin)&&ME){ ME.admin=!!r.adm; saveMe(); admUi(); } if(r.an!==undefined) annCheck(r.an); if(r.mail){MAILAT=r.mail;mailBtn();} if(r.ch!==CH) await load(true); if(r.rc!==undefined&&r.rc!==RC) await loadRem(true); }
-  }catch(e){}
-  POLLING=false;
+/* ================= التحديث الفوري (Real-time) =================
+   الخادم Google Apps Script لا يدعم WebSocket، فالمستمِع المناسب لهذه التقنية هو «فحص علامة التغيّر»:
+   طلب خفيف كل ٣ ثوانٍ يعيد علامات (رسائل · تذكيرات · أرشيف · إعلانات · بيانات الحساب)، وعند تغيّر أي علامة فقط
+   يُعاد تحميل ذلك القسم بصمت. العلامات يرفعها الخادم عند أي كتابة من أي جهاز أو واتساب أو بريد أو تعديل يدوي في الشيت. */
+const pollGap = () => PFAIL ? Math.min(30000, 3000*Math.pow(2,Math.min(PFAIL,4))) : 3000;   /* ٣ث، وعند تعثّر الاتصال يتباطأ تدريجيًا ثم يعود فور نجاحه */
+function schedulePoll(ms){ clearTimeout(PTIMER); PTIMER=setTimeout(poll, ms==null?pollGap():ms); }
+function syncMe(m){   /* تغيير الجوال/البريد من جهاز آخر ينعكس هنا */
+  if(!ME||!m) return;
+  if(String(ME.name||'')===m.name && String(ME.phone||'')===m.phone && String(ME.email||'')===m.email) return;
+  ME.name=m.name; ME.phone=m.phone; ME.email=m.email; saveMe();
+  $('hi').textContent='أهلًا '+ME.name;
+  if($('adlg').open){ $('aPh').textContent=disp(ME.phone); $('aEm').textContent=ME.email; }
 }
-setInterval(poll,6000);
-document.addEventListener('visibilitychange',()=>{ if(!document.hidden&&TOKEN&&$('inbox').style.display==='block') poll(); });
+async function poll(){
+  clearTimeout(PTIMER);
+  if(!TOKEN||document.hidden||$('inbox').style.display!=='block'){ schedulePoll(); return; }
+  if(POLLING && Date.now()-PSTART<40000){ schedulePoll(1000); return; }   /* فحص سابق لا يزال جاريًا */
+  POLLING=true; PSTART=Date.now();
+  try{
+    const r=await post({action:'poll',token:TOKEN},15000);
+    if(!TOKEN){}
+    else if(r.auth===false){ logout(); }
+    else if(r.ok){
+      PFAIL=0;
+      if(r.adm!==undefined&&!!r.adm!==!!(ME&&ME.admin)&&ME){ ME.admin=!!r.adm; saveMe(); admUi(); }
+      if(r.me) syncMe(r.me);
+      if(r.an!==undefined) annCheck(r.an);
+      if(r.mail){MAILAT=r.mail;mailBtn();}
+      if(r.ch!==CH){ if((FILTER===ARCH?await loadCounts():await load(true))===false) PFAIL++; }
+      if(r.rc!==undefined&&r.rc!==RC){ if((await loadRem(true))===false) PFAIL++; }
+      if(FILTER===ARCH&&r.ar!==undefined&&r.ar!==ARC){ if((await load(true,true))===false) PFAIL++; }
+    } else PFAIL++;
+  }catch(e){ PFAIL++; }
+  POLLING=false; schedulePoll();
+}
+/* فحص فوري عند عودة الصفحة للظهور أو التركيز أو عودة الاتصال (مثلًا بعد قفل الجوال) */
+const kickPoll=()=>{ if(TOKEN&&$('inbox').style.display==='block') poll(); };
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) kickPoll(); });
+window.addEventListener('focus',kickPoll); window.addEventListener('online',kickPoll); window.addEventListener('pageshow',kickPoll);
+schedulePoll();
  $('outBtn').onclick=logout;
 
 /* ================= الإعلانات ================= */
@@ -857,10 +932,13 @@ function gotoRem(r){ RTAB=RKT[rcls(r)]; RQ=''; $('rQ').value=''; setView('rem');
 /* ---------- التحميل ---------- */
 async function loadRem(silent){
   const tk=TOKEN; if(!tk) return;
+  const seq=++RSEQ, w0=WSEQ;
   try{
-    const r=await post({action:'remList',token:tk});
+    const r=await post({action:'remList',token:tk},30000);
     if(!TOKEN) return;
     if(r.auth===false){ logout(); return; }
+    if(seq!==RSEQ) return;
+    if(silent && (WRITES>0 || WSEQ!==w0)) return;   /* انظر load: لا نكتب ردًّا قد يسبق كتابة جارية */
     if(!r.ok){ if(!silent) toast(r.error||'تعذّر تحميل التذكيرات.',1); return false; }
     REMS=r.rows||[]; RDONE=r.doneTotal||0; RC=r.rc||0; afterRem(); checkDue(); return true;
   }catch(e){ if(!silent) toast('تعذّر تحميل التذكيرات.',1); return false; }
@@ -970,12 +1048,13 @@ async function addRem(p){
     const r=await post(Object.assign({action:'remAdd',token:TOKEN},p));
     if(r.auth===false){ logout(); return; }
     if(!r.ok){ toast(/غير معروف/.test(r.error||'')?'يلزم نشر إصدار جديد من Apps Script أولًا.':(r.error||'تعذّر حفظ التذكير.'),1); return; }
-    REMS.push(r.rem); if(r.rc) RC=r.rc; afterRem(); toast('تم حفظ التذكير · '+fmtDue(r.rem.due));
+    REMS.push(r.rem); adoptRC(r); afterRem(); toast('تم حفظ التذكير · '+fmtDue(r.rem.due));
   }catch(e){ toast('تعذّر الاتصال.',1); }
 }
 async function remindFor(x){ const f=await remForm({mode:'new',msg:x}); if(f) addRem({title:f.title,due:f.due,note:f.note,msgId:x.id}); }
 $('rNew').onclick=async()=>{ const f=await remForm({mode:'new'}); if(f) addRem({title:f.title,due:f.due,note:f.note,name:f.name,phone:f.phone}); };
 async function remUpd(r,patch,msg){
+  r=curR(r);
   if(patch.done!==undefined&&patch.done!==r.done) RDONE=Math.max(0,RDONE+(patch.done?1:-1));
   Object.assign(r,patch); if(patch.done!==undefined) r.doneAt=patch.done?Date.now():0;
   afterRem();
@@ -983,7 +1062,7 @@ async function remUpd(r,patch,msg){
     const res=await post(Object.assign({action:'remUpdate',token:TOKEN,id:r.id},patch));
     if(res.auth===false){ logout(); return; }
     if(!res.ok){ toast(res.error||'تعذّر الحفظ.',1); loadRem(true); return; }
-    if(res.rc) RC=res.rc; if(msg) toast(msg);
+    adoptRC(res); if(msg) toast(msg);
   }catch(e){ toast('تعذّر الاتصال.',1); loadRem(true); }
 }
 async function editRem(r){
@@ -995,10 +1074,10 @@ async function snoozeCustom(r){ const f=await remForm({mode:'snooze',rem:r}); if
 function snooze(r,ts){ remUpd(r,{due:ts},'تم التأجيل إلى '+fmtDue(ts)); }
 async function delRem(r){
   if(!await dlg('حذف التذكير',{text:'سيتم حذف هذا التذكير نهائيًا.',ok:'حذف',danger:true})) return;
-  REMS=REMS.filter(y=>y!==r); if(r.done) RDONE=Math.max(0,RDONE-1); afterRem();
+  r=curR(r); REMS=REMS.filter(y=>y.id!==r.id); if(r.done) RDONE=Math.max(0,RDONE-1); afterRem();
   const res=await postSafe({action:'remDelete',token:TOKEN,id:r.id});
   if(res.auth===false){ logout(); return; }
-  if(res.ok){ if(res.rc) RC=res.rc; toast('تم حذف التذكير'); } else { toast(res.error||'تعذّر الحذف.',1); loadRem(true); }
+  if(res.ok){ adoptRC(res); toast('تم حذف التذكير'); } else { toast(res.error||'تعذّر الحذف.',1); loadRem(true); }
 }
 
 /* ---------- فتح المحادثة المرتبطة ---------- */
@@ -1218,7 +1297,7 @@ function archAlert(){   /* مرة واحدة يوميًا عند وجود رسا
 }
 
 /* ---------- البداية ---------- */
-if(U) initPublic();
+if(U){ initPublic(); setInterval(pubRefresh,30000); document.addEventListener('visibilitychange',pubRefresh); }
 else{
   try{TOKEN=localStorage.getItem('tok')||'';ME=JSON.parse(localStorage.getItem('me')||'null');}catch(e){}
   if(TOKEN&&ME) openInbox(); else show('auth');
