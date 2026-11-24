@@ -331,7 +331,7 @@ const API = 'https://script.google.com/macros/s/AKfycbwMvIkRlI-03zzajL4SCeY6ySRs
 const $ = id => document.getElementById(id);
 const STATUSES = ['جديدة', 'تم الرد', 'لم يُرد عليها'], STAR = 'المميز بنجمة', ARCH = 'الأرشيف';
 const U = new URLSearchParams(location.search).get('u');
-let LDN = 0, RLDN = 0, VERTXT = '', CH = 0, ARC = 0, WRITES = 0, WSEQ = 0, LSEQ = 0, RSEQ = 0, POLLING = false, PSTART = 0, PTIMER = 0, PFAIL = 0, MAILAT = 0, TOKEN = '', KEY = '', ME = null, ALL = [], STARN = 0, COUNTS = {}, ARCHN = null, ARCHD = 90, ARCHK = 30, ARCHW = null, LIMIT = 50, FILTER = 'جديدة', SEL = new Set(), TAGS = [], TAGC = {}, TAGF = '', TAGT = 0;
+let ARCPRE = null, ARCSCH = 0, MSGBAK = null, LDN = 0, RLDN = 0, VERTXT = '', CH = 0, ARC = 0, WRITES = 0, WSEQ = 0, LSEQ = 0, RSEQ = 0, POLLING = false, PSTART = 0, PTIMER = 0, PFAIL = 0, MAILAT = 0, TOKEN = '', KEY = '', ME = null, ALL = [], STARN = 0, COUNTS = {}, ARCHN = null, ARCHD = 90, ARCHK = 30, ARCHW = null, LIMIT = 50, FILTER = 'جديدة', SEL = new Set(), TAGS = [], TAGC = {}, TAGF = '', TAGT = 0;
 const show = id => ['pub','auth','inbox'].forEach(s => $(s).style.display = s===id ? 'block' : 'none');
 const disp = p => { p = String(p||''); return p.startsWith('966') ? '0' + p.slice(3) : p; };
 const ic = n => '<svg class="i"><use href="#'+n+'"/></svg>';
@@ -530,10 +530,18 @@ async function load(silent,force){
     VERTXT = r.v ? ('إصدار الخادم: '+r.v) : 'تنبيه: الخادم يعمل بكود قديم، يرجى نشر إصدار جديد من Apps Script.'; $('ver').textContent = VERTXT;
     if(r.archDays) ARCHD=r.archDays;
     if(r.archKeep) ARCHK=r.archKeep; ARCHW=r.archWarn||null; setTimeout(archAlert,700);
-    if(inArch){ ALL=r.rows; ARCHN=r.total||0; if(r.ar!==undefined) ARC=r.ar; render(); return true; }
-    ALL=r.rows; TAGS=r.tl||TAGS; TAGC=r.tc||{}; TAGT=r.total||0; if(TAGF&&!TAGS.includes(TAGF)) TAGF=''; STARN=r.starredCount||0; COUNTS=r.counts||{}; MAILAT=r.mail||0; CH=r.ch||0; mailBtn(); render(); return true;
+    if(inArch){ ALL=r.rows; ARCHN=r.total||0; if(r.ar!==undefined) ARC=r.ar; ARCPRE={rows:r.rows,total:ARCHN,ar:r.ar}; render(); return true; }
+    ALL=r.rows; TAGS=r.tl||TAGS; TAGC=r.tc||{}; TAGT=r.total||0; if(TAGF&&!TAGS.includes(TAGF)) TAGF=''; STARN=r.starredCount||0; COUNTS=r.counts||{}; MAILAT=r.mail||0; CH=r.ch||0; mailBtn(); if(!inStar&&!TAGF) MSGBAK=ALL; render(); if(!ARCSCH){ ARCSCH=1; setTimeout(prefetchArch,4000); } return true;
   }catch(e){if(!silent)$('list').textContent='تعذّر تحميل الرسائل.'; return false;}
   finally{ LDN--; }
+}
+/* جلب مسبق للأرشيف بعد استقرار الصفحة (في ذاكرة الصفحة فقط) فيفتح فورًا عند الضغط عليه */
+async function prefetchArch(){
+  const tk=TOKEN; if(!tk) return;
+  try{
+    const r=await post({action:'list',token:tk,archive:true,limit:50},30000);
+    if(r&&r.ok&&TOKEN===tk&&FILTER!==ARCH){ ARCPRE={rows:r.rows,total:r.total||0,ar:r.ar}; if(ARCHN==null){ ARCHN=ARCPRE.total; render(); } }
+  }catch(e){}
 }
 /* أثناء عرض الأرشيف: نحدّث الأعداد والتصنيفات فقط (بطلب خفيف) كي تبقى الإحصائيات صحيحة دون المساس بقائمة الأرشيف */
 async function loadCounts(){
@@ -557,7 +565,16 @@ function render(){
   [...STATUSES,STAR,ARCH].forEach(s=>{
     const c = s===STAR?STARN:s===ARCH?ARCHN:cnt(s);
     const b=document.createElement('button'); b.className='chip'+(s===FILTER&&!TAGF?' on':''); b.innerHTML=(s===STAR?ic('st')+' ':'')+s+(c==null?'':' ('+c+')');
-    b.onclick=()=>{const sw=TAGF||FILTER===STAR||s===STAR||FILTER===ARCH||s===ARCH; TAGF=''; FILTER=s; SEL.clear(); if(sw)LIMIT=50; sw?load():render();}; f.appendChild(b);
+    b.onclick=()=>{
+      const from=FILTER, hadTag=!!TAGF, sw=hadTag||from===STAR||s===STAR||from===ARCH||s===ARCH;
+      if(from!==ARCH&&from!==STAR&&!hadTag) MSGBAK=ALL;   /* نحتفظ بآخر قائمة رسائل لنعرضها فورًا عند الرجوع */
+      TAGF=''; FILTER=s; SEL.clear(); if(sw)LIMIT=50;
+      if(!sw){ render(); return; }
+      /* نعرض فورًا ما لدينا ثم نُحدّث بصمت من الخادم دون مربعات تحميل */
+      if(s===ARCH){ if(ARCPRE){ ALL=ARCPRE.rows; ARCHN=ARCPRE.total; if(ARCPRE.ar!==undefined) ARC=ARCPRE.ar; render(); load(true,true); } else load(); return; }
+      if(s===STAR){ const base=MSGBAK||(from===ARCH?[]:ALL); ALL=base.filter(x=>x.starred); if(!ALL.length&&STARN){ load(); return; } render(); load(true); return; }
+      if(MSGBAK&&MSGBAK.length){ ALL=MSGBAK; render(); load(true); } else load();
+    }; f.appendChild(b);
   });
   renderTag();
   const an=$('archNote'); an.textContent = inStar ? '' : inArch
@@ -765,7 +782,7 @@ $('cCopy').onclick=e=>cp('cUrl',e.target);
 function logout(){
   const t=TOKEN;
   /* الخروج الفوري من الواجهة أولًا، دون انتظار الخادم */
-  KEY='';TOKEN='';ME=null;ALL=[];SEL=new Set();REMS=[];RC=0;CH=0;ARC=0;RDONE=0;$('alerts').innerHTML='';document.title='صِلة للتواصل';
+  KEY='';TOKEN='';ME=null;ALL=[];ARCPRE=null;ARCSCH=0;MSGBAK=null;ARCHN=null;SEL=new Set();REMS=[];RC=0;CH=0;ARC=0;RDONE=0;$('alerts').innerHTML='';document.title='صِلة للتواصل';
   try{localStorage.removeItem('tok');localStorage.removeItem('me');}catch(e){}
   show('auth'); pwReset(); admUi();
   /* اشتراك التنبيهات يبقى في المتصفح (لا نلغيه) فلا تُطلب إعادة التفعيل عند الدخول؛ نفصل الجهاز عن الحساب في الخادم فقط */
