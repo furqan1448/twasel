@@ -3,7 +3,7 @@
 // مهم: عند أي تحديث لا تنشئي «عملية نشر جديدة». استخدمي: نشر ← إدارة عمليات النشر ← ✏️ تعديل ← الإصدار: «إصدار جديد» ← نشر.
 // بهذه الطريقة يبقى رابط /exec نفسه، فلا يحتاج أي مستخدم لتغيير رابط Meta أو أي ربط آخر.
 const WA_VERIFY_TOKEN = 'furqan-wa-2026';   // أي كلمة تختارينها، وتكتبينها نفسها في Meta
-const VERSION = '2026-11-24-contacts';               // رقم الإصدار: يظهر عند فتح رابط النشر في المتصفح، ليُعرف هل النشر يعمل بآخر كود
+const VERSION = '2026-11-24-pushmodes';               // رقم الإصدار: يظهر عند فتح رابط النشر في المتصفح، ليُعرف هل النشر يعمل بآخر كود
 const MSG = 'الرسائل', USR = 'المستخدمون';
 const COLS = 11;                              // عدد أعمدة جدول الرسائل
 const DEL = 'محذوفة';                         // قديم: صفوف قديمة تُحذف تلقائيًا من الشيت ولا يُكتب هذا النص بعد الآن
@@ -177,14 +177,32 @@ function sendPush_(endpoint, cache) {   // إشعار بلا حمولة: الـ 
 }
 function subs_(uid) { try { return JSON.parse(PropertiesService.getScriptProperties().getProperty('PS_' + uid) || '[]'); } catch (e) { return []; } }
 function setSubs_(uid, a) { const P = PropertiesService.getScriptProperties(); if (a.length) P.setProperty('PS_' + uid, JSON.stringify(a)); else P.deleteProperty('PS_' + uid); }
-function pushAll_(uid, cache) {   // يرسل لكل أجهزتها، ويحذف الأجهزة المنتهية. يعيد عدد ما وصل
-  const keep = []; let okN = 0;
+function pushAll_(uid, cache, kind) {   // يرسل لأجهزتها، ويحذف الأجهزة المنتهية. يعيد عدد ما وصل. kind='msg': للأجهزة المفعّل عليها «جميع الرسائل» فقط
+  const gone = []; let okN = 0;
   subs_(uid).forEach(s => {
+    if (kind === 'msg' && s.m !== 'all') return;
     const c = sendPush_(s.e, cache);
-    if (c === 404 || c === 410) return;
-    keep.push(s); if (c >= 200 && c < 300) okN++;
+    if (c === 404 || c === 410) { gone.push(s.e); return; }
+    if (c >= 200 && c < 300) okN++;
   });
-  setSubs_(uid, keep); return okN;
+  if (gone.length) setSubs_(uid, subs_(uid).filter(s => gone.indexOf(s.e) < 0));   // نعيد القراءة قبل الحفظ كي لا نمحو تغييرًا حدث أثناء الإرسال
+  return okN;
+}
+// تنبيه الرسائل الجديدة: تُجمَع أثناء المعالجة ثم تُرسل بعد تحرير القفل فلا تبطّئ الاستقبال
+let PEND_ = {};
+function queueMsgPush_(uid, id, n) {
+  const p = PEND_[uid] || (PEND_[uid] = { n: 0, id: '' });
+  p.n += (n || 1); p.id = id || p.id;
+}
+function flushMsgPush_() {
+  const pend = PEND_; PEND_ = {};
+  Object.keys(pend).forEach(uid => {
+    try {
+      if (!subs_(uid).some(s => s.m === 'all')) return;
+      PropertiesService.getScriptProperties().setProperty('PN_' + uid, JSON.stringify({ t: Date.now(), n: pend[uid].n, id: pend[uid].id }));
+      pushAll_(uid, {}, 'msg');
+    } catch (e) {}
+  });
 }
 function pushTick() {
   const now = Date.now(), cand = {}, lock = LockService.getScriptLock();
@@ -374,12 +392,16 @@ function doGet(e) {
       if (items.length) touch_(me[0]);   // كان مسار GET لا يُعلم الموقع بوصول بريد جديد
       PropertiesService.getScriptProperties().setProperty('ML_' + me[0], String(Date.now()));
     } finally { lock.releaseLock(); }
+    flushMsgPush_();
     return out_({ ok: true, count: items.length, expected: regEmail });
   }
   return out_({ ok: true, v: VERSION, url: ScriptApp.getService().getUrl() });
 }
 
 function doPost(e) {
+  try { return doPost_(e); } finally { flushMsgPush_(); }   // التنبيهات تُرسل بعد تحرير القفل
+}
+function doPost_(e) {
   const raw = e.postData.contents;
   let d;
   if (raw.indexOf('wa§§') === 0) {                         // إشعار واتساب من تطبيق الجوال
@@ -455,8 +477,9 @@ function doPost(e) {
       if (!d.name || !d.message) return out_({ ok: false, error: 'الاسم والرسالة مطلوبان.' });
       const name = String(d.name).slice(0, 200), message = String(d.message).slice(0, 5000);
       const phone = String(d.phone || '').slice(0, 50), email = String(d.email || '').slice(0, 200);
-      msgs_().appendRow([Utilities.getUuid(), new Date(), enc_(name), enc_(phone), enc_(email), enc_(message), 'جديدة', '', 'النموذج', owner[0], '']);
-      touch_(owner[0]);
+      const nid = Utilities.getUuid();
+      msgs_().appendRow([nid, new Date(), enc_(name), enc_(phone), enc_(email), enc_(message), 'جديدة', '', 'النموذج', owner[0], '']);
+      touch_(owner[0]); queueMsgPush_(owner[0], nid, 1);
       notify_(owner[3], name, phone, email, message, 'النموذج');
       return out_({ ok: true });
     }
@@ -560,8 +583,9 @@ function doPost(e) {
       const sh = msgs_(), n = sh.getLastRow() - 1;
       const recent = n > 0 ? sh.getRange(Math.max(2, n - 98), 1, Math.min(n, 100), COLS).getValues() : [];
       if (recent.some(r => r[9] === me[0] && r[6] !== DEL && dec_(r[2]) === title && dec_(r[5]) === text)) return out_({ ok: true });   // منع التكرار
-      sh.appendRow([Utilities.getUuid(), new Date(), enc_(title), '', '', enc_(text), 'جديدة', '', 'واتساب', me[0], '']);
-      touch_(me[0]);
+      const wid = Utilities.getUuid();
+      sh.appendRow([wid, new Date(), enc_(title), '', '', enc_(text), 'جديدة', '', 'واتساب', me[0], '']);
+      touch_(me[0]); queueMsgPush_(me[0], wid, 1);
       return out_({ ok: true });
     }
 
@@ -597,9 +621,16 @@ function doPost(e) {
       if (!mine.some(s => s.e === e)) {   // جهاز جديد لهذا الحساب: يُفصل عن أي حساب آخر سُجّل به سابقًا (دخلت منه مستخدمة أخرى)
         allUsers_().forEach(u => { if (u[0] !== me[0]) { const o = subs_(u[0]); if (o.some(s => s.e === e)) setSubs_(u[0], o.filter(s => s.e !== e)); } });
       }
-      const a = mine.filter(s => s.e !== e); a.push({ e: e, t: Date.now() });
+      const md = d.mode === 'all' ? 'all' : d.mode === 'rem' ? 'rem' : '', old = mine.find(s => s.e === e), mode = md || (old && old.m) || 'rem';   // الافتراضي: التذكيرات فقط
+      const a = mine.filter(s => s.e !== e); a.push({ e: e, t: Date.now(), m: mode });
       setSubs_(me[0], a.slice(-5));
-      return out_({ ok: true });
+      return out_({ ok: true, mode: mode });
+    }
+    if (d.action === 'pushMode') {   // تغيير نوع التنبيهات لهذا الجهاز: all = جميع الرسائل والتذكيرات · rem = التذكيرات فقط
+      const e = String(d.endpoint || ''), mode = d.mode === 'all' ? 'all' : 'rem', mine = subs_(me[0]);
+      if (!mine.some(s => s.e === e)) return out_({ ok: false, error: 'هذا الجهاز غير مفعّل للتنبيهات.' });
+      setSubs_(me[0], mine.map(s => s.e === e ? { e: s.e, t: s.t, m: mode } : s));
+      return out_({ ok: true, mode: mode });
     }
     if (d.action === 'pushUnsub') { setSubs_(me[0], subs_(me[0]).filter(s => s.e !== String(d.endpoint || ''))); return out_({ ok: true }); }
     if (d.action === 'pushTest') {
@@ -612,7 +643,15 @@ function doPost(e) {
       const sh = rems_(), n = sh.getLastRow() - 1, now = Date.now(), rows = [];
       if (n > 0) sh.getRange(2, 1, n, RCOLS).getValues().forEach(r => { if (r[2] === me[0] && r[4] !== 'مكتمل' && Number(r[14]) > now - 180000) rows.push(r); });
       const pt = Number(PropertiesService.getScriptProperties().getProperty('PT_' + me[0]) || 0);
-      return out_({ ok: true, rows: rows.slice(0, 5).map(remOut_), test: now - pt < 180000 });
+      let msg = null;   // رسائل جديدة وصلت قبل لحظات (للأجهزة المفعّل عليها «جميع الرسائل» فقط). لا يُرسل نص الرسالة، بل الاسم والمصدر
+      if (d.mode === 'all') {
+        let pn = null; try { pn = JSON.parse(PropertiesService.getScriptProperties().getProperty('PN_' + me[0]) || 'null'); } catch (e) {}
+        if (pn && now - Number(pn.t) < 180000) {
+          msg = { n: Number(pn.n) || 1, id: String(pn.id || '') };
+          if (msg.n === 1 && msg.id) { const f = findRow_(msgs_(), msg.id, me); if (f) { msg.name = dec_(f.vals[2]); msg.source = f.vals[8] || ''; } }
+        }
+      }
+      return out_({ ok: true, rows: rows.slice(0, 5).map(remOut_), test: now - pt < 180000, msg: msg });
     }
 
     // ---- التذكيرات والمتابعات ----
@@ -840,6 +879,7 @@ function mailIn_(me, items) {
         sh.getRange(i + 2, 2).setValue(when);
         sh.getRange(i + 2, 6).setValue(enc_(text));
         sh.getRange(i + 2, 11).setValue('');
+        queueMsgPush_(me[0], id, 1);
       }
       return;
     }
@@ -848,6 +888,7 @@ function mailIn_(me, items) {
     const name = from.replace(/<.*>/, '').replace(/"/g, '').trim() || from;
     const mail = (from.match(/<(.+?)>/) || [])[1] || from;
     sh.appendRow([id, when, enc_(name), '', enc_(mail), enc_(text), 'جديدة', '', 'البريد', me[0], '']);
+    queueMsgPush_(me[0], id, 1);
   });
 }
 
@@ -868,6 +909,7 @@ function handleWhatsApp_(d, key) {
       let text = m.type === 'text' ? m.text.body : m.type === 'button' ? m.button.text : '[رسالة من نوع: ' + m.type + ']';
       const ts = m.timestamp ? new Date(Number(m.timestamp) * 1000) : new Date();
       sh.appendRow([m.id, ts, enc_(name), enc_(m.from), '', enc_(text), 'جديدة', '', 'واتساب', owner[0], '']);
+      queueMsgPush_(owner[0], m.id, 1);
     });
 
     (v.message_echoes || []).forEach(m => {
@@ -1015,6 +1057,7 @@ function handleWhapi_(token, d) {
     const text = m.type === 'text' ? ((m.text && m.text.body) || '') : '[رسالة من نوع: ' + m.type + ']';
     const when = m.timestamp ? new Date(Number(m.timestamp) * 1000) : new Date();
     sh.appendRow([m.id, when, enc_(m.from_name || phone), enc_(phone), '', enc_(text), 'جديدة', '', 'واتساب', me[0], '']);
+    queueMsgPush_(me[0], m.id, 1);
   });
   touch_(me[0]);
 }

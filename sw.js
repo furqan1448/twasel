@@ -18,21 +18,31 @@ async function kv(k) {
 }
 
 self.addEventListener('push', e => e.waitUntil((async () => {
-  let items = [], test = false;
+  let items = [], test = false, msg = null;
   try {
-    const api = await kv('api'), tok = await kv('tok');
+    const api = await kv('api'), tok = await kv('tok'), mode = await kv('mode');
     if (api && tok) {
-      const r = await fetch(api, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'remDue', token: tok }) });
+      const r = await fetch(api, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'remDue', token: tok, mode: mode === 'all' ? 'all' : 'rem' }) });
       const j = await r.json();
-      if (j && j.ok) { items = j.rows || []; test = !!j.test; }
+      if (j && j.ok) { items = j.rows || []; test = !!j.test; msg = j.msg || null; }
     }
   } catch (err) {}
   const base = self.registration.scope, icon = 'icon-192.png';
+  if (msg) {   // رسالة جديدة (للأجهزة المفعّل عليها «جميع الرسائل»)
+    const src = msg.source ? ' عبر ' + msg.source : '';
+    const one = msg.n <= 1;
+    await self.registration.showNotification(one ? 'رسالة جديدة' : msg.n + ' رسائل جديدة', {
+      body: one ? (msg.name ? 'من ' + msg.name + src : 'وصلتك رسالة جديدة') : 'وصلتك رسائل جديدة، افتحي صِلة لعرضها.',
+      icon, tag: 'msg-new', renotify: true,
+      data: { url: base + (one && msg.id ? '#msg=' + encodeURIComponent(msg.id) : '#inbox') }
+    });
+    if (!items.length) return;
+  }
   if (test && !items.length) {
-    return self.registration.showNotification('تنبيه تجريبي ✓', { body: 'تنبيهات التذكير تعمل على هذا الجهاز.', icon, tag: 'rem-test', data: { url: base } });
+    return self.registration.showNotification('تنبيه تجريبي ✓', { body: 'التنبيهات تعمل على هذا الجهاز.', icon, tag: 'rem-test', data: { url: base } });
   }
   if (!items.length) {   // يجب إظهار إشعار دائمًا (شرط آبل)، حتى لو تعذّر جلب التفاصيل
-    return self.registration.showNotification('لديك تذكير مستحق', { body: 'افتحي صِلة لعرض التذكيرات.', icon, tag: 'rem-generic', data: { url: base + '#rem' } });
+    return self.registration.showNotification('لديك تنبيه جديد', { body: 'افتحي صِلة لعرض التفاصيل.', icon, tag: 'rem-generic', data: { url: base + '#rem' } });
   }
   await Promise.all(items.slice(0, 5).map(r => self.registration.showNotification('تذكير: ' + r.title, {
     body: (r.name ? r.name + ' · ' : '') + 'حان موعد المتابعة',

@@ -88,6 +88,7 @@ textarea{min-height:120px;resize:vertical}
 dialog{border:0;border-radius:18px;padding:22px;width:min(420px,92vw);background:var(--card);color:var(--ink);box-shadow:0 20px 60px rgba(0,0,0,.35)}dialog::backdrop{background:rgba(30,10,14,.5);backdrop-filter:blur(2px)}
 .arow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}.arow small{display:block;color:var(--mut);font-size:13px;margin:0}.arow b{display:block;direction:ltr;unicode-bidi:plaintext;text-align:right;word-break:break-all;font-weight:500}
 .ib.spin svg{animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(-360deg)}}
+.popts{display:grid;gap:10px;margin-top:14px}.popt{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border:1px solid var(--line);border-radius:12px;cursor:pointer;transition:.15s}.popt:hover{background:var(--soft)}.popt:has(input:checked){border-color:var(--acc);background:var(--soft)}.popt input{margin-top:6px;accent-color:var(--acc);width:18px;height:18px;flex:none}.popt b{display:block;color:var(--ink)}.popt small{display:block;color:var(--mut);font-size:13px;line-height:1.7}
 dialog h3{margin:0 0 4px;font-size:20px}dialog p{margin:0;color:var(--mut)}.dact{display:flex;gap:8px;margin-top:18px;justify-content:flex-start}
 .pw{position:relative}.pw input{display:block;padding-inline-end:48px}
 .pwt{position:absolute;inset-block:0;inset-inline-end:0;width:46px;border:0;background:transparent;color:var(--mut);cursor:pointer;display:grid;place-items:center;border-radius:10px;padding:0}.pwt:hover,.pwt.on{color:var(--acc)}.pwt:focus-visible{outline:2px solid var(--acc)}
@@ -289,7 +290,7 @@ a.btn{text-decoration:none}
   </div>
   <div class="wrap" id="vRem" style="display:none">
     <div class="rhead"><h2 class="gr">التذكيرات والمتابعات</h2>
-      <div class="tools" style="margin:0"><button class="btn sm" id="rNew"><svg class="i"><use href="#pp"/></svg>تذكير جديد</button><button class="btn sm" id="rPush"><svg class="i"><use href="#bl"/></svg>تفعيل تنبيهات التذكيرات</button><button class="btn ghost sm" id="rPushTest" style="display:none">تجربة تنبيه</button></div></div>
+      <div class="tools" style="margin:0"><button class="btn sm" id="rNew"><svg class="i"><use href="#pp"/></svg>تذكير جديد</button><button class="btn sm" id="rPush"><svg class="i"><use href="#bl"/></svg>تفعيل التنبيهات</button><button class="btn ghost sm" id="rPushTest" style="display:none">تجربة تنبيه</button></div></div>
     <div class="chips" id="rTabs"></div>
     <div class="card rbar">
       <div class="rs"><label for="rQ">بحث</label><input id="rQ" type="search" placeholder="العنوان، الاسم، الجوال، الملاحظة…"></div>
@@ -312,7 +313,7 @@ a.btn{text-decoration:none}
 <dialog id="cndlg"><h3>استيراد أسماء جهات الاتصال</h3>
   <p>يعرض الموقع اسم الشخص كما سمّيتِه في جوالك بدل الاسم الذي كتبه هو في واتساب. يُقرأ الملف داخل متصفحك فقط، ويُحفظ الاسم مشفّرًا والرقم بصيغة لا يمكن قراءتها.</p>
   <div style="margin:12px 0;font-size:14px;line-height:1.9;color:var(--mut)">
-    <b style="color:var(--ink)">آيفون:</b> من iCloud.com ← جهات الاتصال ← تحديد الكل ← تصدير vCard.<br>
+    <b style="color:var(--ink)">آيفون:</b> من iCloud.com ← جهات الاتصال ← القوائم ← اضغطي ضغطة مطوّلة على «كل iCloud» ← تصدير.<br>
     <b style="color:var(--ink)">أندرويد / قوقل:</b> من contacts.google.com ← تصدير ← vCard أو Google CSV.
   </div>
   <label class="btn ghost" for="cnFile" style="display:inline-flex;cursor:pointer">اختيار الملف</label>
@@ -321,6 +322,12 @@ a.btn{text-decoration:none}
   <div class="dact"><button class="btn" id="cnGo" type="button" disabled>استيراد</button><button class="btn ghost" id="cnDel" type="button" style="display:none">حذف الأسماء المستوردة</button><button class="btn ghost" id="cnX" type="button">إغلاق</button></div></dialog>
 
 <dialog id="dlg"><h3 id="dT"></h3><p id="dM"></p><div id="dF"></div><div class="dact"><button class="btn" id="dOk"></button><button class="btn ghost" id="dNo">إلغاء</button></div></dialog>
+<dialog id="pdlg"><h3>التنبيهات</h3><p id="pdM">اختاري نوع التنبيهات التي تصلك على هذا الجهاز.</p>
+  <div class="popts">
+    <label class="popt"><input type="radio" name="pmode" value="all"><span><b>جميع الرسائل</b><small>تنبيه عند وصول أي رسالة جديدة، إضافةً إلى تنبيهات التذكيرات.</small></span></label>
+    <label class="popt"><input type="radio" name="pmode" value="rem"><span><b>التذكيرات فقط</b><small>لا تصلك تنبيهات إلا عند حلول موعد تذكير.</small></span></label>
+  </div>
+  <div class="dact"><button class="btn" id="pdOk" type="button">تفعيل</button><button class="btn ghost" id="pdNo" type="button">إلغاء</button><button class="btn danger" id="pdOff" type="button" style="margin-inline-start:auto;display:none">إيقاف التنبيهات</button></div></dialog>
 <dialog id="rdlg"><h3 id="rdT"></h3><p id="rdWho"></p>
   <div id="rdTitleBox"><label for="rdt">عنوان التذكير</label><input id="rdt" maxlength="200"></div>
   <div class="qk" id="rdQuick"></div>
@@ -1300,7 +1307,9 @@ function idbPut(k,v){
     r.onsuccess=()=>{ const tx=r.result.transaction('kv','readwrite'), st=tx.objectStore('kv'); if(v===null) st.delete(k); else st.put(v,k); tx.oncomplete=()=>res(); tx.onerror=()=>res(); };
   }catch(e){ res(); } });
 }
-const swSync=async()=>{ await idbPut('api',TOKEN?API:null); await idbPut('tok',TOKEN||null); };
+const getMode=()=>{ try{ return localStorage.getItem('pushMode')==='all'?'all':'rem'; }catch(e){ return 'rem'; } };
+const setMode=m=>{ try{ localStorage.setItem('pushMode',m==='all'?'all':'rem'); }catch(e){} };
+const swSync=async()=>{ await idbPut('api',TOKEN?API:null); await idbPut('tok',TOKEN||null); await idbPut('mode',getMode()); };
 const pushOk=()=>('serviceWorker' in navigator)&&('PushManager' in window)&&('Notification' in window);
 const getReg=async()=>{
   if(SWREG&&SWREG.active) return SWREG;
@@ -1311,7 +1320,7 @@ const getReg=async()=>{
 async function curSub(){ try{ const r=await getReg(); return r?await r.pushManager.getSubscription():null; }catch(e){ return null; } }
 async function pushBtn(){
   const sub=pushOk()?await curSub():null; PUSHON=!!sub&&Notification.permission==='granted';
-  const b=$('rPush'); b.innerHTML=ic('bl')+(PUSHON?'تنبيهات التذكيرات مفعّلة ✓':'تفعيل تنبيهات التذكيرات'); b.classList.toggle('ghost',PUSHON);
+  const b=$('rPush'); b.innerHTML=ic('bl')+(PUSHON?(getMode()==='all'?'التنبيهات مفعّلة: جميع الرسائل ✓':'التنبيهات مفعّلة: التذكيرات فقط ✓'):'تفعيل التنبيهات'); b.classList.toggle('ghost',PUSHON);
   $('rPushTest').style.display=PUSHON?'inline-flex':'none';
 }
 /* يضمن وجود اشتراك للجهاز ويسجّله في الخادم. ask: يطلب الإذن إن لم يُمنح · force: يعيد إنشاء الاشتراك */
@@ -1328,31 +1337,59 @@ async function ensurePush({ask=false,force=false}={}){
     sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ToU8(v.pub)});
   }
   await swSync();
-  const r=await postSafe({action:'pushSub',token:TOKEN,sub:sub.toJSON()}); if(!r.ok) throw new Error('sub');
+  let pm=''; try{ pm=localStorage.getItem('pushMode')||''; }catch(e){}
+  const r=await postSafe({action:'pushSub',token:TOKEN,sub:sub.toJSON(),mode:pm||undefined}); if(!r.ok) throw new Error('sub');
+  if(r.mode){ setMode(r.mode); await idbPut('mode',getMode()); }
   try{ localStorage.setItem('pushEp',sub.endpoint); }catch(e){}
   return true;
 }
 async function enablePush(){
   if(!pushOk()){
-    await dlg('تفعيل تنبيهات التذكيرات',{text:'على الجوال تعمل هذه الميزة عند فتح الموقع من أيقونته على الشاشة الرئيسية (وليس من Safari). في الآيفون: احذفي الاختصار القديم، ثم افتحي الموقع في Safari ← مشاركة ← «إضافة إلى الشاشة الرئيسية»، ثم افتحيه من الأيقونة واضغطي هذا الزر. (يتطلب iOS 16.4 أو أحدث).',ok:'حسنًا'});
+    await dlg('تفعيل التنبيهات',{text:'على الجوال تعمل هذه الميزة عند فتح الموقع من أيقونته على الشاشة الرئيسية (وليس من Safari). في الآيفون: احذفي الاختصار القديم، ثم افتحي الموقع في Safari ← مشاركة ← «إضافة إلى الشاشة الرئيسية»، ثم افتحيه من الأيقونة واضغطي هذا الزر. (يتطلب iOS 16.4 أو أحدث).',ok:'حسنًا'});
     return;
   }
   if(Notification.permission==='denied'){ toast('الإشعارات محظورة لهذا الموقع. فعّليها من إعدادات المتصفح أو الجوال ثم أعيدي المحاولة.',1); return; }
+  const mode=await askPushMode('all',false); if(!mode) return;
+  setMode(mode);
   try{
     const ok=await ensurePush({ask:true,force:true});
     if(!ok){ toast('لم يُسمح بالإشعارات. فعّليها من إعدادات المتصفح أو الجوال.',1); return; }
-    toast('تم تفعيل تنبيهات التذكيرات ✓'); pushBtn();
+    toast(mode==='all'?'تم تفعيل تنبيهات جميع الرسائل ✓':'تم تفعيل تنبيهات التذكيرات فقط ✓'); pushBtn();
   }catch(e){ toast('تعذّر التفعيل. تأكدي من نشر آخر إصدار من Apps Script ثم أعيدي المحاولة.',1); }
 }
+/* نافذة اختيار نوع التنبيهات. تُعيد 'all' أو 'rem' أو 'off' (عند الإيقاف) أو null عند الإلغاء */
+function askPushMode(cur,manage){
+  return new Promise(res=>{
+    const d=$('pdlg'); let done=false;
+    d.querySelectorAll('input[name=pmode]').forEach(r=>{ r.checked=(r.value===cur); });
+    $('pdM').textContent=manage?'يمكنك تغيير نوع التنبيهات على هذا الجهاز، أو إيقافها.':'اختاري نوع التنبيهات التي تصلك على هذا الجهاز.';
+    $('pdOk').textContent=manage?'حفظ':'تفعيل'; $('pdOff').style.display=manage?'inline-flex':'none';
+    const fin=v=>{ if(done) return; done=true; d.close(); res(v); };
+    $('pdOk').onclick=()=>{ const c=d.querySelector('input[name=pmode]:checked'); fin(c?c.value:cur); };
+    $('pdNo').onclick=()=>fin(null); $('pdOff').onclick=()=>fin('off'); d.oncancel=e=>{ e.preventDefault(); fin(null); };
+    d.showModal();
+  });
+}
+async function managePush(){
+  const m=await askPushMode(getMode(),true); if(!m) return;
+  if(m==='off'){ disablePush(); return; }
+  if(m===getMode()){ return; }
+  const sub=await curSub(); if(!sub){ toast('تعذّر تغيير النوع. أعيدي تفعيل التنبيهات.',1); return; }
+  const r=await postSafe({action:'pushMode',token:TOKEN,endpoint:sub.endpoint,mode:m});
+  if(r.auth===false){ logout(); return; }
+  if(!r.ok){ toast(r.error||'تعذّر تغيير نوع التنبيهات.',1); return; }
+  setMode(m); await idbPut('mode',m);
+  toast(m==='all'?'تم التحويل إلى تنبيهات جميع الرسائل ✓':'تم التحويل إلى تنبيهات التذكيرات فقط ✓'); pushBtn();
+}
 async function disablePush(){
-  if(!await dlg('إيقاف تنبيهات التذكيرات',{text:'لن تصلك تنبيهات التذكيرات على هذا الجهاز.',ok:'إيقاف',danger:true})) return;
+  if(!await dlg('إيقاف التنبيهات',{text:'لن تصلك أي تنبيهات على هذا الجهاز.',ok:'إيقاف',danger:true})) return;
   const sub=await curSub(); let ep='';
   if(sub){ ep=sub.endpoint; try{ await sub.unsubscribe(); }catch(e){} }
   try{ localStorage.removeItem('pushEp'); localStorage.setItem('pushAsked','1'); }catch(e){}
   if(ep) postSafe({action:'pushUnsub',token:TOKEN,endpoint:ep});
-  toast('تم إيقاف تنبيهات التذكيرات.'); pushBtn();
+  toast('تم إيقاف التنبيهات.'); pushBtn();
 }
-$('rPush').onclick=()=>PUSHON?disablePush():enablePush();
+$('rPush').onclick=()=>PUSHON?managePush():enablePush();
 $('rPushTest').onclick=async()=>{
   const r=await postSafe({action:'pushTest',token:TOKEN});
   if(r.auth===false){ logout(); return; }
@@ -1368,7 +1405,7 @@ function armPushAsk(){
   const go=()=>{
     document.removeEventListener('click',go,true); PUSHARM=false;
     try{ localStorage.setItem('pushAsked','1'); }catch(e){}
-    if(TOKEN) ensurePush({ask:true}).then(ok=>{ if(ok){ toast('تم تفعيل تنبيهات التذكيرات ✓'); pushBtn(); } }).catch(()=>{});
+    if(TOKEN) ensurePush({ask:true}).then(ok=>{ if(ok){ toast(getMode()==='all'?'تم تفعيل تنبيهات جميع الرسائل ✓':'تم تفعيل تنبيهات التذكيرات فقط ✓'); pushBtn(); } }).catch(()=>{});
   };
   document.addEventListener('click',go,true);
 }
@@ -1382,7 +1419,7 @@ if('serviceWorker' in navigator){
   navigator.serviceWorker.addEventListener('message',e=>{
     const u=e.data&&e.data.type==='open'&&e.data.url; if(!u||!TOKEN) return;
     const h=u.split('#')[1]||'';
-    if(h.indexOf('msg=')===0) openConvById(decodeURIComponent(h.slice(4))); else { setView('rem'); loadRem(true); }
+    if(h.indexOf('msg=')===0) openConvById(decodeURIComponent(h.slice(4))); else if(h==='inbox'){ setView('msg'); } else { setView('rem'); loadRem(true); }
   });
 }
 
