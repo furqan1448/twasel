@@ -17,7 +17,8 @@
 :root{--bg:#f7f4f1;--card:#fff;--ink:#2b1a1d;--mut:#7b6c6f;--line:#ebe1e2;--acc:#8C1A2C;--acc2:#6f1423;--gold:#C2AA85;--gray:#B0AEAE;--soft:#f6ecee;--ok:#1f6b45;--warn:#9a5b00;--bad:#b3261e;--sh:0 4px 20px rgba(60,20,28,.07)}
 @media (prefers-color-scheme:dark){:root{--bg:#171112;--card:#221a1c;--ink:#f4eaeb;--mut:#b7a6a9;--line:#3a2b2f;--acc:#d9707f;--acc2:#e58e9a;--soft:#2e2024;--ok:#58c28a;--warn:#e0a24a;--bad:#ef7b73;--sh:none}}
 *{box-sizing:border-box}
-body{margin:0;font-family:'Tajawal',system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.8}
+html{background:var(--bg);overscroll-behavior-y:none}   /* يمنع ظهور لون خلف الصفحة عند سحبها لأسفل في الجوال */
+body{overscroll-behavior-y:none;margin:0;font-family:'Tajawal',system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.8}
 section{display:none}
 svg.i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
 .logo{width:56px;height:56px;object-fit:contain;border-radius:14px;background:#fff;padding:4px;border:1px solid var(--line)}
@@ -370,7 +371,7 @@ a.btn{text-decoration:none}
 
 <script>
 /* ===== رابط النشر (Apps Script): غيّريه هنا فقط ===== */
-const API = 'https://script.google.com/macros/s/AKfycby0yYYDh-TsfnbuG2crvQSV-LbwmlBBnL3PihXj1RpOvxHrnsRRRZtavbegcgKYUB6fgg/exec';
+const API = 'https://script.google.com/macros/s/AKfycbysxUPbG2cmZZ14l9uWxYCsM_M81wvVJZSwNdj3CGk8JFp-YYSJyDAgIKnyPVmDnTYz7Q/exec';
 const $ = id => document.getElementById(id);
 const STATUSES = ['جديدة', 'تم الرد', 'لم يُرد عليها'], STAR = 'المميز بنجمة', ARCH = 'الأرشيف';
 const U = new URLSearchParams(location.search).get('u');
