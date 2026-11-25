@@ -112,18 +112,24 @@ dialog h3{margin:0 0 4px;font-size:20px}dialog p{margin:0;color:var(--mut)}.dact
 .item.swa .av{background:#1f9d551f;color:#1f9d55}.item.sml .av{background:#3b6fd41f;color:#3b6fd4}
 .item.swa .bd:not(.s){background:#1f9d551f;color:#1f9d55}.item.sml .bd:not(.s){background:#3b6fd41f;color:#3b6fd4}
 .item.new{box-shadow:0 0 0 2px color-mix(in srgb,var(--acc) 14%,transparent)}
-#menuBtn,#navOv{display:none}
+#mbar,#navOv{display:none}
 @media(max-width:760px){
-/* قائمة منسدلة: زر صغير، وعند الضغط تنفتح القائمة كاملة من اليمين (مثل اللابتوب)، والصفحة تبقى بعرضها كاملًا */
-.top{transform:translateX(105%);transition:transform .25s ease;box-shadow:none}
-body.navopen .top{transform:none;box-shadow:-10px 0 40px rgba(0,0,0,.35)}
-#menuBtn{display:flex;position:fixed;top:10px;right:10px;z-index:4;width:44px;height:44px;align-items:center;justify-content:center;border:0;border-radius:12px;background:linear-gradient(180deg,#8C1A2C,#5e0f1c);color:#fff;cursor:pointer;box-shadow:0 4px 14px rgba(60,20,28,.3)}
-#menuBtn .i{width:24px;height:24px}
-#menuBtn .nbd{position:absolute;top:-4px;left:-4px;min-width:18px;height:18px;padding:0 5px;border-radius:99px;background:var(--gold);color:#3a1018;font-size:11px;font-weight:800;line-height:18px;text-align:center;display:none}
-body.navopen #menuBtn{display:none}
+/* شريط علوي بتنسيق «إدارة وحدة المقاصف»: القائمة (☰) يمين، الشعار والاسم، وأيقونة الخروج يسار. وعند الضغط على ☰ تنفتح القائمة كاملة من اليمين */
+body{overflow-x:hidden}
+#mbar{display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:4;padding:10px 14px;background:linear-gradient(135deg,#8C1A2C,#5e0f1c);color:#fff;box-shadow:0 4px 16px rgba(60,20,28,.25)}
+#mbar .bm{display:flex;flex:none}
+#mbar .logo,#mbar .lf{width:46px;height:46px;border-radius:50%;background:#fff;object-fit:contain;padding:3px;border:3px solid rgba(255,255,255,.35);box-sizing:border-box;place-items:center;color:#8C1A2C;font-size:22px;font-weight:800}
+#mbar .mt{flex:1;font-size:22px;font-weight:800;line-height:1.2}
+#menuBtn{position:relative;flex:none;width:44px;height:44px;display:flex;align-items:center;justify-content:center;border:0;background:none;color:#fff;cursor:pointer;padding:0}
+#menuBtn .i{width:28px;height:28px}
+#menuBtn .nbd{position:absolute;top:0;inset-inline-end:0;min-width:18px;height:18px;padding:0 5px;border-radius:99px;background:var(--gold);color:#3a1018;font-size:11px;font-weight:800;line-height:18px;text-align:center;display:none}
+#mOut{flex:none;width:48px;height:42px;display:flex;align-items:center;justify-content:center;border:1.5px solid rgba(255,255,255,.55);border-radius:14px;background:none;color:#fff;cursor:pointer;padding:0}
+#mOut .i{width:22px;height:22px}
+.top{width:min(250px,82vw);transform:translateX(105%);visibility:hidden;transition:transform .25s ease,visibility 0s linear .25s;box-shadow:none}
+body.navopen .top{transform:none;visibility:visible;transition:transform .25s ease,visibility 0s;box-shadow:-10px 0 40px rgba(0,0,0,.35)}
 #navOv{position:fixed;inset:0;background:rgba(30,10,14,.5);z-index:5;opacity:0;pointer-events:none;transition:opacity .25s;display:block}
 body.navopen #navOv{opacity:1;pointer-events:auto}
-.wrap{margin:0 auto;padding:68px 14px 70px}
+.wrap{margin:0 auto;padding:18px 14px 70px}
 }
 
 
@@ -246,7 +252,7 @@ a.btn{text-decoration:none}
 
 <!-- الصندوق -->
 <section id="inbox">
-  <button id="menuBtn" type="button" aria-label="القائمة"><svg viewBox="0 0 24 24" class="i" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="nbd" id="nbd"></span></button><div id="navOv"></div>
+  <div id="mbar"><button id="menuBtn" type="button" aria-label="القائمة"><svg viewBox="0 0 24 24" class="i" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="nbd" id="nbd"></span></button><span class="bm"></span><b class="mt">صِلة</b><button id="mOut" type="button" title="تسجيل الخروج" aria-label="تسجيل الخروج"><svg class="i"><use href="#out"/></svg></button></div><div id="navOv"></div>
   <div class="top"><div class="in"><span class="bm"></span><div class="ttl"><b>صِلة</b><small>رسائلك في مكان واحد</small></div>
     <button class="ib act" id="navMsg" title="الرسائل" aria-label="الرسائل"><svg class="i"><use href="#in"/></svg></button>
     <button class="ib" id="navTag" title="التصنيفات" aria-label="التصنيفات"><svg class="i"><use href="#tg"/></svg></button>
@@ -364,7 +370,7 @@ a.btn{text-decoration:none}
 
 <script>
 /* ===== رابط النشر (Apps Script): غيّريه هنا فقط ===== */
-const API = 'https://script.google.com/macros/s/AKfycbyq8xe5AJMCCLnzxC1ZUoXPly7mccEwYJqRPgB4LX5OD-I79ch0KtfULbOskp9-mmy7fA/exec';
+const API = 'https://script.google.com/macros/s/AKfycbysxUPbG2cmZZ14l9uWxYCsM_M81wvVJZSwNdj3CGk8JFp-YYSJyDAgIKnyPVmDnTYz7Q/exec';
 const $ = id => document.getElementById(id);
 const STATUSES = ['جديدة', 'تم الرد', 'لم يُرد عليها'], STAR = 'المميز بنجمة', ARCH = 'الأرشيف';
 const U = new URLSearchParams(location.search).get('u');
@@ -1498,6 +1504,7 @@ else{
 (function(){ const B=document.body, close=()=>B.classList.remove('navopen');
   document.getElementById('menuBtn').onclick=()=>B.classList.add('navopen');
   document.getElementById('navOv').onclick=close;
+  document.getElementById('mOut').onclick=()=>document.getElementById('outBtn').click();
   document.querySelectorAll('.top .ib').forEach(b=>b.addEventListener('click',close));
   document.addEventListener('keydown',e=>{ if(e.key==='Escape') close(); });
   window.addEventListener('resize',()=>{ if(innerWidth>760) close(); });
