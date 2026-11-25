@@ -17,8 +17,7 @@
 :root{--bg:#f7f4f1;--card:#fff;--ink:#2b1a1d;--mut:#7b6c6f;--line:#ebe1e2;--acc:#8C1A2C;--acc2:#6f1423;--gold:#C2AA85;--gray:#B0AEAE;--soft:#f6ecee;--ok:#1f6b45;--warn:#9a5b00;--bad:#b3261e;--sh:0 4px 20px rgba(60,20,28,.07)}
 @media (prefers-color-scheme:dark){:root{--bg:#171112;--card:#221a1c;--ink:#f4eaeb;--mut:#b7a6a9;--line:#3a2b2f;--acc:#d9707f;--acc2:#e58e9a;--soft:#2e2024;--ok:#58c28a;--warn:#e0a24a;--bad:#ef7b73;--sh:none}}
 *{box-sizing:border-box}
-html{background:var(--bg);overscroll-behavior-y:none}   /* يمنع ظهور لون خلف الصفحة عند سحبها لأسفل في الجوال */
-body{overscroll-behavior-y:none;margin:0;font-family:'Tajawal',system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.8}
+body{margin:0;font-family:'Tajawal',system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.8}
 section{display:none}
 svg.i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
 .logo{width:56px;height:56px;object-fit:contain;border-radius:14px;background:#fff;padding:4px;border:1px solid var(--line)}
@@ -116,8 +115,7 @@ dialog h3{margin:0 0 4px;font-size:20px}dialog p{margin:0;color:var(--mut)}.dact
 #mbar,#navOv{display:none}
 @media(max-width:760px){
 /* شريط علوي بتنسيق «إدارة وحدة المقاصف»: القائمة (☰) يمين، الشعار والاسم، وأيقونة الخروج يسار. وعند الضغط على ☰ تنفتح القائمة كاملة من اليمين */
-body{overflow-x:hidden}
-#mbar{display:flex;align-items:center;justify-content:space-between;gap:10px;position:sticky;top:0;z-index:4;padding:8px 12px;background:linear-gradient(135deg,#8C1A2C,#5e0f1c);color:#fff;box-shadow:0 4px 16px rgba(60,20,28,.25)}
+#mbar{display:flex;align-items:center;justify-content:space-between;gap:10px;position:sticky;top:0;z-index:4;padding:8px 12px;background:#8C1A2C;color:#fff;box-shadow:0 2px 8px rgba(60,20,28,.18)}
 #mbar .bm{display:flex;flex:none}
 #mbar .logo,#mbar .lf{width:46px;height:46px;border-radius:50%;background:#fff;object-fit:contain;padding:3px;border:3px solid rgba(255,255,255,.35);box-sizing:border-box;place-items:center;color:#8C1A2C;font-size:22px;font-weight:800}
 #mbar .mt{flex:1;font-size:22px;font-weight:800;line-height:1.2}
@@ -126,10 +124,11 @@ body{overflow-x:hidden}
 #menuBtn .nbd{position:absolute;top:0;inset-inline-end:0;min-width:18px;height:18px;padding:0 5px;border-radius:99px;background:var(--gold);color:#3a1018;font-size:11px;font-weight:800;line-height:18px;text-align:center;display:none}
 #mOut{flex:none;width:48px;height:42px;display:flex;align-items:center;justify-content:center;border:1.5px solid rgba(255,255,255,.55);border-radius:14px;background:none;color:#fff;cursor:pointer;padding:0}
 #mOut .i{width:22px;height:22px}
-.top{width:min(250px,82vw);transform:translateX(105%);visibility:hidden;transition:transform .25s ease,visibility 0s linear .25s;box-shadow:none}
-body.navopen .top{transform:none;visibility:visible;transition:transform .25s ease,visibility 0s;box-shadow:-10px 0 40px rgba(0,0,0,.35)}
-#navOv{position:fixed;inset:0;background:rgba(30,10,14,.5);z-index:5;opacity:0;pointer-events:none;transition:opacity .25s;display:block}
-body.navopen #navOv{opacity:1;pointer-events:auto}
+.top{display:none;width:min(250px,82vw)}
+body.navopen .top{display:block;animation:navIn .2s ease-out;box-shadow:-10px 0 40px rgba(0,0,0,.35)}
+@keyframes navIn{from{transform:translateX(40px);opacity:.4}to{transform:none;opacity:1}}
+#navOv{position:fixed;inset:0;background:rgba(30,10,14,.5);z-index:5;display:none}
+body.navopen #navOv{display:block}
 .wrap{margin:0 auto;padding:18px 14px 70px}
 }
 
