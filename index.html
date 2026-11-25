@@ -116,7 +116,7 @@ dialog h3{margin:0 0 4px;font-size:20px}dialog p{margin:0;color:var(--mut)}.dact
 @media(max-width:760px){
 /* شريط علوي بتنسيق «إدارة وحدة المقاصف»: القائمة (☰) يمين، الشعار والاسم، وأيقونة الخروج يسار. وعند الضغط على ☰ تنفتح القائمة كاملة من اليمين */
 body{overflow-x:hidden}
-#mbar{display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:4;padding:10px 14px;background:linear-gradient(135deg,#8C1A2C,#5e0f1c);color:#fff;box-shadow:0 4px 16px rgba(60,20,28,.25)}
+#mbar{display:flex;align-items:center;justify-content:space-between;gap:10px;position:sticky;top:0;z-index:4;padding:8px 12px;background:linear-gradient(135deg,#8C1A2C,#5e0f1c);color:#fff;box-shadow:0 4px 16px rgba(60,20,28,.25)}
 #mbar .bm{display:flex;flex:none}
 #mbar .logo,#mbar .lf{width:46px;height:46px;border-radius:50%;background:#fff;object-fit:contain;padding:3px;border:3px solid rgba(255,255,255,.35);box-sizing:border-box;place-items:center;color:#8C1A2C;font-size:22px;font-weight:800}
 #mbar .mt{flex:1;font-size:22px;font-weight:800;line-height:1.2}
@@ -143,7 +143,7 @@ body.navopen #navOv{opacity:1;pointer-events:auto}
 /* الشريط الجانبي */
 .top{overflow:hidden}.top .in{position:relative;z-index:1}
 .top:before{inset:auto auto -60px -60px;width:190px;height:190px;border:2px solid rgba(194,170,133,.3);box-shadow:0 0 0 26px rgba(194,170,133,.07),0 0 0 54px rgba(194,170,133,.035)}
-@media(max-width:760px){.top{overflow-y:auto;overflow-x:hidden}.top:before{display:none}.hero:before{width:150px;height:150px;inset:-60px auto auto -60px;box-shadow:0 0 0 20px rgba(194,170,133,.07)}}
+@media(max-width:760px){.top{overflow-y:auto;overflow-x:hidden}.hero:before{width:150px;height:150px;inset:-60px auto auto -60px;box-shadow:0 0 0 20px rgba(194,170,133,.07)}}
 
 /* ===== التذكيرات والمتابعات ===== */
 select{width:100%;padding:12px 14px;font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:10px}
@@ -252,7 +252,7 @@ a.btn{text-decoration:none}
 
 <!-- الصندوق -->
 <section id="inbox">
-  <div id="mbar"><button id="menuBtn" type="button" aria-label="القائمة"><svg viewBox="0 0 24 24" class="i" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="nbd" id="nbd"></span></button><span class="bm"></span><b class="mt">صِلة</b><button id="mOut" type="button" title="تسجيل الخروج" aria-label="تسجيل الخروج"><svg class="i"><use href="#out"/></svg></button></div><div id="navOv"></div>
+  <div id="mbar"><button id="menuBtn" type="button" aria-label="القائمة"><svg viewBox="0 0 24 24" class="i" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="nbd" id="nbd"></span></button><button id="mOut" type="button" title="تسجيل الخروج" aria-label="تسجيل الخروج"><svg class="i"><use href="#out"/></svg></button></div><div id="navOv"></div>
   <div class="top"><div class="in"><span class="bm"></span><div class="ttl"><b>صِلة</b><small>رسائلك في مكان واحد</small></div>
     <button class="ib act" id="navMsg" title="الرسائل" aria-label="الرسائل"><svg class="i"><use href="#in"/></svg></button>
     <button class="ib" id="navTag" title="التصنيفات" aria-label="التصنيفات"><svg class="i"><use href="#tg"/></svg></button>
@@ -370,7 +370,7 @@ a.btn{text-decoration:none}
 
 <script>
 /* ===== رابط النشر (Apps Script): غيّريه هنا فقط ===== */
-const API = 'https://script.google.com/macros/s/AKfycbyq8xe5AJMCCLnzxC1ZUoXPly7mccEwYJqRPgB4LX5OD-I79ch0KtfULbOskp9-mmy7fA/exec';
+const API = 'https://script.google.com/macros/s/AKfycbysxUPbG2cmZZ14l9uWxYCsM_M81wvVJZSwNdj3CGk8JFp-YYSJyDAgIKnyPVmDnTYz7Q/exec';
 const $ = id => document.getElementById(id);
 const STATUSES = ['جديدة', 'تم الرد', 'لم يُرد عليها'], STAR = 'المميز بنجمة', ARCH = 'الأرشيف';
 const U = new URLSearchParams(location.search).get('u');
