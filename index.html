@@ -112,14 +112,18 @@ dialog h3{margin:0 0 4px;font-size:20px}dialog p{margin:0;color:var(--mut)}.dact
 .item.swa .av{background:#1f9d551f;color:#1f9d55}.item.sml .av{background:#3b6fd41f;color:#3b6fd4}
 .item.swa .bd:not(.s){background:#1f9d551f;color:#1f9d55}.item.sml .bd:not(.s){background:#3b6fd41f;color:#3b6fd4}
 .item.new{box-shadow:0 0 0 2px color-mix(in srgb,var(--acc) 14%,transparent)}
+#menuBtn,#navOv{display:none}
 @media(max-width:760px){
-/* نفس شكل اللابتوب: الشريط على اليمين، لكن بعرض مصغّر (أيقونات فقط) كي يتسع الجوال */
-.top{width:64px}
-.top .in{padding:14px 8px;gap:6px;align-items:center}
-.top .ttl{display:none}
-.top .ib{width:46px;height:46px;padding:0;justify-content:center;border:0}.top .ib::after{display:none}
-#outBtn{margin-top:auto}
-.wrap{margin:0 64px 0 0;padding:18px 12px 70px}
+/* قائمة منسدلة: زر صغير، وعند الضغط تنفتح القائمة كاملة من اليمين (مثل اللابتوب)، والصفحة تبقى بعرضها كاملًا */
+.top{transform:translateX(105%);transition:transform .25s ease;box-shadow:none}
+body.navopen .top{transform:none;box-shadow:-10px 0 40px rgba(0,0,0,.35)}
+#menuBtn{display:flex;position:fixed;top:10px;right:10px;z-index:4;width:44px;height:44px;align-items:center;justify-content:center;border:0;border-radius:12px;background:linear-gradient(180deg,#8C1A2C,#5e0f1c);color:#fff;cursor:pointer;box-shadow:0 4px 14px rgba(60,20,28,.3)}
+#menuBtn .i{width:24px;height:24px}
+#menuBtn .nbd{position:absolute;top:-4px;left:-4px;min-width:18px;height:18px;padding:0 5px;border-radius:99px;background:var(--gold);color:#3a1018;font-size:11px;font-weight:800;line-height:18px;text-align:center;display:none}
+body.navopen #menuBtn{display:none}
+#navOv{position:fixed;inset:0;background:rgba(30,10,14,.5);z-index:5;opacity:0;pointer-events:none;transition:opacity .25s;display:block}
+body.navopen #navOv{opacity:1;pointer-events:auto}
+.wrap{margin:0 auto;padding:68px 14px 70px}
 }
 
 
@@ -168,7 +172,7 @@ a.btn{text-decoration:none}
 .alb{cursor:pointer;margin:6px 0 8px}.aT{font-weight:800;font-size:17px;line-height:1.5}.aW{color:var(--mut);font-size:14px}
 .alq{gap:6px;flex-wrap:wrap;margin:0 0 8px}
 .al .acts{margin-top:0}
-@media(max-width:760px){.top .ib{position:relative}.top .nb{position:absolute;top:0;inset-inline-start:0;margin:0}.rbar{grid-template-columns:1fr 1fr}.rbar .rs{grid-column:1/-1}#alerts{top:8px;left:8px;right:8px;width:auto}}
+@media(max-width:760px){.rbar{grid-template-columns:1fr 1fr}.rbar .rs{grid-column:1/-1}#alerts{top:8px;left:8px;right:8px;width:auto}}
 #tgd{width:min(520px,94vw)}#tgd h3{margin:0 0 4px}.tgl{display:flex;flex-direction:column;gap:6px;margin:12px 0;max-height:46vh;overflow:auto}.tgr{display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;cursor:pointer}.tgr .tn{flex:1}.tgr input[type=checkbox]{width:18px;height:18px;margin:0}.tga{display:flex;gap:8px;margin-bottom:6px}.tga input{flex:1;min-width:0}.tgg{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:14px}.tgc{font:inherit;text-align:right;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}.tgc b{font-size:15px;display:flex;gap:6px;align-items:center}.tgc .bd{align-self:flex-start}.tgc:hover{border-color:var(--acc)}:root{--pink:#b0315f}@media (prefers-color-scheme:dark){:root{--pink:#f08aae}}.tgd{width:10px;height:10px;border-radius:50%;flex:none;display:inline-block}.tgs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0;max-height:46vh;overflow:auto}.tgo{font:inherit;font-weight:500;cursor:pointer;border:2px solid transparent;border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px;text-align:right}.tgo .tn{flex:1}.tgi{width:18px;height:18px;border-radius:50%;display:inline-grid;place-items:center;flex:none;color:#fff}.tgi .i{width:11px;height:11px;stroke-width:3}
 </style>
 </head>
@@ -242,6 +246,7 @@ a.btn{text-decoration:none}
 
 <!-- الصندوق -->
 <section id="inbox">
+  <button id="menuBtn" type="button" aria-label="القائمة"><svg viewBox="0 0 24 24" class="i" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="nbd" id="nbd"></span></button><div id="navOv"></div>
   <div class="top"><div class="in"><span class="bm"></span><div class="ttl"><b>صِلة</b><small>رسائلك في مكان واحد</small></div>
     <button class="ib act" id="navMsg" title="الرسائل" aria-label="الرسائل"><svg class="i"><use href="#in"/></svg></button>
     <button class="ib" id="navTag" title="التصنيفات" aria-label="التصنيفات"><svg class="i"><use href="#tg"/></svg></button>
@@ -359,7 +364,7 @@ a.btn{text-decoration:none}
 
 <script>
 /* ===== رابط النشر (Apps Script): غيّريه هنا فقط ===== */
-const API = 'https://script.google.com/macros/s/AKfycbyq8xe5AJMCCLnzxC1ZUoXPly7mccEwYJqRPgB4LX5OD-I79ch0KtfULbOskp9-mmy7fA/exec';
+const API = 'https://script.google.com/macros/s/AKfycbysxUPbG2cmZZ14l9uWxYCsM_M81wvVJZSwNdj3CGk8JFp-YYSJyDAgIKnyPVmDnTYz7Q/exec';
 const $ = id => document.getElementById(id);
 const STATUSES = ['جديدة', 'تم الرد', 'لم يُرد عليها'], STAR = 'المميز بنجمة', ARCH = 'الأرشيف';
 const U = new URLSearchParams(location.search).get('u');
@@ -1488,6 +1493,18 @@ else{
   try{TOKEN=localStorage.getItem('tok')||'';ME=JSON.parse(localStorage.getItem('me')||'null');}catch(e){}
   if(TOKEN&&ME) openInbox(); else show('auth');
 }
+
+/* قائمة الجوال */
+(function(){ const B=document.body, close=()=>B.classList.remove('navopen');
+  document.getElementById('menuBtn').onclick=()=>B.classList.add('navopen');
+  document.getElementById('navOv').onclick=close;
+  document.querySelectorAll('.top .ib').forEach(b=>b.addEventListener('click',close));
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape') close(); });
+  window.addEventListener('resize',()=>{ if(innerWidth>760) close(); });
+  /* عدّاد التذكيرات يظهر أيضًا على زر القائمة */
+  const nb=document.getElementById('nb'), nbd=document.getElementById('nbd');
+  if(nb&&nbd) new MutationObserver(()=>{ nbd.textContent=nb.textContent; nbd.style.display=(nb.textContent.trim()&&getComputedStyle(nb).display!=='none')?'block':'none'; }).observe(nb,{childList:true,characterData:true,subtree:true,attributes:true,attributeFilter:['style','class']});
+})();
 </script>
 </body>
 </html>
