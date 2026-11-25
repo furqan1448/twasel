@@ -98,7 +98,7 @@ dialog h3{margin:0 0 4px;font-size:20px}dialog p{margin:0;color:var(--mut)}.dact
 #anBody{white-space:pre-wrap;line-height:1.9;color:var(--ink);margin:12px 0 0;max-height:52vh;overflow:auto;word-break:break-word}
 #anHead{display:flex;align-items:center;gap:8px;color:var(--acc)}#anHead h3{margin:0;color:var(--ink)}#anHead small{margin-inline-start:auto;color:var(--mut);font-size:12px}
 #toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(30px);background:#2b1a1d;color:#fff;padding:11px 20px;border-radius:12px;opacity:0;pointer-events:none;transition:.25s;z-index:99;max-width:90vw}#toast.on{opacity:1;transform:translateX(-50%)}#toast.bad{background:var(--bad)}
-@media(max-width:760px){.split{grid-template-columns:1fr}.hero{padding:30px 22px;background:#8C1A2C}.hero ul,.hero:after{display:none}.hero h1{font-size:28px}.stats{gap:8px}.stat{padding:10px}.stat b{font-size:21px}.item{grid-template-columns:1fr}.av{display:none}.cts{grid-template-columns:1fr}}
+@media(max-width:760px){.split{grid-template-columns:1fr}.hero{padding:30px 22px}.hero ul,.hero:after{display:none}.hero h1{font-size:28px}.stats{gap:8px}.stat{padding:10px}.stat b{font-size:21px}.item{grid-template-columns:1fr}.av{display:none}.cts{grid-template-columns:1fr}}
 /* ===== الاتجاه الأول: شريط جانبي عنابي ملكي ===== */
 .top{position:fixed;top:0;bottom:0;right:0;width:230px;background:linear-gradient(180deg,#8C1A2C,#5e0f1c);color:#fff;border:0;backdrop-filter:none;z-index:6}
 .top .in{max-width:none;height:100%;flex-direction:column;align-items:stretch;padding:28px 16px;gap:8px}
@@ -371,7 +371,7 @@ a.btn{text-decoration:none}
 <script>
 /* ===== رابط النشر (Apps Script): غيّريه هنا فقط ===== */
 const API = 'https://script.google.com/macros/s/AKfycby0yYYDh-TsfnbuG2crvQSV-LbwmlBBnL3PihXj1RpOvxHrnsRRRZtavbegcgKYUB6fgg/exec';
-const UIVER = '2026-11-25-d';   // يظهر أسفل الصفحة: للتأكد أن آخر نسخة من الواجهة هي المحمّلة
+const UIVER = '2026-11-25-e';   // يظهر أسفل الصفحة: للتأكد أن آخر نسخة من الواجهة هي المحمّلة
 const $ = id => document.getElementById(id);
 const STATUSES = ['جديدة', 'تم الرد', 'لم يُرد عليها'], STAR = 'المميز بنجمة', ARCH = 'الأرشيف';
 const U = new URLSearchParams(location.search).get('u');
