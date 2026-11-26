@@ -8,10 +8,10 @@
 <meta name="theme-color" content="#8C1A2C">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="صِلة">
+<meta name="apple-mobile-web-app-title" content="صلة">
 <link rel="preconnect" href="https://script.google.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<title>صِلة للتواصل</title>
+<title>صلة للتواصل</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#f7f4f1;--card:#fff;--ink:#2b1a1d;--mut:#7b6c6f;--line:#ebe1e2;--acc:#8C1A2C;--acc2:#6f1423;--gold:#C2AA85;--gray:#B0AEAE;--soft:#f6ecee;--ok:#1f6b45;--warn:#9a5b00;--bad:#b3261e;--sh:0 4px 20px rgba(60,20,28,.07)}
@@ -253,7 +253,7 @@ a.btn{text-decoration:none}
 <!-- الصندوق -->
 <section id="inbox">
   <div id="mbar"><button id="menuBtn" type="button" aria-label="القائمة"><svg viewBox="0 0 24 24" class="i" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="nbd" id="nbd"></span></button><button id="mOut" type="button" title="تسجيل الخروج" aria-label="تسجيل الخروج"><svg class="i"><use href="#out"/></svg></button></div><div id="navOv"></div>
-  <div class="top"><div class="in"><span class="bm"></span><div class="ttl"><b>صِلة</b><small>رسائلك في مكان واحد</small></div>
+  <div class="top"><div class="in"><span class="bm"></span><div class="ttl"><b>صلة</b><small>رسائلك في مكان واحد</small></div>
     <button class="ib act" id="navMsg" title="الرسائل" aria-label="الرسائل"><svg class="i"><use href="#in"/></svg></button>
     <button class="ib" id="navTag" title="التصنيفات" aria-label="التصنيفات"><svg class="i"><use href="#tg"/></svg></button>
     <button class="ib" id="navRem" title="التذكيرات" aria-label="التذكيرات"><svg class="i"><use href="#bl"/></svg><span class="nb" id="nb"></span></button>
@@ -371,7 +371,7 @@ a.btn{text-decoration:none}
 <script>
 /* ===== رابط النشر (Apps Script): غيّريه هنا فقط ===== */
 const API = 'https://script.google.com/macros/s/AKfycby0yYYDh-TsfnbuG2crvQSV-LbwmlBBnL3PihXj1RpOvxHrnsRRRZtavbegcgKYUB6fgg/exec';
-const UIVER = '2026-11-25-e';   // يظهر أسفل الصفحة: للتأكد أن آخر نسخة من الواجهة هي المحمّلة
+const UIVER = '2026-11-26-a';   // يظهر أسفل الصفحة: للتأكد أن آخر نسخة من الواجهة هي المحمّلة
 const $ = id => document.getElementById(id);
 const STATUSES = ['جديدة', 'تم الرد', 'لم يُرد عليها'], STAR = 'المميز بنجمة', ARCH = 'الأرشيف';
 const U = new URLSearchParams(location.search).get('u');
@@ -774,6 +774,7 @@ function render(){
     const gm=x.source==='البريد'?gmailUrl(x):'';
     if(gm){ const bd=d.querySelector('.body'); bd.style.cursor='pointer'; bd.title='افتح الرسالة في Gmail'; bd.onclick=()=>window.open(gm,'_blank','noopener'); mk('ghost','in','فتح في Gmail',()=>window.open(gm,'_blank','noopener')); }
     if(x.source==='واتساب'&&x.phone) mk('ghost','wa','فتح واتساب',()=>window.open('https://wa.me/'+String(x.phone).replace(/\D/g,''),'_blank','noopener'));
+    mk('ghost','cp','نسخ الرسالة',()=>copyMsg(x));
     if(inArch){ mk('danger','tr','حذف',()=>delArch(x)); L.appendChild(d); return; }
     STATUSES.filter(s=>s!==x.status&&s!=='جديدة').forEach(s=>mk('',s==='تم الرد'?'ck':'',s,()=>upd(x,{status:s})));
     mk('ghost','nt','ملاحظة',async()=>{const a=await dlg('ملاحظة',{fields:[{k:'t',label:'اكتبي الملاحظة',area:1,value:x.note||''}],ok:'حفظ'}); if(a) upd(x,{note:a.t});});
@@ -875,10 +876,43 @@ async function del(x){
   if(r.auth===false){logout();return;}
   (r.ok||r.error==='الرسالة غير موجودة.')?(toast('تم الحذف نهائيًا'),adoptCH(r)):(toast(r.error||'تعذّر الحذف',1),load());
 }
+/* نسخ نص الرسالة */
+async function copyMsg(x){
+  const t=String(x.message||'');
+  try{ await navigator.clipboard.writeText(t); toast('تم نسخ الرسالة'); }
+  catch(e){
+    try{ const a=document.createElement('textarea'); a.value=t; a.style.cssText='position:fixed;opacity:0'; document.body.appendChild(a); a.select(); document.execCommand('copy'); a.remove(); toast('تم نسخ الرسالة'); }
+    catch(e2){ toast('تعذّر نسخ الرسالة',1); }
+  }
+}
+/* حذف جماعي فيه رسائل مميزة بنجمة: نسأل هل تُحذف أم تُستثنى */
+function delStarChoice(n,ns){
+  return new Promise(res=>{
+    const d=$('dlg'); $('dT').textContent='حذف الرسائل المحددة';
+    $('dM').textContent='من الرسائل المحددة ('+n+') يوجد '+ns+' مميّزة بنجمة. هل تريدين حذفها أيضًا أم استثناءها من الحذف؟ الحذف نهائي ولا يمكن استرجاعه.';
+    $('dF').innerHTML='';
+    const act=d.querySelector('.dact'), ok=$('dOk'), no=$('dNo');
+    const keep=document.createElement('button'); keep.type='button'; keep.className='btn';
+    keep.textContent='حذف غير المميّزة فقط ('+(n-ns)+')'; if(n-ns<=0) keep.style.display='none';
+    ok.textContent='حذف الكل بما فيها المميّزة ('+n+')'; ok.className='btn solid-d';
+    act.insertBefore(keep,ok);
+    let done=false; const fin=v=>{ if(done) return; done=true; keep.remove(); d.close(); res(v); };
+    keep.onclick=()=>fin('skip'); ok.onclick=()=>fin('all'); no.onclick=()=>fin(null);
+    d.oncancel=e=>{e.preventDefault();fin(null);};
+    d.showModal();
+  });
+}
 /* إجراء جماعي على الرسائل المحددة */
 async function bulk(op,picked,value){
+  if(op==='delete'){
+    const stp=picked.filter(x=>x.starred);
+    if(stp.length){
+      const c=await delStarChoice(picked.length,stp.length);
+      if(!c) return;
+      if(c==='skip'){ picked=picked.filter(x=>!x.starred); SEL=new Set(picked.map(x=>x.id)); }
+    } else if(!await dlg('حذف الرسائل المحددة',{text:'سيتم حذف '+picked.length+' رسالة نهائيًا من الشيت ولا يمكن استرجاعها.',ok:'حذف نهائي',danger:true})) return;
+  }
   const n=picked.length, ids=picked.map(x=>x.id);
-  if(op==='delete' && !await dlg('حذف الرسائل المحددة',{text:'سيتم حذف '+n+' رسالة نهائيًا من الشيت ولا يمكن استرجاعها.',ok:'حذف نهائي',danger:true})) return;
   picked=picked.map(cur);
   picked.forEach(x=>{
     if(op==='status'){ if(x.status!==value){COUNTS[x.status]=Math.max(0,(COUNTS[x.status]||0)-1);COUNTS[value]=(COUNTS[value]||0)+1;} x.status=value; }
@@ -924,7 +958,7 @@ $('cCopy').onclick=e=>cp('cUrl',e.target);
 function logout(){
   const t=TOKEN;
   /* الخروج الفوري من الواجهة أولًا، دون انتظار الخادم */
-  KEY='';TOKEN='';ME=null;ALL=[];clearSearch();ARCPRE=null;ARCSCH=0;MSGBAK=null;ARCHN=null;SEL=new Set();REMS=[];RC=0;CH=0;ARC=0;RDONE=0;$('alerts').innerHTML='';document.title='صِلة للتواصل';
+  KEY='';TOKEN='';ME=null;ALL=[];clearSearch();ARCPRE=null;ARCSCH=0;MSGBAK=null;ARCHN=null;SEL=new Set();REMS=[];RC=0;CH=0;ARC=0;RDONE=0;$('alerts').innerHTML='';document.title='صلة للتواصل';
   try{localStorage.removeItem('tok');localStorage.removeItem('me');}catch(e){}
   show('auth'); pwReset(); admUi();
   /* اشتراك التنبيهات يبقى في المتصفح (لا نلغيه) فلا تُطلب إعادة التفعيل عند الدخول؛ نفصل الجهاز عن الحساب في الخادم فقط */
@@ -1114,7 +1148,7 @@ async function loadRem(silent){
 function badge(){
   const t1=nextDay(Date.now()), n=REMS.filter(r=>!r.done&&r.due<t1).length, dueNow=REMS.filter(r=>!r.done&&r.due<=Date.now()).length, b=$('nb');
   b.textContent=n; b.style.display=n?'inline-grid':'none';
-  document.title=(dueNow?'('+dueNow+') ':'')+'صِلة للتواصل';
+  document.title=(dueNow?'('+dueNow+') ':'')+'صلة للتواصل';
 }
 function afterRem(){
   badge(); renderRem();
