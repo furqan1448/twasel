@@ -371,7 +371,7 @@ a.btn{text-decoration:none}
 <script>
 /* ===== رابط النشر (Apps Script): غيّريه هنا فقط ===== */
 const API = 'https://script.google.com/macros/s/AKfycby0yYYDh-TsfnbuG2crvQSV-LbwmlBBnL3PihXj1RpOvxHrnsRRRZtavbegcgKYUB6fgg/exec';
-const UIVER = '2026-11-26-a';   // يظهر أسفل الصفحة: للتأكد أن آخر نسخة من الواجهة هي المحمّلة
+const UIVER = '2026-11-26-b';   // يظهر أسفل الصفحة: للتأكد أن آخر نسخة من الواجهة هي المحمّلة
 const $ = id => document.getElementById(id);
 const STATUSES = ['جديدة', 'تم الرد', 'لم يُرد عليها'], STAR = 'المميز بنجمة', ARCH = 'الأرشيف';
 const U = new URLSearchParams(location.search).get('u');
@@ -889,12 +889,12 @@ async function copyMsg(x){
 function delStarChoice(n,ns){
   return new Promise(res=>{
     const d=$('dlg'); $('dT').textContent='حذف الرسائل المحددة';
-    $('dM').textContent='من الرسائل المحددة ('+n+') يوجد '+ns+' مميّزة بنجمة. هل تريدين حذفها أيضًا أم استثناءها من الحذف؟ الحذف نهائي ولا يمكن استرجاعه.';
+    $('dM').textContent='من الرسائل المحددة ('+n+') يوجد '+ns+' مميزة بنجمة. اختاري طريقة الحذف (الحذف نهائي ولا يمكن استرجاعه):';
     $('dF').innerHTML='';
     const act=d.querySelector('.dact'), ok=$('dOk'), no=$('dNo');
     const keep=document.createElement('button'); keep.type='button'; keep.className='btn';
-    keep.textContent='حذف غير المميّزة فقط ('+(n-ns)+')'; if(n-ns<=0) keep.style.display='none';
-    ok.textContent='حذف الكل بما فيها المميّزة ('+n+')'; ok.className='btn solid-d';
+    keep.textContent='حذف جميع الرسائل باستثناء المميزة بنجمة ('+(n-ns)+')'; if(n-ns<=0) keep.style.display='none';
+    ok.textContent='حذف جميع الرسائل دون استثناء ('+n+')'; ok.className='btn solid-d';
     act.insertBefore(keep,ok);
     let done=false; const fin=v=>{ if(done) return; done=true; keep.remove(); d.close(); res(v); };
     keep.onclick=()=>fin('skip'); ok.onclick=()=>fin('all'); no.onclick=()=>fin(null);
